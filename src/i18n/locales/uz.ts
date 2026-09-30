@@ -16,9 +16,10 @@ export const uz: Dictionary = {
   'welcome.line1': 'Gapiring',
   'welcome.line2': 'rus tilida',
   'welcome.line3': 'ishonch bilan',
-  'welcome.description': 'AI bilan haqiqiy suhbatlarni mashq qiling va ko‘nikmalaringizni har kuni rivojlantiring.',
+  'welcome.description': 'AI bilan haqiqiy suhbatlarni mashq qiling va maqsadlaringizga erishing.',
   'welcome.bubble': 'Привет!',
   'welcome.start': 'Boshlash',
+  'welcome.haveAccount': 'Mening hisobim bor',
 
   'home.greeting': 'Salom,',
   'home.goalTitle': 'Bugungi maqsad',

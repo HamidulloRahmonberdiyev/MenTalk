@@ -1,113 +1,150 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import Animated, {
-  Easing,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
-import { Button } from '@/components/ui/Button';
-import { Screen } from '@/components/ui/Screen';
-import { TutorAvatar } from '@/components/ui/TutorAvatar';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { haptics } from '@/services/haptics';
+import { radii, spacing } from '@/theme';
 
+import { CathedralSkyline } from './CathedralSkyline';
 import { LanguageChips } from './LanguageChips';
+
+const SKY_COLORS = ['#0B0F2B', '#211A4A', '#4B2960', '#8A4A55'] as const;
+const SKY_LOCATIONS = [0, 0.45, 0.78, 1] as const;
 
 export function WelcomeScreen() {
   const t = useT();
-  const { height } = useWindowDimensions();
-  const avatarSize = Math.min(Math.max(height * 0.36, 200), 340);
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const skylineHeight = Math.min(Math.max(height * 0.13, 100), 140);
+
+  const goToApp = () => router.replace('/home');
 
   return (
-    <Screen>
-      <LanguageChips />
-      <Animated.View entering={FadeInDown.duration(500)} style={styles.copy}>
-        <AppText variant="display" accessibilityRole="header">
-          {t('welcome.line1')}
-          {'\n'}
-          <AppText variant="display" color={colors.primary}>
-            {t('welcome.line2')}
-          </AppText>
-          {'\n'}
-          {t('welcome.line3')}
-        </AppText>
-        <AppText variant="body" color={colors.textSecondary} style={styles.description}>
-          {t('welcome.description')}
-        </AppText>
-      </Animated.View>
-
-      <View style={styles.hero}>
-        <LinearGradient
-          colors={[colors.primarySoft, 'rgba(230,244,251,0)']}
-          style={[styles.halo, { width: avatarSize * 1.15, height: avatarSize * 1.15 }]}
-        />
-        <TutorAvatar size={avatarSize} />
-        <FloatingBubble text={t('welcome.bubble')} />
+    <View style={styles.root}>
+      <StatusBar style="light" />
+      <LinearGradient colors={SKY_COLORS} locations={SKY_LOCATIONS} style={StyleSheet.absoluteFill} />
+      <View style={[styles.skyline, { height: skylineHeight }]} pointerEvents="none">
+        <CathedralSkyline width={width} height={skylineHeight} color="#080A1F" />
       </View>
 
-      <Button title={t('welcome.start')} icon="arrow-forward" iconPosition="right" onPress={() => router.replace('/home')} />
-    </Screen>
-  );
-}
+      <View
+        style={[
+          styles.content,
+          {
+            paddingTop: insets.top + spacing.lg,
+            paddingBottom: Math.max(insets.bottom, spacing.xl) + skylineHeight * 0.6,
+          },
+        ]}
+      >
+        <LanguageChips />
 
-function FloatingBubble({ text }: { text: string }) {
-  const offset = useSharedValue(0);
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.copy}>
+          <AppText variant="display" color="#FFFFFF" accessibilityRole="header">
+            {t('welcome.line1')}
+            {'\n'}
+            {t('welcome.line2')}
+            {'\n'}
+            {t('welcome.line3')}
+          </AppText>
+          <AppText variant="body" color="rgba(255,255,255,0.75)" style={styles.description}>
+            {t('welcome.description')}
+          </AppText>
+        </Animated.View>
 
-  useEffect(() => {
-    offset.value = withRepeat(
-      withSequence(
-        withTiming(-6, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
-        withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
-      ),
-      -1,
-    );
-  }, [offset]);
+        <View style={styles.spacer} />
 
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
+        <Animated.View entering={FadeIn.duration(500).delay(150)} style={styles.actions}>
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={t('welcome.start')}
+            onPress={() => {
+              haptics.light();
+              goToApp();
+            }}
+            style={styles.startButton}
+          >
+            <LinearGradient
+              colors={['#8B6CFF', '#5B4CE0']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.startButtonFill}
+            >
+              <AppText variant="button" color="#FFFFFF">
+                {t('welcome.start')}
+              </AppText>
+              <AppText variant="button" color="#FFFFFF">
+                {' →'}
+              </AppText>
+            </LinearGradient>
+          </PressableScale>
 
-  return (
-    <Animated.View style={[styles.bubble, animatedStyle]}>
-      <AppText variant="bodyStrong" color={colors.onPrimary}>
-        {text}
-      </AppText>
-    </Animated.View>
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={t('welcome.haveAccount')}
+            onPress={() => {
+              haptics.selection();
+              goToApp();
+            }}
+            style={styles.secondaryAction}
+          >
+            <AppText variant="bodyStrong" color="rgba(255,255,255,0.8)">
+              {t('welcome.haveAccount')}
+            </AppText>
+          </PressableScale>
+        </Animated.View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0B0F2B',
+  },
+  skyline: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
   copy: {
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xxxl,
     gap: spacing.lg,
   },
   description: {
     maxWidth: 300,
   },
-  hero: {
+  spacer: {
     flex: 1,
+  },
+  actions: {
+    gap: spacing.lg,
+  },
+  startButton: {
+    height: 58,
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
+  startButtonFill: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
   },
-  halo: {
-    position: 'absolute',
-    borderRadius: radii.pill,
-  },
-  bubble: {
-    position: 'absolute',
-    top: '12%',
-    right: 0,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.lg,
-    borderBottomRightRadius: 6,
-    backgroundColor: colors.primary,
-    ...shadows.primary,
+  secondaryAction: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
 });

@@ -14,9 +14,10 @@ export const en = {
   'welcome.line1': 'Speak',
   'welcome.line2': 'Russian',
   'welcome.line3': 'confidently',
-  'welcome.description': 'Practice real conversations with AI and build your skills every day.',
+  'welcome.description': 'Practice real conversations with AI and reach your goals.',
   'welcome.bubble': 'Привет!',
   'welcome.start': 'Get started',
+  'welcome.haveAccount': 'I already have an account',
 
   'home.greeting': 'Hi,',
   'home.goalTitle': "Today's goal",

@@ -16,9 +16,10 @@ export const ru: Dictionary = {
   'welcome.line1': 'Говори',
   'welcome.line2': 'на русском',
   'welcome.line3': 'уверенно',
-  'welcome.description': 'Практикуй реальные разговоры с AI и развивай свои навыки каждый день.',
+  'welcome.description': 'Практикуй реальные разговоры с AI и достигай своих целей.',
   'welcome.bubble': 'Привет!',
   'welcome.start': 'Начать',
+  'welcome.haveAccount': 'У меня уже есть аккаунт',
 
   'home.greeting': 'Привет,',
   'home.goalTitle': 'Сегодняшняя цель',
