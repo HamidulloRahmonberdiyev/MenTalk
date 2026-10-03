@@ -212,9 +212,14 @@ export function useTranslator() {
       return;
     }
     stopSpeaking();
+    setListening(true);
     const opened = await startCapture();
-    setListening(opened);
-    if (!opened) {
+    if (opened !== 'started') {
+      setListening(false);
+      if (opened === 'failed') {
+        Alert.alert(t('error.title'), t('voice.startFailed'));
+        return;
+      }
       Alert.alert(t('voice.permissionTitle'), t('voice.permissionMessage'), [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('voice.openSettings'), onPress: () => void Linking.openSettings() },

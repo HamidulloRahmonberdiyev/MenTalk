@@ -27,16 +27,21 @@ export function useVoiceTurn(conversation: Conversation, voiceState: VoiceState)
     }
     if (voiceState !== 'idle' && voiceState !== 'speaking') return;
 
+    // Show "listening" at once; opening the recorder takes a moment and must not make the tap feel laggy.
+    startListening();
     const opened = await start();
-    if (opened) {
-      startListening();
-      return;
+    if (opened === 'started') return;
+
+    cancelListening();
+    if (opened === 'denied') {
+      Alert.alert(t('voice.permissionTitle'), t('voice.permissionMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('voice.openSettings'), onPress: () => void Linking.openSettings() },
+      ]);
+    } else {
+      Alert.alert(t('error.title'), t('voice.startFailed'));
     }
-    Alert.alert(t('voice.permissionTitle'), t('voice.permissionMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('voice.openSettings'), onPress: () => void Linking.openSettings() },
-    ]);
-  }, [voiceState, start, stop, startListening, t]);
+  }, [voiceState, start, stop, startListening, cancelListening, t]);
 
   /** Closes the mic and leaves the listening state without a reply (keyboard mode, finishing). */
   const cancel = useCallback(async () => {

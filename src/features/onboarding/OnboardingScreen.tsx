@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import Animated, { FadeInLeft, FadeInRight, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -18,6 +17,9 @@ import type { Gender, LearningGoal, RussianLevel } from '@/types';
 import { BirthDateField, type BirthParts } from './BirthDateField';
 import { parseBirthDate } from './birthDate';
 import { OptionCard } from './OptionCard';
+import { ProgressSegments } from './ProgressSegments';
+import { Reveal } from './Reveal';
+import { StepHero } from './StepHero';
 
 type StepId = 'name' | 'gender' | 'birth' | 'level' | 'goals' | 'daily';
 
@@ -76,6 +78,7 @@ export function OnboardingScreen() {
 
   const parsedBirth = useMemo(() => parseBirthDate(birth.day, birth.month, birth.year), [birth]);
   const current = STEPS[step];
+  const direction = forward ? 'forward' : 'back';
   const isLast = step === STEPS.length - 1;
 
   const canContinue = {
@@ -143,11 +146,7 @@ export function OnboardingScreen() {
         >
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </PressableScale>
-        <View style={styles.segments} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: STEPS.length, now: step + 1 }}>
-          {STEPS.map((item, index) => (
-            <View key={item.id} style={[styles.segment, index <= step && styles.segmentOn]} />
-          ))}
-        </View>
+        <ProgressSegments count={STEPS.length} step={step} />
       </View>
 
       <ScrollView
@@ -155,74 +154,75 @@ export function OnboardingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Animated.View
-          key={current.id}
-          entering={(forward ? FadeInRight : FadeInLeft).duration(320)}
-          style={styles.step}
-        >
-          <Animated.View entering={ZoomIn.springify().damping(12).delay(80)} style={styles.hero}>
-            <AppText style={styles.heroEmoji}>{current.emoji}</AppText>
-          </Animated.View>
+        <StepHero emoji={current.emoji} />
 
+        <View key={current.id} style={styles.step}>
           <View style={styles.heading}>
-            <AppText variant="title" style={styles.center} accessibilityRole="header">
-              {t(`onb.${current.id}.title`)}
-            </AppText>
-            <AppText variant="body" color={colors.textSecondary} style={styles.center}>
-              {t(`onb.${current.id}.subtitle`)}
-            </AppText>
+            <Reveal index={0} direction={direction}>
+              <AppText variant="title" style={styles.center} accessibilityRole="header">
+                {t(`onb.${current.id}.title`)}
+              </AppText>
+            </Reveal>
+            <Reveal index={1} direction={direction}>
+              <AppText variant="body" color={colors.textSecondary} style={styles.center}>
+                {t(`onb.${current.id}.subtitle`)}
+              </AppText>
+            </Reveal>
           </View>
 
           <View style={styles.body}>
             {current.id === 'name' ? (
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                onSubmitEditing={goNext}
-                placeholder={t('onb.name.placeholder')}
-                placeholderTextColor={colors.textMuted}
-                selectionColor={colors.primary}
-                autoFocus
-                autoCapitalize="words"
-                autoCorrect={false}
-                maxLength={30}
-                returnKeyType="next"
-                accessibilityLabel={t('onb.name.placeholder')}
-                style={styles.nameInput}
-              />
+              <Reveal index={2}>
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  onSubmitEditing={goNext}
+                  placeholder={t('onb.name.placeholder')}
+                  placeholderTextColor={colors.textMuted}
+                  selectionColor={colors.primary}
+                  autoFocus
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  maxLength={30}
+                  returnKeyType="next"
+                  accessibilityLabel={t('onb.name.placeholder')}
+                  style={styles.nameInput}
+                />
+              </Reveal>
             ) : null}
 
             {current.id === 'gender'
-              ? GENDERS.map(({ id, emoji }) => (
-                  <OptionCard
-                    key={id}
-                    emoji={emoji}
-                    title={t(`onb.gender.${id}`)}
-                    selected={gender === id}
-                    onPress={() => setGender(id)}
-                  />
+              ? GENDERS.map(({ id, emoji }, index) => (
+                  <Reveal key={id} index={2 + index}>
+                    <OptionCard emoji={emoji} title={t(`onb.gender.${id}`)} selected={gender === id} onPress={() => setGender(id)} />
+                  </Reveal>
                 ))
               : null}
 
-            {current.id === 'birth' ? <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} /> : null}
+            {current.id === 'birth' ? (
+              <Reveal index={2}>
+                <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} />
+              </Reveal>
+            ) : null}
 
             {current.id === 'level'
-              ? LEVELS.map(({ id, emoji }) => (
-                  <OptionCard
-                    key={id}
-                    emoji={emoji}
-                    title={t(`onb.level.${id}`)}
-                    description={t(`onb.level.${id}.desc`)}
-                    selected={level === id}
-                    onPress={() => setLevel(id)}
-                  />
+              ? LEVELS.map(({ id, emoji }, index) => (
+                  <Reveal key={id} index={2 + index}>
+                    <OptionCard
+                      emoji={emoji}
+                      title={t(`onb.level.${id}`)}
+                      description={t(`onb.level.${id}.desc`)}
+                      selected={level === id}
+                      onPress={() => setLevel(id)}
+                    />
+                  </Reveal>
                 ))
               : null}
 
             {current.id === 'goals' ? (
               <View style={styles.grid}>
-                {GOALS.map(({ id, emoji }) => (
-                  <View key={id} style={styles.cell}>
+                {GOALS.map(({ id, emoji }, index) => (
+                  <Reveal key={id} index={2 + index} style={styles.cell}>
                     <OptionCard
                       tile
                       multi
@@ -231,15 +231,15 @@ export function OnboardingScreen() {
                       selected={goals.includes(id)}
                       onPress={() => toggleGoal(id)}
                     />
-                  </View>
+                  </Reveal>
                 ))}
               </View>
             ) : null}
 
             {current.id === 'daily' ? (
               <View style={styles.grid}>
-                {DAILY.map(({ minutes, emoji }) => (
-                  <View key={minutes} style={styles.cell}>
+                {DAILY.map(({ minutes, emoji }, index) => (
+                  <Reveal key={minutes} index={2 + index} style={styles.cell}>
                     <OptionCard
                       tile
                       emoji={emoji}
@@ -248,12 +248,12 @@ export function OnboardingScreen() {
                       selected={daily === minutes}
                       onPress={() => setDaily(minutes)}
                     />
-                  </View>
+                  </Reveal>
                 ))}
               </View>
             ) : null}
           </View>
-        </Animated.View>
+        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
@@ -286,22 +286,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
   },
-  segments: { flex: 1, flexDirection: 'row', gap: 6 },
-  segment: { flex: 1, height: 6, borderRadius: radii.pill, backgroundColor: colors.border },
-  segmentOn: { backgroundColor: colors.primary },
-  scroll: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
+  scroll: { flexGrow: 1, gap: spacing.xxl, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
   step: { gap: spacing.xxl },
-  hero: {
-    alignSelf: 'center',
-    width: 96,
-    height: 96,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    boxShadow: '0 14px 34px rgba(42, 171, 238, 0.28)',
-  },
-  heroEmoji: { fontSize: 50, lineHeight: 62 },
   heading: { gap: spacing.sm },
   center: { textAlign: 'center' },
   body: { gap: spacing.md },
