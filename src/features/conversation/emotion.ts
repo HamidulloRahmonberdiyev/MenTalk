@@ -1,27 +1,22 @@
+import type { FaceEmotion, FaceState } from '@/features/face';
 import type { VoiceState } from '@/types';
 
-/** Picks the tutor's face from the turn state and, while speaking, from the tone of the message. */
-export function pickEmoji(state: VoiceState, text?: string | null): string {
-  switch (state) {
-    case 'idle':
-      return '☺️';
-    case 'listening':
-      return '🙂';
-    case 'thinking':
-      return '🤔';
-    case 'speaking':
-      return speakingEmoji(text ?? '');
-  }
+export function toFaceState(state: VoiceState): FaceState {
+  return state;
 }
 
-const RULES: readonly [RegExp, string][] = [
-  [/спасибо|пожалуйста|рад[аы]? /i, '🥰'],
-  [/отлично|молодец|прекрасно|супер|great|excellent/i, '🤩'],
-  [/извин|простите|sorry/i, '😅'],
-  [/!/, '😄'],
-  [/\?/, '🧐'],
+const RULES: readonly [RegExp, FaceEmotion][] = [
+  [/отлично|молодец|прекрасно|супер|great|excellent/i, 'encouraging'],
+  [/спасибо|пожалуйста|рад[аы]? /i, 'happy'],
+  [/извин|простите|sorry/i, 'empathetic'],
+  [/!/, 'happy'],
+  [/\?/, 'curious'],
 ];
 
-function speakingEmoji(text: string): string {
-  return RULES.find(([pattern]) => pattern.test(text))?.[1] ?? '😊';
+/**
+ * Mock emotion detection from the message text. Replace with the emotion reported
+ * by the AI backend once it provides one.
+ */
+export function pickEmotion(text?: string | null): FaceEmotion {
+  return RULES.find(([pattern]) => pattern.test(text ?? ''))?.[1] ?? 'neutral';
 }

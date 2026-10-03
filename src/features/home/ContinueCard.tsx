@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { IconTile } from '@/components/ui/IconTile';
+import { ScenarioThumb } from '@/components/ui/ScenarioThumb';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
@@ -28,7 +28,7 @@ export function ContinueCard({ scenario, onPress }: ContinueCardProps) {
       }}
       style={styles.card}
     >
-      <IconTile icon={scenario.icon} tint={scenario.tint} gradient={scenario.gradient} size={76} />
+      <ScenarioThumb scenario={scenario} size={76} />
       <View style={styles.texts}>
         <AppText variant="subheading">{title}</AppText>
         <AppText variant="caption" color={colors.textSecondary} numberOfLines={2}>

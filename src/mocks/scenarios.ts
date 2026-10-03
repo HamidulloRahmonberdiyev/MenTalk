@@ -3,36 +3,42 @@ import type { Scenario, ScenarioId } from '@/types';
 export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'intro',
+    image: require('../../assets/scenarios/intro.jpg'),
     icon: 'people',
     tint: '#2AABEE',
     gradient: ['#5CC3F2', '#1E88C7'],
   },
   {
     id: 'cafe',
+    image: require('../../assets/scenarios/cafe.jpg'),
     icon: 'cafe',
     tint: '#EF5B4C',
     gradient: ['#B07A50', '#4A2F1F'],
   },
   {
     id: 'shop',
+    image: require('../../assets/scenarios/shop.jpg'),
     icon: 'cart',
     tint: '#22B573',
     gradient: ['#4FCB8F', '#137A4C'],
   },
   {
     id: 'taxi',
+    image: require('../../assets/scenarios/taxi.jpg'),
     icon: 'car',
     tint: '#F5A524',
     gradient: ['#FBC658', '#C77A0B'],
   },
   {
     id: 'work',
+    image: require('../../assets/scenarios/work.jpg'),
     icon: 'briefcase',
     tint: '#5A8DEE',
     gradient: ['#7FA8F5', '#2F5FC4'],
   },
   {
     id: 'airport',
+    image: require('../../assets/scenarios/airport.jpg'),
     icon: 'airplane',
     tint: '#17B2D6',
     gradient: ['#5CC3F2', '#0A6796'],

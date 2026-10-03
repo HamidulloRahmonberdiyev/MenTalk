@@ -1,6 +1,7 @@
 import type { TranslationKey } from '@/i18n';
 import type { ComponentProps } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
+import type { ImageSourcePropType } from 'react-native';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -10,6 +11,7 @@ export interface Scenario {
   id: ScenarioId;
   icon: IconName;
   tint: string;
+  image: ImageSourcePropType;
   gradient: readonly [string, string];
 }
 

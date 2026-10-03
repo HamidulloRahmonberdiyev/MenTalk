@@ -9,17 +9,17 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
+import { AIFace, useMockAudioLevel } from '@/features/face';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useResultStore } from '@/store/resultStore';
 import { useUserStore } from '@/store/userStore';
-import { colors, spacing } from '@/theme';
+import { colors, radii, shadows, spacing } from '@/theme';
 import type { Scenario } from '@/types';
 
 import { ActionButton } from './ActionButton';
 import { AiMessageBubble } from './AiMessageBubble';
-import { EmojiAvatar } from './EmojiAvatar';
-import { pickEmoji } from './emotion';
+import { toFaceState, pickEmotion } from './emotion';
 import { HintCard } from './HintCard';
 import { TextComposer } from './TextComposer';
 import { useConversation } from './useConversation';
@@ -40,8 +40,9 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
 
-  const avatarSize = Math.min(Math.max(height * 0.2, 120), 180);
-  const emoji = pickEmoji(voiceState, message?.text);
+  const faceSize = Math.min(Math.max(height * 0.3, 190), 250);
+  const emotion = pickEmotion(message?.text);
+  const audioLevel = useMockAudioLevel(voiceState === 'speaking');
 
   const handleFinish = useCallback(async () => {
     const result = await conversation.finish();
@@ -113,7 +114,9 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         ) : (
           <Animated.View entering={FadeIn.duration(400)} style={styles.stage}>
             <View style={styles.avatarWrap}>
-              <EmojiAvatar emoji={emoji} size={avatarSize} speaking={voiceState === 'speaking'} />
+              <View style={styles.faceCard}>
+                <AIFace state={toFaceState(voiceState)} emotion={emotion} audioLevel={audioLevel} size={faceSize} />
+              </View>
             </View>
 
             <View style={styles.messages}>
@@ -193,7 +196,14 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  faceCard: {
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xl,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    ...shadows.raised,
   },
   messages: {
     gap: spacing.md,

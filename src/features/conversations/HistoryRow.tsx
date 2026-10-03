@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { IconTile } from '@/components/ui/IconTile';
+import { ScenarioThumb } from '@/components/ui/ScenarioThumb';
 import { useT } from '@/i18n';
 import { SCENARIO_MAP } from '@/mocks/scenarios';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -19,7 +19,7 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
 
   return (
     <View style={styles.row}>
-      <IconTile icon={scenario.icon} tint={scenario.tint} gradient={scenario.gradient} />
+      <ScenarioThumb scenario={scenario} />
       <View style={styles.texts}>
         <AppText variant="bodyStrong">{t(`scenario.${scenario.id}.title`)}</AppText>
         <AppText variant="caption" color={colors.textSecondary}>

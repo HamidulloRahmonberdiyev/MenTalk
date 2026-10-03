@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -79,6 +79,14 @@ export function ProfileScreen() {
         <AppText variant="heading">{t('profile.language')}</AppText>
         <LanguageSwitcher />
       </View>
+
+      {__DEV__ ? (
+        <PressableScale accessibilityRole="button" onPress={() => router.push('/face-lab' as Href)} style={styles.logout}>
+          <AppText variant="bodyStrong" color={colors.primary}>
+            Face lab
+          </AppText>
+        </PressableScale>
+      ) : null}
 
       <PressableScale accessibilityRole="button" accessibilityLabel={t('profile.logout')} onPress={logout} style={styles.logout}>
         <Ionicons name="log-out-outline" size={22} color={colors.danger} />
