@@ -1,5 +1,5 @@
 import type { FaceEmotion, FaceState } from '@/features/face';
-import type { VoiceState } from '@/types';
+import type { AiMessage, VoiceState } from '@/types';
 
 export function toFaceState(state: VoiceState): FaceState {
   return state;
@@ -14,9 +14,9 @@ const RULES: readonly [RegExp, FaceEmotion][] = [
 ];
 
 /**
- * Mock emotion detection from the message text. Replace with the emotion reported
- * by the AI backend once it provides one.
+ * The emotion reported by the backend, or a rough guess from the text for the scripted mock.
  */
-export function pickEmotion(text?: string | null): FaceEmotion {
-  return RULES.find(([pattern]) => pattern.test(text ?? ''))?.[1] ?? 'neutral';
+export function pickEmotion(message: AiMessage | null): FaceEmotion {
+  if (message?.emotion) return message.emotion;
+  return RULES.find(([pattern]) => pattern.test(message?.text ?? ''))?.[1] ?? 'neutral';
 }

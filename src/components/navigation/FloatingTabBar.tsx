@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Tabs } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { useEffect, useState, type ComponentProps } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,6 +27,22 @@ interface TabIcons {
 
 export type TabIconMap = Record<string, TabIcons>;
 
+/** The floating bar would sit on top of the keyboard, so it steps aside while typing. */
+function useKeyboardVisible(): boolean {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setVisible(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setVisible(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  return visible;
+}
+
 interface FloatingTabBarProps extends BottomTabBarProps {
   icons: TabIconMap;
 }
@@ -36,12 +52,15 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
   const [width, setWidth] = useState(0);
   const slot = state.routes.length ? (width - INNER_PADDING * 2) / state.routes.length : 0;
   const offset = useSharedValue(0);
+  const keyboardOpen = useKeyboardVisible();
 
   useEffect(() => {
     offset.value = withSpring(state.index * slot, SPRING);
   }, [state.index, slot, offset]);
 
   const indicatorStyle = useAnimatedStyle(() => ({ transform: [{ translateX: offset.value }] }));
+
+  if (keyboardOpen) return null;
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom, spacing.md) }]}>

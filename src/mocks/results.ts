@@ -20,7 +20,7 @@ export function createMockResult(
         wrongMark: 'хожу',
         correct: 'Я ходил в магазин вчера.',
         correctMark: 'ходил',
-        note: 'note.past',
+        noteKey: 'note.past',
       },
       {
         id: 'age',
@@ -28,7 +28,7 @@ export function createMockResult(
         wrongMark: 'назад',
         correct: 'Мне 25 лет.',
         correctMark: '25 лет',
-        note: 'note.present',
+        noteKey: 'note.present',
       },
     ],
   };

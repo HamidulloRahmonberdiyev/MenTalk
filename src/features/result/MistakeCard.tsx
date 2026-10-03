@@ -22,7 +22,7 @@ export function MistakeCard({ mistake }: { mistake: Mistake }) {
         <HighlightedText text={mistake.correct} mark={mistake.correctMark} markColor={colors.primary} />
       </View>
       <AppText variant="caption" color={colors.textMuted} style={styles.note}>
-        {t(mistake.note)}
+        {mistake.note ?? (mistake.noteKey ? t(mistake.noteKey) : '')}
       </AppText>
     </Card>
   );

@@ -8,9 +8,10 @@ interface ProgressBarProps {
   /** 0..1 */
   value: number;
   color?: string;
+  trackColor?: string;
 }
 
-export function ProgressBar({ value, color = colors.primary }: ProgressBarProps) {
+export function ProgressBar({ value, color = colors.primary, trackColor = colors.border }: ProgressBarProps) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export function ProgressBar({ value, color = colors.primary }: ProgressBarProps)
   const fillStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, { backgroundColor: trackColor }]}>
       <Animated.View style={[styles.fill, { backgroundColor: color }, fillStyle]} />
     </View>
   );

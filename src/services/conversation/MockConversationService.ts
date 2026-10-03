@@ -1,12 +1,13 @@
 import { CONVERSATION_SCRIPTS, type ConversationScript } from '@/mocks/conversationScripts';
 import { createMockResult } from '@/mocks/results';
-import type { ConversationResult, Scenario, VoiceState } from '@/types';
+import type { ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
 
 import type {
   ConversationEvent,
   ConversationListener,
   ConversationService,
   ConversationSession,
+  RecordedAudio,
   Unsubscribe,
 } from './ConversationService';
 
@@ -49,6 +50,16 @@ class MockConversationSession implements ConversationSession {
   stopListening(): void {
     if (this.state !== 'listening') return;
     this.reply();
+  }
+
+  /** Mock analysis: a real provider would send `audio` to the speech model here. */
+  sendAudio(_audio: RecordedAudio): void {
+    if (this.state !== 'listening') return;
+    this.reply();
+  }
+
+  cancelListening(): void {
+    if (this.state === 'listening') this.setState('idle');
   }
 
   sendText(text: string): void {
@@ -123,7 +134,7 @@ class MockConversationSession implements ConversationSession {
 }
 
 export class MockConversationService implements ConversationService {
-  createSession(scenario: Scenario): ConversationSession {
+  createSession(scenario: Scenario, _learner: LearnerProfile): ConversationSession {
     return new MockConversationSession(scenario);
   }
 }

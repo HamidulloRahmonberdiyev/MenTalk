@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -7,23 +6,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
-import { AIFace, useMockAudioLevel } from '@/features/face';
+import { useMockAudioLevel } from '@/features/face';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useResultStore } from '@/store/resultStore';
 import { useUserStore } from '@/store/userStore';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 import type { Scenario } from '@/types';
 
 import { ActionButton } from './ActionButton';
 import { AiMessageBubble } from './AiMessageBubble';
+import { ConversationBackdrop } from './ConversationBackdrop';
+import { ConversationHeader } from './ConversationHeader';
 import { toFaceState, pickEmotion } from './emotion';
+import { FloatingAvatar } from './FloatingAvatar';
 import { HintCard } from './HintCard';
+import { NoticeBanner } from './NoticeBanner';
 import { TextComposer } from './TextComposer';
 import { useConversation } from './useConversation';
+import { useTutorVoice } from './useTutorVoice';
+import { useVoiceTurn } from './useVoiceTurn';
 import { VoiceOrb } from './VoiceOrb';
+import { WaveBars } from './WaveBars';
 
 interface ConversationScreenProps {
   scenario: Scenario;
@@ -40,28 +45,24 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
 
-  const faceSize = Math.min(Math.max(height * 0.3, 190), 250);
-  const emotion = pickEmotion(message?.text);
-  const audioLevel = useMockAudioLevel(voiceState === 'speaking');
+  const faceSize = Math.min(Math.max(height * 0.21, 140), 210);
+  const emotion = pickEmotion(message);
+  const tutor = useTutorVoice(message, voiceState);
+  // The scripted session may report idle while the speech engine is still talking.
+  const shownState = voiceState === 'idle' && tutor.speaking ? 'speaking' : voiceState;
+  const waving = shownState === 'listening' || shownState === 'speaking';
+  const audioLevel = useMockAudioLevel(shownState === 'speaking');
+  const voice = useVoiceTurn(conversation, voiceState);
 
   const handleFinish = useCallback(async () => {
+    await voice.cancel();
     const result = await conversation.finish();
     if (!result) return;
     haptics.success();
     recordConversation(result.scenarioId, result.durationSec, result.overall);
     setResult(result);
     router.replace('/result');
-  }, [conversation, recordConversation, setResult]);
-
-  const handleMicPress = useCallback(() => {
-    if (voiceState === 'listening') {
-      haptics.light();
-      conversation.stopListening();
-    } else if (voiceState === 'idle' || voiceState === 'speaking') {
-      haptics.medium();
-      conversation.startListening();
-    }
-  }, [voiceState, conversation]);
+  }, [conversation, voice, recordConversation, setResult]);
 
   const handleSendText = useCallback(
     (text: string) => {
@@ -76,16 +77,12 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
       behavior={Platform.OS === 'web' ? undefined : 'padding'}
       style={styles.root}
     >
-      <LinearGradient
-        colors={[colors.primarySoft, colors.background]}
-        style={[styles.backdrop, { height: height * 0.5 }]}
-      />
+      <ConversationBackdrop scenario={scenario} />
 
       <View style={[styles.content, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <ScreenHeader
+        <ConversationHeader
           title={t(`scenario.${scenario.id}.title`)}
           onBack={() => router.back()}
-          style={styles.header}
           right={
             status === 'ready' ? (
               <PressableScale
@@ -104,8 +101,10 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
           }
         />
 
+        <NoticeBanner notice={conversation.notice} onDismiss={conversation.dismissNotice} />
+
         {status === 'connecting' ? (
-          <LoadingView label={t('conversation.connecting')} />
+          <LoadingView label={t('conversation.connecting')} inverted />
         ) : status === 'error' ? (
           <ErrorView
             message={conversation.errorMessage ?? t('error.unknown')}
@@ -114,13 +113,11 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         ) : (
           <Animated.View entering={FadeIn.duration(400)} style={styles.stage}>
             <View style={styles.avatarWrap}>
-              <View style={styles.faceCard}>
-                <AIFace state={toFaceState(voiceState)} emotion={emotion} audioLevel={audioLevel} size={faceSize} />
-              </View>
+              <FloatingAvatar state={toFaceState(shownState)} emotion={emotion} audioLevel={audioLevel} size={faceSize} />
             </View>
 
             <View style={styles.messages}>
-              <AiMessageBubble message={message} speaking={voiceState === 'speaking'} />
+              <AiMessageBubble message={message} speaking={shownState === 'speaking'} onReplay={tutor.replay} />
               <HintCard hint={hint} />
             </View>
 
@@ -138,17 +135,23 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             ) : (
               <View style={styles.controls}>
                 <View style={styles.micRow}>
+                  <WaveBars active={waving} />
                   <VoiceOrb
                     state={voiceState}
-                    onPress={handleMicPress}
-                    accessibilityLabel={t(`voiceButton.${voiceState}`)}
+                    onPress={voice.toggle}
+                    level={voice.level}
+                    accessibilityLabel={t(`voiceButton.${shownState}`)}
                   />
+                  <WaveBars active={waving} mirrored />
                 </View>
                 <AppText variant="bodyStrong" color={colors.textSecondary} accessibilityLiveRegion="polite">
-                  {t(`voice.${voiceState}`)}
+                  {t(`voice.${shownState}`)}
                 </AppText>
                 <View style={styles.actions}>
-                  <ActionButton icon="keypad-outline" label={t('conversation.keyboard')} onPress={() => setKeyboardMode(true)} />
+                  <ActionButton icon="keypad-outline" label={t('conversation.keyboard')} onPress={() => {
+                      void voice.cancel();
+                      setKeyboardMode(true);
+                    }} />
                   <ActionButton
                     icon="bulb-outline"
                     label={t('conversation.hint')}
@@ -184,26 +187,19 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   finish: {
-    height: 34,
-    paddingHorizontal: spacing.md,
-    borderRadius: 17,
+    height: 38,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.surface,
   },
   stage: {
     flex: 1,
   },
   avatarWrap: {
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  faceCard: {
-    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xl,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface,
-    ...shadows.raised,
   },
   messages: {
     gap: spacing.md,
@@ -219,14 +215,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
     alignSelf: 'stretch',
   },
   actions: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    justifyContent: 'center',
-    gap: spacing.xxxl,
-    paddingTop: spacing.sm,
+    justifyContent: 'space-between',
+    paddingTop: spacing.xs,
   },
   composer: {
     gap: spacing.md,

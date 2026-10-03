@@ -1,11 +1,13 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
+import type { TutorEmotion } from '@/types';
+
 /** What the tutor is doing right now. `happy` and `encouraging` are short reactions. */
 export type FaceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'happy' | 'encouraging';
 
 /** Emotional colouring layered on top of the state (e.g. speaking while happy). */
-export type FaceEmotion = 'neutral' | 'happy' | 'encouraging' | 'curious' | 'empathetic';
+export type FaceEmotion = TutorEmotion;
 
 /**
  * Loudness of the tutor's voice, 0..1.

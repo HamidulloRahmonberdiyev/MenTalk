@@ -12,7 +12,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      language: 'uz',
+      language: 'ru',
       setLanguage: (language) => set({ language }),
     }),
     { name: 'settings', storage: createJSONStorage(() => AsyncStorage) },

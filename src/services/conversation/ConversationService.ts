@@ -1,9 +1,19 @@
-import type { AiMessage, ConversationResult, Scenario, VoiceState } from '@/types';
+import type { AiMessage, ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
 
 export type ConversationEvent =
   | { type: 'state'; state: VoiceState }
   | { type: 'aiMessage'; message: AiMessage }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** A single turn failed; the conversation goes on. */
+  | { type: 'notice'; code: NoticeCode };
+
+/** One spoken turn captured from the microphone. */
+export interface RecordedAudio {
+  uri: string;
+  durationMs: number;
+}
+
+export type NoticeCode = 'turnFailed' | 'network' | 'quota';
 
 export type ConversationListener = (event: ConversationEvent) => void;
 export type Unsubscribe = () => void;
@@ -19,6 +29,10 @@ export interface ConversationSession {
   startListening(): void;
   /** The user finished speaking; the tutor should reply. */
   stopListening(): void;
+  /** The captured voice of the finished turn. The backend analyses it and the tutor replies. */
+  sendAudio(audio: RecordedAudio): void;
+  /** Listening ended without any speech: go back to idle without a reply. */
+  cancelListening(): void;
   /** Keyboard input as an alternative to voice. */
   sendText(text: string): void;
   requestHint(): Promise<string>;
@@ -29,5 +43,5 @@ export interface ConversationSession {
 }
 
 export interface ConversationService {
-  createSession(scenario: Scenario): ConversationSession;
+  createSession(scenario: Scenario, learner: LearnerProfile): ConversationSession;
 }

@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useT } from '@/i18n';
-import { conversationService, type ConversationSession } from '@/services/conversation';
-import type { AiMessage, ConversationResult, Scenario, VoiceState } from '@/types';
+import {
+  conversationService,
+  type ConversationSession,
+  type NoticeCode,
+  type RecordedAudio,
+} from '@/services/conversation';
+import { useSettingsStore } from '@/store/settingsStore';
+import { useUserStore } from '@/store/userStore';
+import type { AiMessage, ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
 
 export type ConnectionStatus = 'connecting' | 'ready' | 'error';
 export type HintState =
@@ -11,6 +18,28 @@ export type HintState =
   | { status: 'shown'; text: string };
 
 const HIDDEN_HINT: HintState = { status: 'hidden' };
+
+function ageFrom(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const born = new Date(birthDate);
+  const now = new Date();
+  let age = now.getFullYear() - born.getFullYear();
+  if (now.getMonth() < born.getMonth() || (now.getMonth() === born.getMonth() && now.getDate() < born.getDate())) age -= 1;
+  return age;
+}
+
+/** Snapshot of who is talking, taken when a session starts. */
+function currentLearner(): LearnerProfile {
+  const user = useUserStore.getState();
+  return {
+    name: user.name,
+    gender: user.gender,
+    age: ageFrom(user.birthDate),
+    level: user.level,
+    goals: user.goals,
+    uiLanguage: useSettingsStore.getState().language,
+  };
+}
 
 /** Binds a `ConversationSession` to React state. Contains no provider-specific code. */
 export function useConversation(scenario: Scenario) {
@@ -23,9 +52,10 @@ export function useConversation(scenario: Scenario) {
   const [message, setMessage] = useState<AiMessage | null>(null);
   const [hint, setHint] = useState<HintState>(HIDDEN_HINT);
   const [finishing, setFinishing] = useState(false);
+  const [notice, setNotice] = useState<{ code: NoticeCode; id: number } | null>(null);
 
   useEffect(() => {
-    const session = conversationService.createSession(scenario);
+    const session = conversationService.createSession(scenario, currentLearner());
     sessionRef.current = session;
     const unsubscribe = session.subscribe((event) => {
       switch (event.type) {
@@ -35,6 +65,9 @@ export function useConversation(scenario: Scenario) {
         case 'aiMessage':
           setMessage(event.message);
           setHint(HIDDEN_HINT);
+          break;
+        case 'notice':
+          setNotice({ code: event.code, id: Date.now() });
           break;
         case 'error':
           setErrorMessage(event.message);
@@ -67,8 +100,12 @@ export function useConversation(scenario: Scenario) {
     setAttempt((value) => value + 1);
   }, []);
 
+  const dismissNotice = useCallback(() => setNotice(null), []);
+
   const startListening = useCallback(() => sessionRef.current?.startListening(), []);
   const stopListening = useCallback(() => sessionRef.current?.stopListening(), []);
+  const sendAudio = useCallback((audio: RecordedAudio) => sessionRef.current?.sendAudio(audio), []);
+  const cancelListening = useCallback(() => sessionRef.current?.cancelListening(), []);
   const sendText = useCallback((text: string) => sessionRef.current?.sendText(text), []);
 
   const toggleHint = useCallback(async () => {
@@ -109,10 +146,14 @@ export function useConversation(scenario: Scenario) {
     message,
     hint,
     finishing,
+    notice,
+    dismissNotice,
     retry,
     startListening,
     stopListening,
     sendText,
+    sendAudio,
+    cancelListening,
     toggleHint,
     finish,
   };

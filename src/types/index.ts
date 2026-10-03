@@ -18,9 +18,15 @@ export interface Scenario {
 /** Turn-taking state of the voice conversation. */
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
+export type TutorEmotion = 'neutral' | 'happy' | 'encouraging' | 'curious' | 'empathetic';
+
 export interface AiMessage {
   id: string;
   text: string;
+  /** Emotion the backend attached to the line, if any. */
+  emotion?: TutorEmotion;
+  /** Synthesized speech for the line. When absent, the UI reads `text` with the device voice. */
+  audioUri?: string;
 }
 
 export type MetricId = 'speech' | 'vocabulary' | 'grammar';
@@ -39,7 +45,10 @@ export interface Mistake {
   correct: string;
   /** Fragment of `correct` to highlight. */
   correctMark: string;
-  note: TranslationKey;
+  /** Explanation written by the backend, in the learner's language. */
+  note?: string;
+  /** Built-in explanation, used by mock data. */
+  noteKey?: TranslationKey;
 }
 
 export interface ConversationResult {
@@ -62,6 +71,17 @@ export type Gender = 'male' | 'female' | 'unspecified';
 export type RussianLevel = 'beginner' | 'elementary' | 'intermediate' | 'advanced';
 export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
 
+/** Everything the tutor should know about the person it is talking to. */
+export interface LearnerProfile {
+  name: string;
+  gender: Gender | null;
+  age: number | null;
+  level: RussianLevel | null;
+  goals: LearningGoal[];
+  /** Language of the app UI; explanations and hints are written in it. */
+  uiLanguage: 'uz' | 'ru' | 'en';
+}
+
 export interface UserProfile {
   name: string;
   onboarded: boolean;
@@ -74,4 +94,46 @@ export interface UserProfile {
   minutesToday: number;
   lastScenarioId: ScenarioId | null;
   history: HistoryEntry[];
+}
+
+export type LanguageCode = 'uz' | 'ru' | 'en' | 'tr' | 'kk' | 'ar' | 'de' | 'ko';
+export type UzbekScript = 'latin' | 'cyrillic';
+export type Register = 'neutral' | 'formal' | 'informal' | 'slang';
+
+export interface TranslationMeaning {
+  translation: string;
+  partOfSpeech: string;
+  example?: { source: string; target: string };
+}
+
+export interface TranslationAlternative {
+  text: string;
+  register: Register;
+}
+
+export interface TranslationResult {
+  sourceLanguage: LanguageCode;
+  targetLanguage: LanguageCode;
+  /** The text that was translated (the transcript when the input was spoken). */
+  sourceText: string;
+  translation: string;
+  /** Latin-letter reading of the translation when its script is not Latin. */
+  reading: string;
+  /** Russian translation with stress marks, to help pronunciation. */
+  stressed: string;
+  /** Spelling-corrected version of the input, when it had obvious typos. */
+  correctedInput: string;
+  meanings: TranslationMeaning[];
+  alternatives: TranslationAlternative[];
+  /** Short usage note in the app language. */
+  note: string;
+}
+
+export interface SavedTranslation {
+  id: string;
+  sourceLanguage: LanguageCode;
+  targetLanguage: LanguageCode;
+  sourceText: string;
+  translation: string;
+  createdAt: number;
 }
