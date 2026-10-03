@@ -1,7 +1,8 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,38 +12,41 @@ import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { radii, spacing } from '@/theme';
 
-import { CathedralSkyline } from './CathedralSkyline';
 import { LanguageChips } from './LanguageChips';
 
-const SKY_COLORS = ['#0B0F2B', '#211A4A', '#4B2960', '#8A4A55'] as const;
-const SKY_LOCATIONS = [0, 0.45, 0.78, 1] as const;
+const BACKGROUND = require('../../../assets/app/moscow.png');
+const OVERLAY_COLORS = ['rgba(8,6,28,0.45)', 'rgba(8,6,28,0.15)', 'rgba(8,6,28,0.65)', 'rgba(8,6,28,0.92)'] as const;
+const OVERLAY_LOCATIONS = [0, 0.3, 0.62, 1] as const;
 
 export function WelcomeScreen() {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
-  const skylineHeight = Math.min(Math.max(height * 0.13, 100), 140);
 
-  const goToApp = () => router.replace('/home');
+  const goToAuth = () => router.push('/auth');
 
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <LinearGradient colors={SKY_COLORS} locations={SKY_LOCATIONS} style={StyleSheet.absoluteFill} />
-      <View style={[styles.skyline, { height: skylineHeight }]} pointerEvents="none">
-        <CathedralSkyline width={width} height={skylineHeight} color="#080A1F" />
-      </View>
+      <Image source={BACKGROUND} contentFit="cover" contentPosition="center" style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={OVERLAY_COLORS}
+        locations={OVERLAY_LOCATIONS}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
 
       <View
         style={[
           styles.content,
           {
             paddingTop: insets.top + spacing.lg,
-            paddingBottom: Math.max(insets.bottom, spacing.xl) + skylineHeight * 0.6,
+            paddingBottom: Math.max(insets.bottom, spacing.xl) + spacing.lg,
           },
         ]}
       >
         <LanguageChips />
+
+        <View style={styles.spacer} />
 
         <Animated.View entering={FadeInDown.duration(500)} style={styles.copy}>
           <AppText variant="display" color="#FFFFFF" accessibilityRole="header">
@@ -57,20 +61,18 @@ export function WelcomeScreen() {
           </AppText>
         </Animated.View>
 
-        <View style={styles.spacer} />
-
         <Animated.View entering={FadeIn.duration(500).delay(150)} style={styles.actions}>
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={t('welcome.start')}
             onPress={() => {
               haptics.light();
-              goToApp();
+              goToAuth();
             }}
             style={styles.startButton}
           >
             <LinearGradient
-              colors={['#8B6CFF', '#5B4CE0']}
+              colors={['#4FC0F5', '#229ED9']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.startButtonFill}
@@ -89,7 +91,7 @@ export function WelcomeScreen() {
             accessibilityLabel={t('welcome.haveAccount')}
             onPress={() => {
               haptics.selection();
-              goToApp();
+              goToAuth();
             }}
             style={styles.secondaryAction}
           >
@@ -107,23 +109,18 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0B0F2B',
-  },
-  skyline: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
   },
   copy: {
-    paddingTop: spacing.xxxl,
-    gap: spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.xxxl,
   },
   description: {
-    maxWidth: 300,
+    maxWidth: 320,
   },
   spacer: {
     flex: 1,

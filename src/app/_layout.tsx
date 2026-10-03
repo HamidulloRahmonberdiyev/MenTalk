@@ -16,6 +16,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
         <Stack.Screen name="conversation/[scenarioId]" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'fade' }} />
       </Stack>
     </>

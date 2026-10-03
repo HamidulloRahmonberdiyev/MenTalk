@@ -9,7 +9,6 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
-import { TutorAvatar } from '@/components/ui/TutorAvatar';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useResultStore } from '@/store/resultStore';
@@ -19,12 +18,12 @@ import type { Scenario } from '@/types';
 
 import { ActionButton } from './ActionButton';
 import { AiMessageBubble } from './AiMessageBubble';
-import { Float3D } from './Float3D';
+import { EmojiAvatar } from './EmojiAvatar';
+import { pickEmoji } from './emotion';
 import { HintCard } from './HintCard';
 import { TextComposer } from './TextComposer';
 import { useConversation } from './useConversation';
 import { VoiceOrb } from './VoiceOrb';
-import { Waveform } from './Waveform';
 
 interface ConversationScreenProps {
   scenario: Scenario;
@@ -41,7 +40,8 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
 
-  const avatarSize = Math.min(Math.max(height * 0.26, 150), 250);
+  const avatarSize = Math.min(Math.max(height * 0.2, 120), 180);
+  const emoji = pickEmoji(voiceState, message?.text);
 
   const handleFinish = useCallback(async () => {
     const result = await conversation.finish();
@@ -76,14 +76,12 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
       style={styles.root}
     >
       <LinearGradient
-        colors={[scenario.gradient[1], scenario.gradient[0], colors.background]}
-        locations={[0, 0.45, 1]}
-        style={[styles.backdrop, { height: height * 0.62 }]}
+        colors={[colors.primarySoft, colors.background]}
+        style={[styles.backdrop, { height: height * 0.5 }]}
       />
 
       <View style={[styles.content, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <ScreenHeader
-          inverted
           title={t(`scenario.${scenario.id}.title`)}
           onBack={() => router.back()}
           style={styles.header}
@@ -97,7 +95,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
                 onPress={handleFinish}
                 style={styles.finish}
               >
-                <AppText variant="captionStrong" color="#FFFFFF">
+                <AppText variant="captionStrong" color={colors.primaryDark}>
                   {finishing ? '…' : t('conversation.finishShort')}
                 </AppText>
               </PressableScale>
@@ -106,7 +104,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         />
 
         {status === 'connecting' ? (
-          <LoadingView label={t('conversation.connecting')} inverted />
+          <LoadingView label={t('conversation.connecting')} />
         ) : status === 'error' ? (
           <ErrorView
             message={conversation.errorMessage ?? t('error.unknown')}
@@ -115,9 +113,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         ) : (
           <Animated.View entering={FadeIn.duration(400)} style={styles.stage}>
             <View style={styles.avatarWrap}>
-              <Float3D active={voiceState === 'speaking'}>
-                <TutorAvatar size={avatarSize} speaking={voiceState === 'speaking'} />
-              </Float3D>
+              <EmojiAvatar emoji={emoji} size={avatarSize} speaking={voiceState === 'speaking'} />
             </View>
 
             <View style={styles.messages}>
@@ -139,13 +135,11 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             ) : (
               <View style={styles.controls}>
                 <View style={styles.micRow}>
-                  <Waveform active={voiceState === 'listening' || voiceState === 'speaking'} />
                   <VoiceOrb
                     state={voiceState}
                     onPress={handleMicPress}
                     accessibilityLabel={t(`voiceButton.${voiceState}`)}
                   />
-                  <Waveform active={voiceState === 'listening' || voiceState === 'speaking'} mirrored />
                 </View>
                 <AppText variant="bodyStrong" color={colors.textSecondary} accessibilityLiveRegion="polite">
                   {t(`voice.${voiceState}`)}
@@ -192,14 +186,14 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: colors.primarySoft,
   },
   stage: {
     flex: 1,
   },
   avatarWrap: {
     alignItems: 'center',
-    marginBottom: -spacing.xl,
+    paddingVertical: spacing.xl,
   },
   messages: {
     gap: spacing.md,
@@ -214,13 +208,14 @@ const styles = StyleSheet.create({
   micRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignSelf: 'stretch',
   },
   actions: {
     flexDirection: 'row',
     alignSelf: 'stretch',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: spacing.xxxl,
     paddingTop: spacing.sm,
   },
   composer: {

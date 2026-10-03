@@ -4,8 +4,8 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'intro',
     icon: 'people',
-    tint: '#1F7AFF',
-    gradient: ['#6AA8F5', '#3C6FD1'],
+    tint: '#2AABEE',
+    gradient: ['#5CC3F2', '#1E88C7'],
   },
   {
     id: 'cafe',
@@ -28,13 +28,13 @@ export const SCENARIOS: readonly Scenario[] = [
   {
     id: 'work',
     icon: 'briefcase',
-    tint: '#7C5CFA',
-    gradient: ['#8E78FB', '#4B34C4'],
+    tint: '#5A8DEE',
+    gradient: ['#7FA8F5', '#2F5FC4'],
   },
   {
     id: 'airport',
     icon: 'airplane',
-    tint: '#0EA5E9',
+    tint: '#17B2D6',
     gradient: ['#5CC3F2', '#0A6796'],
   },
 ];

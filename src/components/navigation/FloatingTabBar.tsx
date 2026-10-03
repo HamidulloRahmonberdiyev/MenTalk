@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: 'rgba(31, 122, 255, 0.12)',
+    borderColor: 'rgba(42, 171, 238, 0.12)',
   },
   tab: {
     flex: 1,

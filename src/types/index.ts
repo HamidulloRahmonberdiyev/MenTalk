@@ -56,8 +56,18 @@ export interface HistoryEntry {
   date: number;
 }
 
+export type Gender = 'male' | 'female' | 'unspecified';
+export type RussianLevel = 'beginner' | 'elementary' | 'intermediate' | 'advanced';
+export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
+
 export interface UserProfile {
   name: string;
+  onboarded: boolean;
+  gender: Gender | null;
+  /** ISO date (YYYY-MM-DD). */
+  birthDate: string | null;
+  level: RussianLevel | null;
+  goals: LearningGoal[];
   dailyGoalMinutes: number;
   minutesToday: number;
   lastScenarioId: ScenarioId | null;

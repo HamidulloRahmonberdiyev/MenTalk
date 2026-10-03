@@ -18,7 +18,7 @@ export function DailyGoalCard({ minutesDone, goalMinutes }: DailyGoalCardProps) 
 
   return (
     <LinearGradient
-      colors={['#E3EEFF', '#F4F8FF']}
+      colors={['#DDF2FD', '#F2FAFE']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.card}
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
-    boxShadow: '0 8px 24px rgba(31, 122, 255, 0.10)',
+    boxShadow: '0 8px 24px rgba(42, 171, 238, 0.10)',
   },
   texts: {
     flex: 1,

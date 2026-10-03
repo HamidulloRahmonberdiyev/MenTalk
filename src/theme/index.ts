@@ -1,15 +1,15 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 
 export const colors = {
-  primary: '#1F7AFF',
-  primaryDark: '#1362D6',
-  primaryLight: '#5A9CFF',
-  primarySoft: '#E5EFFF',
-  primaryTint: '#F0F6FF',
+  primary: '#2AABEE',
+  primaryDark: '#229ED9',
+  primaryLight: '#6FC3F5',
+  primarySoft: '#E1F3FC',
+  primaryTint: '#F0FAFE',
 
-  background: '#F2F7FE',
+  background: '#F1F7FB',
   surface: '#FFFFFF',
-  border: '#E1EAF6',
+  border: '#DDEAF3',
 
   text: '#0E1B2C',
   textSecondary: '#5F6F82',
@@ -19,7 +19,7 @@ export const colors = {
   success: '#22B573',
   danger: '#EF4444',
   warning: '#F5A524',
-  purple: '#7C5CFA',
+  purple: '#5A8DEE',
 } as const;
 
 export const spacing = {
@@ -41,9 +41,9 @@ export const radii = {
 } as const;
 
 export const shadows = {
-  card: { boxShadow: '0 4px 18px rgba(23, 64, 128, 0.07)' },
-  raised: { boxShadow: '0 10px 28px rgba(23, 64, 128, 0.14)' },
-  primary: { boxShadow: '0 10px 24px rgba(31, 122, 255, 0.35)' },
+  card: { boxShadow: '0 4px 18px rgba(20, 70, 100, 0.07)' },
+  raised: { boxShadow: '0 10px 28px rgba(20, 70, 100, 0.14)' },
+  primary: { boxShadow: '0 10px 24px rgba(42, 171, 238, 0.35)' },
 } as const satisfies Record<string, ViewStyle>;
 
 export const typography = {

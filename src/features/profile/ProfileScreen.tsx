@@ -1,10 +1,15 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { Card } from '@/components/ui/Card';
 import { TabScreen } from '@/components/ui/TabScreen';
 import { useT } from '@/i18n';
+import { authService } from '@/services/auth';
+import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, shadows, spacing } from '@/theme';
 
@@ -18,9 +23,26 @@ export function ProfileScreen() {
   const name = useUserStore((state) => state.name);
   const goal = useUserStore((state) => state.dailyGoalMinutes);
   const history = useUserStore((state) => state.history);
+  const reset = useUserStore((state) => state.reset);
 
   const totalMinutes = Math.round(sum(history.map((entry) => entry.durationSec)) / 60);
   const average = history.length ? (sum(history.map((entry) => entry.score)) / history.length).toFixed(1) : '–';
+
+  const logout = () => {
+    haptics.light();
+    Alert.alert(t('profile.logoutTitle'), t('profile.logoutMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.logout'),
+        style: 'destructive',
+        onPress: async () => {
+          await authService.signOut();
+          reset();
+          router.replace('/');
+        },
+      },
+    ]);
+  };
 
   return (
     <TabScreen>
@@ -57,6 +79,13 @@ export function ProfileScreen() {
         <AppText variant="heading">{t('profile.language')}</AppText>
         <LanguageSwitcher />
       </View>
+
+      <PressableScale accessibilityRole="button" accessibilityLabel={t('profile.logout')} onPress={logout} style={styles.logout}>
+        <Ionicons name="log-out-outline" size={22} color={colors.danger} />
+        <AppText variant="bodyStrong" color={colors.danger}>
+          {t('profile.logout')}
+        </AppText>
+      </PressableScale>
     </TabScreen>
   );
 }
@@ -78,6 +107,16 @@ const styles = StyleSheet.create({
   },
   texts: { flex: 1, gap: 2 },
   stats: { flexDirection: 'row', gap: spacing.md },
+  logout: {
+    height: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
   language: {
     gap: spacing.md,
     padding: spacing.lg,
