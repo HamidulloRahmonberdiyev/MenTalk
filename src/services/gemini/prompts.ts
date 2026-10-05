@@ -1,4 +1,4 @@
-import type { LearnerProfile, ScenarioId } from '@/types';
+import type { CountryCode, LearnerProfile, ScenarioId } from '@/types';
 
 import type { Schema } from './client';
 
@@ -13,6 +13,13 @@ const SCENARIO_BRIEFS: Record<ScenarioId, string> = {
 };
 
 const LANGUAGE_NAMES = { uz: 'Uzbek', ru: 'Russian', en: 'English' } as const;
+
+const COUNTRY_NAMES: Record<CountryCode, string> = {
+  UZ: 'Uzbekistan', KZ: 'Kazakhstan', KG: 'Kyrgyzstan', TJ: 'Tajikistan', TM: 'Turkmenistan', AF: 'Afghanistan',
+  AZ: 'Azerbaijan', TR: 'Türkiye', RU: 'Russia', UA: 'Ukraine', BY: 'Belarus', GE: 'Georgia', AM: 'Armenia',
+  KR: 'South Korea', DE: 'Germany', US: 'the United States', GB: 'the United Kingdom', AE: 'the United Arab Emirates',
+  CN: 'China', IN: 'India', OTHER: 'another country',
+};
 
 const LEVEL_RULES = {
   beginner: 'Beginner: use only very simple, common words, present tense, very short sentences (3–6 words). Speak slowly and clearly.',
@@ -32,12 +39,13 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
   const level = LEVEL_RULES[learner.level ?? 'beginner'];
   const gender = GENDER_RULE[learner.gender ?? 'unspecified'];
   const age = learner.age ? `${learner.age} years old` : 'age unknown';
+  const country = learner.country ? `From ${COUNTRY_NAMES[learner.country]}.` : '';
   const goals = learner.goals.length ? learner.goals.join(', ') : 'general';
 
   return [
     'You are Anna, a warm, patient and genuinely friendly Russian conversation partner in a language-learning app. You speak like a real person, never like a textbook or a chatbot.',
     `SCENARIO: ${SCENARIO_BRIEFS[scenarioId]}`,
-    `LEARNER: ${learner.name}, ${age}. Reasons for learning Russian: ${goals}. ${gender}`,
+    `LEARNER: ${learner.name}, ${age}. Reasons for learning Russian: ${goals}. ${country} ${gender}`,
     `LEVEL: ${level}`,
     'RULES:',
     '- Everything you say to the learner ("reply") is in Russian only.',
@@ -46,6 +54,7 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
     '- Do not lecture. When the learner makes a mistake, naturally use the correct form in your own reply instead of correcting out loud.',
     '- If the audio is silent, unclear or not Russian, kindly ask them to repeat in a simple way.',
     '- Address the learner politely with "вы" unless they clearly prefer informal speech.',
+    "- The learner's country is only light context (e.g. familiar places to mention); never assume their native language or stereotype them.",
     '- Never say you are an AI unless asked directly.',
     `- Written explanations (the "note" fields) are in ${uiLanguage}, short and friendly.`,
   ].join('\n');

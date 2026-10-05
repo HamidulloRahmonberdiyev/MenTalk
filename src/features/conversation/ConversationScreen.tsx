@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { router, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,6 +58,10 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const audioLevel = useMockAudioLevel(shownState === 'speaking');
   const voice = useVoiceTurn(conversation, voiceState);
 
+  const navigation = useNavigation();
+  /** Set once the screen is allowed to close without asking again (result shown, or the user said No). */
+  const exitAllowed = useRef(false);
+
   const handleFinish = useCallback(async () => {
     await voice.cancel();
     const result = await conversation.finish();
@@ -65,8 +69,33 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
     haptics.success();
     recordConversation(result.scenarioId, result.durationSec, result.overall);
     setResult(result);
+    exitAllowed.current = true;
     router.replace('/result');
   }, [conversation, voice, recordConversation, setResult]);
+
+  // Leaving by any route (back button, swipe, hardware back) asks whether to finish and show the result.
+  const { hasAnswered } = conversation;
+  const stopVoice = voice.cancel;
+  useEffect(
+    () =>
+      navigation.addListener('beforeRemove', (event) => {
+        if (exitAllowed.current || !hasAnswered()) return;
+        event.preventDefault();
+        Alert.alert(t('conversation.exitTitle'), t('conversation.exitMessage'), [
+          {
+            text: t('conversation.exitNo'),
+            style: 'destructive',
+            onPress: () => {
+              exitAllowed.current = true;
+              void stopVoice();
+              navigation.dispatch(event.data.action);
+            },
+          },
+          { text: t('conversation.exitYes'), isPreferred: true, onPress: () => void handleFinish() },
+        ]);
+      }),
+    [navigation, hasAnswered, stopVoice, handleFinish, t],
+  );
 
   const handleSendText = useCallback(
     (text: string) => {

@@ -72,9 +72,13 @@ export type RussianLevel = 'beginner' | 'elementary' | 'intermediate' | 'advance
 export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
 
 /** Everything the tutor should know about the person it is talking to. */
+/** Where the learner is from (ISO 3166-1 alpha-2), or 'OTHER' for a country that is not listed. */
+export type CountryCode = 'UZ' | 'KZ' | 'KG' | 'TJ' | 'TM' | 'AF' | 'AZ' | 'TR' | 'RU' | 'UA' | 'BY' | 'GE' | 'AM' | 'KR' | 'DE' | 'US' | 'GB' | 'AE' | 'CN' | 'IN' | 'OTHER';
+
 export interface LearnerProfile {
   name: string;
   gender: Gender | null;
+  country: CountryCode | null;
   age: number | null;
   level: RussianLevel | null;
   goals: LearningGoal[];
@@ -86,6 +90,7 @@ export interface UserProfile {
   name: string;
   onboarded: boolean;
   gender: Gender | null;
+  country: CountryCode | null;
   /** ISO date (YYYY-MM-DD). */
   birthDate: string | null;
   level: RussianLevel | null;

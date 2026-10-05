@@ -12,8 +12,9 @@ import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
-import type { Gender, LearningGoal, RussianLevel } from '@/types';
+import type { CountryCode, Gender, LearningGoal, RussianLevel } from '@/types';
 
+import { COUNTRIES } from './countries';
 import { BirthDateField, type BirthParts } from './BirthDateField';
 import { parseBirthDate } from './birthDate';
 import { OptionCard } from './OptionCard';
@@ -21,11 +22,12 @@ import { ProgressSegments } from './ProgressSegments';
 import { Reveal } from './Reveal';
 import { StepHero } from './StepHero';
 
-type StepId = 'name' | 'gender' | 'birth' | 'level' | 'goals' | 'daily';
+type StepId = 'name' | 'gender' | 'country' | 'birth' | 'level' | 'goals' | 'daily';
 
 const STEPS: readonly { id: StepId; emoji: string }[] = [
   { id: 'name', emoji: '👋' },
   { id: 'gender', emoji: '🙋' },
+  { id: 'country', emoji: '🌍' },
   { id: 'birth', emoji: '🎂' },
   { id: 'level', emoji: '🌱' },
   { id: 'goals', emoji: '🧭' },
@@ -71,6 +73,7 @@ export function OnboardingScreen() {
   const [forward, setForward] = useState(true);
   const [name, setName] = useState(initialName);
   const [gender, setGender] = useState<Gender | null>(null);
+  const [country, setCountry] = useState<CountryCode | null>(null);
   const [birth, setBirth] = useState<BirthParts>({ day: '', month: '', year: '' });
   const [level, setLevel] = useState<RussianLevel | null>(null);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
@@ -84,6 +87,7 @@ export function OnboardingScreen() {
   const canContinue = {
     name: name.trim().length >= 2,
     gender: gender !== null,
+    country: country !== null,
     birth: parsedBirth !== null,
     level: level !== null,
     goals: goals.length > 0,
@@ -116,11 +120,12 @@ export function OnboardingScreen() {
       setStep((value) => value + 1);
       return;
     }
-    if (!gender || !level || !parsedBirth) return;
+    if (!gender || !country || !level || !parsedBirth) return;
     haptics.success();
     completeOnboarding({
       name: name.trim(),
       gender,
+      country,
       birthDate: parsedBirth.iso,
       level,
       goals,
@@ -195,6 +200,14 @@ export function OnboardingScreen() {
               ? GENDERS.map(({ id, emoji }, index) => (
                   <Reveal key={id} index={2 + index}>
                     <OptionCard emoji={emoji} title={t(`onb.gender.${id}`)} selected={gender === id} onPress={() => setGender(id)} />
+                  </Reveal>
+                ))
+              : null}
+
+            {current.id === 'country'
+              ? COUNTRIES.map(({ id, emoji }, index) => (
+                  <Reveal key={id} index={Math.min(2 + index, 8)}>
+                    <OptionCard emoji={emoji} title={t(`country.${id}`)} selected={country === id} onPress={() => setCountry(id)} />
                   </Reveal>
                 ))
               : null}

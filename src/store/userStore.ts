@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 
 import { INITIAL_USER } from '@/mocks/user';
-import type { Gender, LearningGoal, RussianLevel, ScenarioId, UserProfile } from '@/types';
+import type { CountryCode, Gender, LearningGoal, RussianLevel, ScenarioId, UserProfile } from '@/types';
 
 export interface OnboardingData {
   name: string;
   gender: Gender;
+  country: CountryCode;
   birthDate: string;
   level: RussianLevel;
   goals: LearningGoal[];

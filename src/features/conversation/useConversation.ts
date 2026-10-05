@@ -34,6 +34,7 @@ function currentLearner(): LearnerProfile {
   return {
     name: user.name,
     gender: user.gender,
+    country: user.country,
     age: ageFrom(user.birthDate),
     level: user.level,
     goals: user.goals,
@@ -45,6 +46,9 @@ function currentLearner(): LearnerProfile {
 export function useConversation(scenario: Scenario) {
   const t = useT();
   const sessionRef = useRef<ConversationSession | null>(null);
+  /** Whether the learner has given at least one answer, so there is something to evaluate. */
+  const answeredRef = useRef(false);
+  const greetedRef = useRef(false);
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,11 +61,15 @@ export function useConversation(scenario: Scenario) {
 
   useEffect(() => {
     const session = conversationService.createSession(scenario, currentLearner());
+    answeredRef.current = false;
+    greetedRef.current = false;
     sessionRef.current = session;
     const unsubscribe = session.subscribe((event) => {
       switch (event.type) {
         case 'state':
           setVoiceState(event.state);
+          // 'thinking' after the greeting means the learner's turn was submitted.
+          if (event.state === 'thinking' && greetedRef.current) answeredRef.current = true;
           // A new turn starts: the previous sentence is no longer news.
           if (event.state === 'listening') setLearnerText(null);
           break;
@@ -69,6 +77,7 @@ export function useConversation(scenario: Scenario) {
           setLearnerText(event.text);
           break;
         case 'aiMessage':
+          greetedRef.current = true;
           setMessage(event.message);
           setHint(HIDDEN_HINT);
           break;
@@ -106,6 +115,8 @@ export function useConversation(scenario: Scenario) {
     setHint(HIDDEN_HINT);
     setAttempt((value) => value + 1);
   }, []);
+
+  const hasAnswered = useCallback(() => answeredRef.current, []);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
 
@@ -154,6 +165,7 @@ export function useConversation(scenario: Scenario) {
     learnerText,
     hint,
     finishing,
+    hasAnswered,
     notice,
     dismissNotice,
     retry,
