@@ -14,8 +14,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#2F54E6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundImage": "./assets/images/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.hamidullo_rahmonberdiyev.govori"
