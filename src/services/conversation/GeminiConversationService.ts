@@ -205,6 +205,7 @@ class GeminiSession implements ConversationSession {
       if (this.isStale(id)) return;
 
       const learnerText = input.kind === 'text' ? input.text : result.transcript?.trim();
+      if (input.kind === 'audio' && learnerText) this.emit({ type: 'learnerMessage', text: learnerText });
       if (input.kind !== 'opening' && learnerText) {
         this.history.push({ role: 'user', parts: [{ text: learnerText }] });
         this.learnerTurns += 1;
@@ -248,7 +249,7 @@ class GeminiSession implements ConversationSession {
   private async speak(text: string): Promise<SpeechFile | null> {
     if (!geminiConfig.ttsEnabled) return null;
     try {
-      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text));
+      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text, 'ru'));
       this.speechFiles.push(file);
       return file;
     } catch {

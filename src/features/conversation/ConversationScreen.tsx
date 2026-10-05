@@ -10,6 +10,7 @@ import { ErrorView, LoadingView } from '@/components/ui/StateViews';
 import { useMockAudioLevel } from '@/features/face';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useResultStore } from '@/store/resultStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, spacing } from '@/theme';
@@ -25,6 +26,7 @@ import { HintCard } from './HintCard';
 import { NoticeBanner } from './NoticeBanner';
 import { TextComposer } from './TextComposer';
 import { useConversation } from './useConversation';
+import { UserTranscript } from './UserTranscript';
 import { useTutorVoice } from './useTutorVoice';
 import { useVoiceTurn } from './useVoiceTurn';
 import { VoiceOrb } from './VoiceOrb';
@@ -41,6 +43,8 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const conversation = useConversation(scenario);
   const { status, voiceState, message, hint, finishing } = conversation;
   const [keyboardMode, setKeyboardMode] = useState(false);
+  const showTranscript = useSettingsStore((state) => state.showTranscript);
+  const toggleTranscript = useSettingsStore((state) => state.toggleTranscript);
 
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
@@ -119,6 +123,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             <View style={styles.messages}>
               <AiMessageBubble message={message} speaking={shownState === 'speaking'} onReplay={tutor.replay} />
               <HintCard hint={hint} />
+              <UserTranscript text={conversation.learnerText} visible={showTranscript} />
             </View>
 
             <View style={styles.spacer} />
@@ -152,6 +157,13 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
                       void voice.cancel();
                       setKeyboardMode(true);
                     }} />
+                  <ActionButton
+                    icon={showTranscript ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+                    label={t('conversation.transcript')}
+                    accessibilityLabel={t(showTranscript ? 'conversation.transcriptHide' : 'conversation.transcriptShow')}
+                    active={showTranscript}
+                    onPress={toggleTranscript}
+                  />
                   <ActionButton
                     icon="bulb-outline"
                     label={t('conversation.hint')}

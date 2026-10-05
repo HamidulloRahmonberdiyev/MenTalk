@@ -50,6 +50,7 @@ export function useConversation(scenario: Scenario) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
   const [message, setMessage] = useState<AiMessage | null>(null);
+  const [learnerText, setLearnerText] = useState<string | null>(null);
   const [hint, setHint] = useState<HintState>(HIDDEN_HINT);
   const [finishing, setFinishing] = useState(false);
   const [notice, setNotice] = useState<{ code: NoticeCode; id: number } | null>(null);
@@ -61,6 +62,11 @@ export function useConversation(scenario: Scenario) {
       switch (event.type) {
         case 'state':
           setVoiceState(event.state);
+          // A new turn starts: the previous sentence is no longer news.
+          if (event.state === 'listening') setLearnerText(null);
+          break;
+        case 'learnerMessage':
+          setLearnerText(event.text);
           break;
         case 'aiMessage':
           setMessage(event.message);
@@ -96,6 +102,7 @@ export function useConversation(scenario: Scenario) {
     setErrorMessage(null);
     setVoiceState('idle');
     setMessage(null);
+    setLearnerText(null);
     setHint(HIDDEN_HINT);
     setAttempt((value) => value + 1);
   }, []);
@@ -144,6 +151,7 @@ export function useConversation(scenario: Scenario) {
     errorMessage,
     voiceState,
     message,
+    learnerText,
     hint,
     finishing,
     notice,

@@ -135,10 +135,21 @@ export interface SpeechData {
   sampleRate: number;
 }
 
-/** Turns a line into natural speech with Gemini TTS. */
-export async function synthesizeSpeech(text: string): Promise<SpeechData> {
+/**
+ * The TTS model detects the language from the text, and the instruction in front of it biases the
+ * accent: an English instruction before Russian text gives an English-sounding voice. So the style
+ * instruction is written in the language being spoken.
+ */
+const TTS_STYLE: Record<string, (text: string) => string> = {
+  ru: (text) => `Произнеси по-русски, чисто, без акцента, тёплым, естественным, дружелюбным голосом, как добрая учительница: ${text}`,
+  en: (text) => `Say in a warm, natural, friendly tone, like a kind teacher: ${text}`,
+};
+
+/** Turns a line into natural speech with Gemini TTS. `language` is the ISO 639-1 code of `text`. */
+export async function synthesizeSpeech(text: string, language = 'en'): Promise<SpeechData> {
+  const style = TTS_STYLE[language] ?? TTS_STYLE.en;
   const response = await post(geminiConfig.ttsModel, {
-    contents: [{ parts: [{ text: `Say in a warm, natural, friendly tone, like a kind teacher: ${text}` }] }],
+    contents: [{ parts: [{ text: style(text) }] }],
     generationConfig: {
       responseModalities: ['AUDIO'],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiConfig.voice } } },

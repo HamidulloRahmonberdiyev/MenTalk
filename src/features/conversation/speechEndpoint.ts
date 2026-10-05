@@ -48,9 +48,9 @@ export interface EndpointConfig {
 export const DEFAULT_ENDPOINT_CONFIG: EndpointConfig = {
   tickMs: 50,
   minSpeechMs: 250,
-  silenceAfterShortMs: 850,
-  silenceAfterMediumMs: 700,
-  silenceAfterLongMs: 600,
+  silenceAfterShortMs: 1000,
+  silenceAfterMediumMs: 850,
+  silenceAfterLongMs: 700,
   noSpeechMs: 7000,
   maxTurnMs: 30_000,
   minStartDb: -42,

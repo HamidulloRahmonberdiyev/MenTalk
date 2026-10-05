@@ -3,6 +3,8 @@ import type { AiMessage, ConversationResult, LearnerProfile, Scenario, VoiceStat
 export type ConversationEvent =
   | { type: 'state'; state: VoiceState }
   | { type: 'aiMessage'; message: AiMessage }
+  /** What the learner said, as recognised from their voice. Arrives just before the tutor's reply. */
+  | { type: 'learnerMessage'; text: string }
   | { type: 'error'; message: string }
   /** A single turn failed; the conversation goes on. */
   | { type: 'notice'; code: NoticeCode };

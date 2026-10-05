@@ -11,15 +11,17 @@ interface ActionButtonProps {
   icon: IconName;
   label: string;
   active?: boolean;
+  /** Spoken label when it differs from the visible one. */
+  accessibilityLabel?: string;
   onPress: () => void;
 }
 
 /** Small secondary action under the mic (keyboard, hint). */
-export function ActionButton({ icon, label, active = false, onPress }: ActionButtonProps) {
+export function ActionButton({ icon, label, active = false, accessibilityLabel, onPress }: ActionButtonProps) {
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ selected: active }}
       onPress={() => {
         haptics.selection();

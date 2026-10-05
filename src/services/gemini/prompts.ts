@@ -52,10 +52,10 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
 }
 
 export const OPENING_PROMPT =
-  'Begin the conversation now: greet the learner by name in character and ask your first simple question. There is no learner audio yet; leave "transcript" empty.';
+  'Begin the conversation now: greet the learner by name in character and ask your first simple question. The "reply" must be written in Russian (Cyrillic) only, never in English. There is no learner audio yet; leave "transcript" empty.';
 
 export const AUDIO_TURN_PROMPT =
-  'The learner just said the following (audio). First transcribe exactly what you heard, then reply as Anna.';
+  'The learner just said the following (audio). They are learning Russian, so expect Russian, possibly with errors or an accent. First transcribe exactly what you heard, in the language it was spoken, then reply as Anna. The "reply" is always Russian only, never English.';
 
 const MISTAKE_SCHEMA: Schema = {
   type: 'OBJECT',
