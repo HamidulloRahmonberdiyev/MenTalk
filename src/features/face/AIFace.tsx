@@ -16,6 +16,7 @@ const EYE_X = [64, 136] as const;
 const EYE_Y = 56;
 const EYE_HALF_WIDTH = 14;
 const EYE_HALF_HEIGHT = 18;
+const BROW_HALF_WIDTH = 15;
 const MOUTH_Y = 108;
 const KAPPA = 0.5523;
 const MOUTH_INSIDE = '#0B4A6A';
@@ -34,28 +35,56 @@ function eyePath(cx: number, cy: number, top: number, bottom: number): string {
   );
 }
 
-function useEyeProps({ eyeOpen, blink, smileEyes, gazeX, gazeY }: FaceMotion, index: 0 | 1) {
+/** Only the right eye winks; it bends into the same smiling crescent as a happy eye. */
+const smileOf = ({ smileEyes, wink }: FaceMotion, index: 0 | 1) => {
+  'worklet';
+  return index === 1 ? Math.max(smileEyes.value, wink.value) : smileEyes.value;
+};
+
+function useEyeProps(motion: FaceMotion, index: 0 | 1) {
+  const { eyeOpen, blink, gazeX, gazeY } = motion;
   return useAnimatedProps(() => {
+    const smileEyes = smileOf(motion, index);
     const open = Math.max(0.06, eyeOpen.value * (1 - blink.value * 0.94));
     const top = EYE_HALF_HEIGHT * open;
-    const bottom = top * (1 - smileEyes.value * 1.65);
-    return { d: eyePath(EYE_X[index] + gazeX.value * 7, EYE_Y + gazeY.value * 5 + smileEyes.value * 3, top, bottom) };
+    const bottom = top * (1 - smileEyes * 1.65);
+    return { d: eyePath(EYE_X[index] + gazeX.value * 7, EYE_Y + gazeY.value * 5 + smileEyes * 3, top, bottom) };
   });
 }
 
-function useGlintProps({ eyeOpen, blink, smileEyes, gazeX, gazeY }: FaceMotion, index: 0 | 1) {
+/** Brow as a gentle arc above the eye. Left brow's inner end is on the right, and vice versa. */
+function useBrowProps({ eyeOpen, blink, gazeX, browLift, browTilt, browAsym, mouth, reaction }: FaceMotion, index: 0 | 1) {
   return useAnimatedProps(() => {
+    const dir = index === 0 ? 1 : -1; // towards the face centre
+    const cx = EYE_X[index] + gazeX.value * 4;
+    const lift = browLift.value + reaction.value * 0.5 + mouth.value * 0.12 + (index === 1 ? browAsym.value : 0);
+    const y = EYE_Y - EYE_HALF_HEIGHT * eyeOpen.value - 11 - lift * 7 + blink.value * 2;
+    const tilt = browTilt.value * 5;
+    const outerY = y + tilt * 0.5;
+    const innerY = y - tilt;
+    const arch = 5 + browLift.value * 1.5 - Math.abs(browTilt.value) * 1.5;
+    const w = BROW_HALF_WIDTH;
+    const outerX = cx - dir * w;
+    const innerX = cx + dir * w;
+    return { d: `M${outerX} ${outerY} Q${cx} ${(outerY + innerY) / 2 - arch} ${innerX} ${innerY}` };
+  });
+}
+
+function useGlintProps(motion: FaceMotion, index: 0 | 1) {
+  const { eyeOpen, blink, gazeX, gazeY } = motion;
+  return useAnimatedProps(() => {
+    const smileEyes = smileOf(motion, index);
     const open = Math.max(0.06, eyeOpen.value * (1 - blink.value * 0.94));
     return {
       cx: EYE_X[index] + gazeX.value * 7 + 4.5,
       cy: EYE_Y + gazeY.value * 5 - 7 * open,
-      opacity: Math.max(0, 1 - blink.value * 1.4 - smileEyes.value * 1.6),
+      opacity: Math.max(0, 1 - blink.value * 1.4 - smileEyes * 1.6),
     };
   });
 }
 
 /**
- * The tutor's face: two eyes and a mouth, drawn with SVG and driven entirely by Reanimated shared values.
+ * The tutor's face: two eyes, expressive brows and a mouth, drawn with SVG and driven entirely by Reanimated shared values.
  *
  *   <AIFace state="speaking" emotion="happy" audioLevel={level} />
  *
@@ -71,6 +100,8 @@ export const AIFace = memo(function AIFace({
 }: AIFaceProps) {
   const motion = useFaceMotion(state, emotion, audioLevel);
   const { breathe, sway, smile, mouthShift, mouth, reaction } = motion;
+  const leftBrow = useBrowProps(motion, 0);
+  const rightBrow = useBrowProps(motion, 1);
 
   const leftEye = useEyeProps(motion, 0);
   const rightEye = useEyeProps(motion, 1);
@@ -119,6 +150,9 @@ export const AIFace = memo(function AIFace({
           <AnimatedPath fill="url(#eye)" animatedProps={rightEye} />
           <AnimatedCircle r={4.2} fill="#FFFFFF" animatedProps={leftGlint} />
           <AnimatedCircle r={4.2} fill="#FFFFFF" animatedProps={rightGlint} />
+
+          <AnimatedPath fill="none" stroke={color} strokeWidth={5} strokeLinecap="round" animatedProps={leftBrow} />
+          <AnimatedPath fill="none" stroke={color} strokeWidth={5} strokeLinecap="round" animatedProps={rightBrow} />
 
           <AnimatedPath
             fill={MOUTH_INSIDE}

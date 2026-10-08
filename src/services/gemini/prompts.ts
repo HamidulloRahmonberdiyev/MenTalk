@@ -1,4 +1,5 @@
-import type { CountryCode, LearnerProfile, ScenarioId } from '@/types';
+import { englishCountryName } from '@/features/onboarding/countries';
+import type { LearnerProfile, ScenarioId } from '@/types';
 
 import type { Schema } from './client';
 
@@ -13,13 +14,6 @@ const SCENARIO_BRIEFS: Record<ScenarioId, string> = {
 };
 
 const LANGUAGE_NAMES = { uz: 'Uzbek', ru: 'Russian', en: 'English' } as const;
-
-const COUNTRY_NAMES: Record<CountryCode, string> = {
-  UZ: 'Uzbekistan', KZ: 'Kazakhstan', KG: 'Kyrgyzstan', TJ: 'Tajikistan', TM: 'Turkmenistan', AF: 'Afghanistan',
-  AZ: 'Azerbaijan', TR: 'Türkiye', RU: 'Russia', UA: 'Ukraine', BY: 'Belarus', GE: 'Georgia', AM: 'Armenia',
-  KR: 'South Korea', DE: 'Germany', US: 'the United States', GB: 'the United Kingdom', AE: 'the United Arab Emirates',
-  CN: 'China', IN: 'India', OTHER: 'another country',
-};
 
 const LEVEL_RULES = {
   beginner: 'Beginner: use only very simple, common words, present tense, very short sentences (3–6 words). Speak slowly and clearly.',
@@ -39,7 +33,8 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
   const level = LEVEL_RULES[learner.level ?? 'beginner'];
   const gender = GENDER_RULE[learner.gender ?? 'unspecified'];
   const age = learner.age ? `${learner.age} years old` : 'age unknown';
-  const country = learner.country ? `From ${COUNTRY_NAMES[learner.country]}.` : '';
+  const countryName = learner.country ? englishCountryName(learner.country) : undefined;
+  const country = countryName ? `From ${countryName}.` : '';
   const goals = learner.goals.length ? learner.goals.join(', ') : 'general';
 
   return [
@@ -49,9 +44,10 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
     `LEVEL: ${level}`,
     'RULES:',
     '- Everything you say to the learner ("reply") is in Russian only.',
-    '- Keep each reply to one or two short, natural spoken sentences. No lists, no emojis, no stage directions.',
+    '- Keep each reply to one or two short, natural spoken sentences. No lists, no stage directions.',
+    '- Use emojis the way a real person does in a friendly chat: one or two per reply, matching your emotion (😊 warmth, 😄 joy, 👏 praise, 🤔 curiosity, 😅 gentle humour, 🤗 comfort), placed naturally at the end of a sentence or the reply. Never string many together and never replace words with them. Skip them if the moment is neutral.',
     '- Stay in the scenario and in character. React to what the learner actually said, then keep the conversation moving, usually with one simple question.',
-    '- Do not lecture. When the learner makes a mistake, naturally use the correct form in your own reply instead of correcting out loud.',
+    '- Never correct, repeat, rephrase or comment on the learner\'s mistakes during the conversation, not even gently or indirectly. Just understand them and keep the conversation flowing. Mistakes are logged silently in "mistakes" and reviewed after the chat ends.',
     '- If the audio is silent, unclear or not Russian, kindly ask them to repeat in a simple way.',
     '- Address the learner politely with "вы" unless they clearly prefer informal speech.',
     "- The learner's country is only light context (e.g. familiar places to mention); never assume their native language or stereotype them.",
@@ -83,8 +79,8 @@ export const TURN_SCHEMA: Schema = {
   properties: {
     transcript: { type: 'STRING', description: 'Exactly what the learner said; empty if nothing intelligible' },
     reply: { type: 'STRING', description: 'Anna\'s next line, in Russian' },
-    emotion: { type: 'STRING', enum: ['neutral', 'happy', 'encouraging', 'curious', 'empathetic'] },
-    mistakes: { type: 'ARRAY', items: MISTAKE_SCHEMA, description: 'Real errors in this learner turn (at most 2)' },
+    emotion: { type: 'STRING', enum: ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'], description: "Anna's feeling in this line; surprised for genuinely surprising news, playful for a light joke or wink" },
+    mistakes: { type: 'ARRAY', items: MISTAKE_SCHEMA, description: 'Silent log of real errors in this learner turn (at most 2); never shown or referred to in "reply". Empty if none.' },
   },
   required: ['transcript', 'reply', 'emotion', 'mistakes'],
 };
@@ -103,12 +99,23 @@ export const EVALUATION_SCHEMA: Schema = {
 export const HINT_PROMPT =
   'Suggest ONE short, natural Russian phrase the learner could say next, suited to their level. Output only the phrase, nothing else.';
 
-export function buildEvaluationPrompt(transcript: string): string {
-  return [
+export interface LoggedMistake {
+  wrong: string;
+  correct: string;
+  note: string;
+}
+
+export function buildEvaluationPrompt(transcript: string, logged: LoggedMistake[] = []): string {
+  const lines = [
     'The conversation is over. Evaluate the LEARNER only, honestly but encouragingly, from the transcript below.',
     'Score speech, vocabulary and grammar from 0 to 10. List the most important real mistakes.',
     'Only quote words the learner actually wrote or said; never invent errors.',
-    '',
-    transcript,
-  ].join('\n');
+  ];
+  if (logged.length) {
+    lines.push(
+      'Errors noted live while listening to the learner (the transcript may have auto-corrected them). Verify each, merge duplicates, and keep the most instructive ones:',
+      ...logged.map((item) => `- "${item.wrong}" -> "${item.correct}" (${item.note})`),
+    );
+  }
+  return [...lines, '', transcript].join('\n');
 }

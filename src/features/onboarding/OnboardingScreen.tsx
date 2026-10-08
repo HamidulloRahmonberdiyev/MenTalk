@@ -14,7 +14,7 @@ import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
 import type { CountryCode, Gender, LearningGoal, RussianLevel } from '@/types';
 
-import { COUNTRIES } from './countries';
+import { CountryPicker } from './CountryPicker';
 import { BirthDateField, type BirthParts } from './BirthDateField';
 import { parseBirthDate } from './birthDate';
 import { OptionCard } from './OptionCard';
@@ -154,6 +154,25 @@ export function OnboardingScreen() {
         <ProgressSegments count={STEPS.length} step={step} />
       </View>
 
+      {current.id === 'country' ? (
+        <View key="country" style={styles.countryStep}>
+          <View style={styles.heading}>
+            <Reveal index={0} direction={direction}>
+              <AppText variant="title" style={styles.center} accessibilityRole="header">
+                {t('onb.country.title')}
+              </AppText>
+            </Reveal>
+            <Reveal index={1} direction={direction}>
+              <AppText variant="body" color={colors.textSecondary} style={styles.center}>
+                {t('onb.country.subtitle')}
+              </AppText>
+            </Reveal>
+          </View>
+          <Reveal index={2} style={styles.countryPicker}>
+            <CountryPicker value={country} onChange={setCountry} />
+          </Reveal>
+        </View>
+      ) : (
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -200,14 +219,6 @@ export function OnboardingScreen() {
               ? GENDERS.map(({ id, emoji }, index) => (
                   <Reveal key={id} index={2 + index}>
                     <OptionCard emoji={emoji} title={t(`onb.gender.${id}`)} selected={gender === id} onPress={() => setGender(id)} />
-                  </Reveal>
-                ))
-              : null}
-
-            {current.id === 'country'
-              ? COUNTRIES.map(({ id, emoji }, index) => (
-                  <Reveal key={id} index={Math.min(2 + index, 8)}>
-                    <OptionCard emoji={emoji} title={t(`country.${id}`)} selected={country === id} onPress={() => setCountry(id)} />
                   </Reveal>
                 ))
               : null}
@@ -268,6 +279,7 @@ export function OnboardingScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <Button
@@ -301,6 +313,8 @@ const styles = StyleSheet.create({
   },
   scroll: { flexGrow: 1, gap: spacing.xxl, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
   step: { gap: spacing.xxl },
+  countryStep: { flex: 1, gap: spacing.lg, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
+  countryPicker: { flex: 1 },
   heading: { gap: spacing.sm },
   center: { textAlign: 'center' },
   body: { gap: spacing.md },

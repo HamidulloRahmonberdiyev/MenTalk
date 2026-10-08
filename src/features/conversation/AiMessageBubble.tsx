@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, { Easing, FadeInDown, FadeOut, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import { useEffect } from 'react';
 
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
@@ -18,6 +19,12 @@ interface AiMessageBubbleProps {
 /** The tutor's Russian line in a speech bubble whose tail points up at the avatar. */
 export function AiMessageBubble({ message, speaking, onReplay }: AiMessageBubbleProps) {
   const t = useT();
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    pulse.value = speaking ? withRepeat(withTiming(1, { duration: 900, easing: Easing.out(Easing.quad) }), -1) : withTiming(0, { duration: 200 });
+  }, [speaking, pulse]);
+  const ring = useAnimatedStyle(() => ({ opacity: speaking ? 0.5 * (1 - pulse.value) : 0, transform: [{ scale: 1 + pulse.value * 0.55 }] }));
+
   return (
     <Animated.View
       key={message?.id ?? 'placeholder'}
@@ -31,6 +38,8 @@ export function AiMessageBubble({ message, speaking, onReplay }: AiMessageBubble
         <AppText variant="subheading" style={styles.text}>
           {message ? message.text : '…'}
         </AppText>
+        <View style={styles.speakerWrap}>
+        <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={t('conversation.replay')}
@@ -41,6 +50,7 @@ export function AiMessageBubble({ message, speaking, onReplay }: AiMessageBubble
         >
           <Ionicons name={speaking ? 'volume-high' : 'volume-medium'} size={20} color={speaking ? colors.onPrimary : colors.primary} />
         </PressableScale>
+        </View>
       </View>
     </Animated.View>
   );
@@ -67,7 +77,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
     ...shadows.raised,
   },
   text: { flex: 1, fontWeight: '600' },
@@ -79,5 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primarySoft,
   },
+  speakerWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  ring: { position: 'absolute', width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.primary },
   speakerActive: { backgroundColor: colors.primary },
 });

@@ -18,7 +18,7 @@ export interface Scenario {
 /** Turn-taking state of the voice conversation. */
 export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
-export type TutorEmotion = 'neutral' | 'happy' | 'encouraging' | 'curious' | 'empathetic';
+export type TutorEmotion = 'neutral' | 'happy' | 'encouraging' | 'curious' | 'empathetic' | 'surprised' | 'playful';
 
 export interface AiMessage {
   id: string;
@@ -72,8 +72,8 @@ export type RussianLevel = 'beginner' | 'elementary' | 'intermediate' | 'advance
 export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
 
 /** Everything the tutor should know about the person it is talking to. */
-/** Where the learner is from (ISO 3166-1 alpha-2), or 'OTHER' for a country that is not listed. */
-export type CountryCode = 'UZ' | 'KZ' | 'KG' | 'TJ' | 'TM' | 'AF' | 'AZ' | 'TR' | 'RU' | 'UA' | 'BY' | 'GE' | 'AM' | 'KR' | 'DE' | 'US' | 'GB' | 'AE' | 'CN' | 'IN' | 'OTHER';
+/** Where the learner is from: an ISO 3166-1 alpha-2 code (legacy profiles may hold 'OTHER'). */
+export type CountryCode = string;
 
 export interface LearnerProfile {
   name: string;

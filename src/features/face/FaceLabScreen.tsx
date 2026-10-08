@@ -9,12 +9,12 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 
-import { AIFace } from './AIFace';
+import { AIMascot } from './AIMascot';
 import type { FaceEmotion, FaceState } from './types';
 import { useMockAudioLevel } from './useMockAudioLevel';
 
-const STATES: readonly FaceState[] = ['idle', 'listening', 'thinking', 'speaking', 'happy', 'encouraging'];
-const EMOTIONS: readonly FaceEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic'];
+const STATES: readonly FaceState[] = ['idle', 'listening', 'thinking', 'speaking', 'happy', 'encouraging', 'wink', 'surprised'];
+const EMOTIONS: readonly FaceEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
 
 /** Dev playground: drive the face with mock state, emotion and audio level. */
 export function FaceLabScreen() {
@@ -24,10 +24,10 @@ export function FaceLabScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Face lab" onBack={() => router.back()} />
+      <ScreenHeader title="Mascot lab" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.stage}>
-          <AIFace state={state} emotion={emotion} audioLevel={audioLevel} size={250} />
+          <AIMascot state={state} emotion={emotion} audioLevel={audioLevel} size={200} />
         </View>
 
         <ChipGroup title="state" items={STATES} value={state} onChange={setState} />
@@ -82,7 +82,7 @@ function ChipGroup<T extends string>({ title, items, value, onChange }: ChipGrou
 const styles = StyleSheet.create({
   content: { gap: spacing.xl, paddingVertical: spacing.lg },
   stage: {
-    height: 260,
+    height: 300,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',

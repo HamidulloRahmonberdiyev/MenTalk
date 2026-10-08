@@ -2,6 +2,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { stripEmoji } from '@/services/text';
 import type { AiMessage, VoiceState } from '@/types';
 
 const LANGUAGE = 'ru-RU';
@@ -27,7 +28,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState)
   }, []);
 
   const speakWithDevice = useCallback((text: string) => {
-    Speech.speak(text, {
+    Speech.speak(stripEmoji(text), {
       language: LANGUAGE,
       rate: RATE,
       onStart: () => setSpeaking(true),

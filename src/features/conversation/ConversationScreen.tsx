@@ -39,7 +39,7 @@ interface ConversationScreenProps {
 export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { height, width } = useWindowDimensions();
   const conversation = useConversation(scenario);
   const { status, voiceState, message, hint, finishing } = conversation;
   const [keyboardMode, setKeyboardMode] = useState(false);
@@ -49,7 +49,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
 
-  const faceSize = Math.min(Math.max(height * 0.21, 140), 210);
+  const faceSize = Math.min(Math.max(Math.min(height * 0.24, width * 0.52), 130), 220);
   const emotion = pickEmotion(message);
   const tutor = useTutorVoice(message, voiceState);
   // The scripted session may report idle while the speech engine is still talking.
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     alignItems: 'center',
-    paddingVertical: spacing.xl,
+    marginBottom: -spacing.md,
   },
   messages: {
     gap: spacing.md,

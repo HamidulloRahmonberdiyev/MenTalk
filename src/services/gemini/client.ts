@@ -1,3 +1,4 @@
+import { stripEmoji } from '../text';
 import { geminiConfig } from './config';
 
 export class GeminiError extends Error {
@@ -149,7 +150,7 @@ const TTS_STYLE: Record<string, (text: string) => string> = {
 export async function synthesizeSpeech(text: string, language = 'en'): Promise<SpeechData> {
   const style = TTS_STYLE[language] ?? TTS_STYLE.en;
   const response = await post(geminiConfig.ttsModel, {
-    contents: [{ parts: [{ text: style(text) }] }],
+    contents: [{ parts: [{ text: style(stripEmoji(text)) }] }],
     generationConfig: {
       responseModalities: ['AUDIO'],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: geminiConfig.voice } } },

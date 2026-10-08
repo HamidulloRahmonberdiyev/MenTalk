@@ -4,6 +4,7 @@ import {
   cancelAnimation,
   useDerivedValue,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withSpring,
@@ -34,8 +35,18 @@ export interface FaceMotion {
   mouthShift: SharedValue<number>;
   /** 0..1 smoothed mouth opening. */
   mouth: SharedValue<number>;
+  /** -1..1 brow height (negative = lowered / frowning, positive = raised). */
+  browLift: SharedValue<number>;
+  /** -1..1 brow slant (positive = inner ends raised, worried / sympathetic; negative = inner ends lowered, focused). */
+  browTilt: SharedValue<number>;
+  /** 0..1 extra lift on one brow only (a quizzical raised brow). */
+  browAsym: SharedValue<number>;
   /** 0..1 one-shot pulse used by the happy / encouraging reactions. */
   reaction: SharedValue<number>;
+  /** 0..1 how closed the right eye is for a wink (it bends into a smiling arch). */
+  wink: SharedValue<number>;
+  /** 0..1 mouth opening while not speaking (a surprised "oh"). */
+  mouthOpen: SharedValue<number>;
 }
 
 interface Pose {
@@ -43,6 +54,11 @@ interface Pose {
   eyeOpen: number;
   smileEyes: number;
   mouthShift: number;
+  browLift: number;
+  browTilt: number;
+  browAsym: number;
+  /** Resting mouth opening when the tutor is not speaking. */
+  mouthOpen?: number;
   gazeX: number;
   gazeY: number;
   /** Amplitude of the random gaze drift. */
@@ -52,22 +68,26 @@ interface Pose {
 }
 
 const POSES: Record<FaceState, Pose> = {
-  idle: { smile: 0.35, eyeOpen: 1, smileEyes: 0, mouthShift: 0, gazeX: 0, gazeY: 0, drift: 1, blinkEvery: [2600, 5200] },
-  listening: { smile: 0.2, eyeOpen: 1.12, smileEyes: 0, mouthShift: 0, gazeX: 0, gazeY: -0.05, drift: 0.28, blinkEvery: [3400, 6400] },
-  thinking: { smile: 0, eyeOpen: 0.9, smileEyes: 0, mouthShift: 0.4, gazeX: 0.8, gazeY: -0.75, drift: 0.2, blinkEvery: [2800, 5600] },
-  speaking: { smile: 0.3, eyeOpen: 1, smileEyes: 0, mouthShift: 0, gazeX: 0, gazeY: 0, drift: 0.4, blinkEvery: [2400, 4600] },
-  happy: { smile: 1, eyeOpen: 1, smileEyes: 1, mouthShift: 0, gazeX: 0, gazeY: 0, drift: 0.1, blinkEvery: [3200, 5400] },
-  encouraging: { smile: 0.65, eyeOpen: 0.96, smileEyes: 0.35, mouthShift: 0, gazeX: 0, gazeY: 0, drift: 0.25, blinkEvery: [3000, 5200] },
+  idle: { smile: 0.35, eyeOpen: 1, smileEyes: 0, mouthShift: 0, browLift: 0, browTilt: 0, browAsym: 0, gazeX: 0, gazeY: 0, drift: 1, blinkEvery: [2600, 5200] },
+  listening: { smile: 0.2, eyeOpen: 1.12, smileEyes: 0, mouthShift: 0, browLift: 0.45, browTilt: 0.1, browAsym: 0, gazeX: 0, gazeY: -0.05, drift: 0.28, blinkEvery: [3400, 6400] },
+  thinking: { smile: 0, eyeOpen: 0.9, smileEyes: 0, mouthShift: 0.4, browLift: 0.1, browTilt: -0.35, browAsym: 0.7, gazeX: 0.8, gazeY: -0.75, drift: 0.2, blinkEvery: [2800, 5600] },
+  speaking: { smile: 0.3, eyeOpen: 1, smileEyes: 0, mouthShift: 0, browLift: 0.1, browTilt: 0, browAsym: 0, gazeX: 0, gazeY: 0, drift: 0.4, blinkEvery: [2400, 4600] },
+  happy: { smile: 1, eyeOpen: 1, smileEyes: 1, mouthShift: 0, browLift: 0.55, browTilt: 0.1, browAsym: 0, gazeX: 0, gazeY: 0, drift: 0.1, blinkEvery: [3200, 5400] },
+  encouraging: { smile: 0.65, eyeOpen: 0.96, smileEyes: 0.35, mouthShift: 0, browLift: 0.4, browTilt: 0.35, browAsym: 0, gazeX: 0, gazeY: 0, drift: 0.25, blinkEvery: [3000, 5200] },
+  wink: { smile: 0.9, eyeOpen: 1, smileEyes: 0, mouthShift: 0.25, browLift: 0.3, browTilt: 0.05, browAsym: 0, gazeX: 0, gazeY: 0, drift: 0.1, blinkEvery: [3200, 5400] },
+  surprised: { smile: 0, eyeOpen: 1.28, smileEyes: 0, mouthShift: 0, browLift: 1, browTilt: 0.1, browAsym: 0, mouthOpen: 0.42, gazeX: 0, gazeY: 0, drift: 0.05, blinkEvery: [4200, 7000] },
 };
 
-type EmotionOffset = Partial<Pick<Pose, 'smile' | 'eyeOpen' | 'smileEyes' | 'mouthShift'>>;
+type EmotionOffset = Partial<Pick<Pose, 'smile' | 'eyeOpen' | 'smileEyes' | 'mouthShift' | 'browLift' | 'browTilt' | 'browAsym' | 'mouthOpen'>>;
 
 const EMOTIONS: Record<FaceEmotion, EmotionOffset> = {
   neutral: {},
-  happy: { smile: 0.35, smileEyes: 0.5 },
-  encouraging: { smile: 0.2, smileEyes: 0.2 },
-  curious: { eyeOpen: 0.1, smile: -0.05, mouthShift: 0.2 },
-  empathetic: { eyeOpen: -0.06, smile: -0.12 },
+  happy: { smile: 0.35, smileEyes: 0.5, browLift: 0.25 },
+  encouraging: { smile: 0.2, smileEyes: 0.2, browLift: 0.15, browTilt: 0.15 },
+  curious: { eyeOpen: 0.1, smile: -0.05, mouthShift: 0.2, browLift: 0.35, browAsym: 0.8 },
+  empathetic: { eyeOpen: -0.06, smile: -0.12, browLift: 0.1, browTilt: 0.8 },
+  surprised: { eyeOpen: 0.22, smile: 0.1, browLift: 0.8, mouthOpen: 0.3 },
+  playful: { smile: 0.4, smileEyes: 0.25, browLift: 0.3, browAsym: 0.5, mouthShift: 0.3 },
 };
 
 const BLEND = { duration: 520, easing: Easing.out(Easing.cubic) } as const;
@@ -90,7 +110,12 @@ export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel
   const smileEyes = useSharedValue(0);
   const smile = useSharedValue(0.35);
   const mouthShift = useSharedValue(0);
+  const browLift = useSharedValue(0);
+  const browTilt = useSharedValue(0);
+  const browAsym = useSharedValue(0);
   const reaction = useSharedValue(0);
+  const wink = useSharedValue(0);
+  const mouthOpen = useSharedValue(0);
 
   const speaking = useSharedValue(0);
   const hasAudio = useSharedValue(0);
@@ -120,13 +145,21 @@ export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel
     eyeOpen.value = withTiming(pose.eyeOpen + (offset.eyeOpen ?? 0), BLEND);
     smileEyes.value = withTiming(Math.min(1, pose.smileEyes + (offset.smileEyes ?? 0)), BLEND);
     mouthShift.value = withTiming(pose.mouthShift + (offset.mouthShift ?? 0), BLEND);
+    browLift.value = withTiming(pose.browLift + (offset.browLift ?? 0), BLEND);
+    browTilt.value = withTiming(pose.browTilt + (offset.browTilt ?? 0), BLEND);
+    browAsym.value = withTiming(pose.browAsym + (offset.browAsym ?? 0), BLEND);
     gazeX.value = withTiming(pose.gazeX, { duration: 600, easing: Easing.out(Easing.cubic) });
     gazeY.value = withTiming(pose.gazeY, { duration: 600, easing: Easing.out(Easing.cubic) });
+    mouthOpen.value = withTiming((pose.mouthOpen ?? 0) + (offset.mouthOpen ?? 0), BLEND);
 
-    if (state === 'happy' || state === 'encouraging') {
+    if (state === 'happy' || state === 'encouraging' || state === 'surprised') {
       reaction.value = withSequence(withTiming(1, { duration: 180 }), withSpring(0, { damping: 9, stiffness: 120 }));
     }
-  }, [state, emotion, smile, eyeOpen, smileEyes, mouthShift, gazeX, gazeY, reaction, speaking]);
+    // A wink is a held beat that opens again by itself, so it also works as a one-off flourish on a playful line.
+    if (state === 'wink' || emotion === 'playful') {
+      wink.value = withSequence(withDelay(260, withTiming(1, { duration: 140 })), withDelay(700, withTiming(0, { duration: 220 })));
+    }
+  }, [state, emotion, smile, eyeOpen, smileEyes, mouthShift, browLift, browTilt, browAsym, gazeX, gazeY, reaction, speaking, wink, mouthOpen]);
 
   // Random blinking and gaze drift: a couple of JS timers that only write shared values.
   useEffect(() => {
@@ -160,7 +193,7 @@ export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel
   }, [state, blink, gazeX, gazeY]);
 
   const mouth = useDerivedValue(() => {
-    if (!speaking.value) return withTiming(0, { duration: 140 });
+    if (!speaking.value) return withTiming(mouthOpen.value, { duration: 140 });
     let level: number;
     if (hasAudio.value) {
       level = levelSource.value;
@@ -172,5 +205,5 @@ export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel
     return withTiming(shapeLevel(level), { duration: 70 });
   });
 
-  return { breathe, sway, blink, gazeX, gazeY, eyeOpen, smileEyes, smile, mouthShift, mouth, reaction };
+  return { breathe, sway, blink, gazeX, gazeY, eyeOpen, smileEyes, smile, mouthShift, mouth, browLift, browTilt, browAsym, reaction, wink, mouthOpen };
 }

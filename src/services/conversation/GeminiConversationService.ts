@@ -65,6 +65,8 @@ class GeminiSession implements ConversationSession {
   /** Plain-text transcript of the conversation so far; the audio itself is only sent for the current turn. */
   private readonly history: Content[] = [];
   private readonly speechFiles: SpeechFile[] = [];
+  /** Errors spotted during the chat; never shown live, only fed into the final evaluation. */
+  private readonly loggedMistakes: RawMistake[] = [];
   private speakingTimer: ReturnType<typeof setTimeout> | null = null;
   private state: VoiceState = 'idle';
   private turn = 0;
@@ -147,7 +149,7 @@ class GeminiSession implements ConversationSession {
       .join('\n');
     const evaluation = await generateJson<EvaluationResult>({
       system: this.system,
-      contents: [{ role: 'user', parts: [{ text: buildEvaluationPrompt(transcript) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildEvaluationPrompt(transcript, this.loggedMistakes) }] }],
       schema: EVALUATION_SCHEMA,
       temperature: 0.2,
     });
@@ -209,6 +211,9 @@ class GeminiSession implements ConversationSession {
       if (input.kind !== 'opening' && learnerText) {
         this.history.push({ role: 'user', parts: [{ text: learnerText }] });
         this.learnerTurns += 1;
+        for (const item of result.mistakes ?? []) {
+          if (item?.wrong && item.correct && item.wrong !== item.correct) this.loggedMistakes.push(item);
+        }
       }
       this.history.push({ role: 'model', parts: [{ text: result.reply }] });
 

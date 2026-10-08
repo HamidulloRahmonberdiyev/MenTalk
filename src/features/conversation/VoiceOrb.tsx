@@ -53,6 +53,11 @@ export const VoiceOrb = memo(function VoiceOrb({ state, onPress, accessibilityLa
     opacity: listening ? 0.5 * (1 - phase.value) : 0.55,
     transform: [{ scale: listening ? 1 + phase.value * 0.3 : 1 + phase.value * 0.04 }],
   }));
+  // A second ripple half a cycle behind the first, so listening reads as continuous sound waves.
+  const outerTrail = useAnimatedStyle(() => {
+    const p = (phase.value + 0.5) % 1;
+    return { opacity: listening ? 0.4 * (1 - p) : 0, transform: [{ scale: 1 + p * 0.3 }] };
+  });
   const inner = useAnimatedStyle(() => ({
     transform: [{ scale: listening && level ? 1 + level.value * 0.16 : 1 + phase.value * 0.03 }],
   }));
@@ -60,6 +65,7 @@ export const VoiceOrb = memo(function VoiceOrb({ state, onPress, accessibilityLa
   return (
     <View style={styles.stage}>
       <Animated.View style={[styles.outer, outer]} />
+      <Animated.View style={[styles.outer, outerTrail]} />
       <Animated.View style={[styles.inner, inner]} />
       <PressableScale
         accessibilityRole="button"

@@ -7,6 +7,8 @@ export function toFaceState(state: VoiceState): FaceState {
 
 const RULES: readonly [RegExp, FaceEmotion][] = [
   [/отлично|молодец|прекрасно|супер|great|excellent/i, 'encouraging'],
+  [/ого|вау|неужели|ничего себе|wow|really\?/i, 'surprised'],
+  [/шутк|хаха|ха-ха|😉|😜|😏/i, 'playful'],
   [/спасибо|пожалуйста|рад[аы]? /i, 'happy'],
   [/извин|простите|sorry/i, 'empathetic'],
   [/!/, 'happy'],
