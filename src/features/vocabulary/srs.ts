@@ -30,7 +30,7 @@ export const isDue = (card: VocabCard, now: number): boolean => card.due <= now;
 
 export function newCard(suggestion: WordSuggestion, now: number): VocabCard {
   const word = suggestion.word.trim().toLowerCase();
-  return { ...suggestion, word, id: word, addedAt: now, stage: 0, due: now, streak: 0, lapses: 0 };
+  return { ...suggestion, word, id: word, addedAt: now, stage: 0, due: now, streak: 0, lapses: 0, updatedAt: now };
 }
 
 /**
@@ -39,9 +39,9 @@ export function newCard(suggestion: WordSuggestion, now: number): VocabCard {
  */
 export function review(card: VocabCard, correct: boolean, now: number): VocabCard {
   if (!correct) {
-    return { ...card, stage: Math.max(0, card.stage - 2), due: now + RETRY_AFTER, streak: 0, lapses: card.lapses + 1 };
+    return { ...card, stage: Math.max(0, card.stage - 2), due: now + RETRY_AFTER, streak: 0, lapses: card.lapses + 1, updatedAt: now };
   }
-  if (!isDue(card, now)) return { ...card, streak: card.streak + 1 };
+  if (!isDue(card, now)) return { ...card, streak: card.streak + 1, updatedAt: now };
   const stage = Math.min(MAX_STAGE, card.stage + 1);
-  return { ...card, stage, due: now + INTERVALS[stage], streak: card.streak + 1 };
+  return { ...card, stage, due: now + INTERVALS[stage], streak: card.streak + 1, updatedAt: now };
 }

@@ -10,6 +10,7 @@ import { TabScreen } from '@/components/ui/TabScreen';
 import { useT } from '@/i18n';
 import { authService } from '@/services/auth';
 import { haptics } from '@/services/haptics';
+import { endSession } from '@/services/session';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, shadows, spacing } from '@/theme';
 
@@ -23,7 +24,6 @@ export function ProfileScreen() {
   const name = useUserStore((state) => state.name);
   const goal = useUserStore((state) => state.dailyGoalMinutes);
   const history = useUserStore((state) => state.history);
-  const reset = useUserStore((state) => state.reset);
 
   const totalMinutes = Math.round(sum(history.map((entry) => entry.durationSec)) / 60);
   const average = history.length ? (sum(history.map((entry) => entry.score)) / history.length).toFixed(1) : '–';
@@ -37,7 +37,7 @@ export function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           await authService.signOut();
-          reset();
+          endSession();
           router.replace('/');
         },
       },

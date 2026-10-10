@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
+import { isApiConfigured } from '@/services/api/config';
+import { authService } from '@/services/auth';
 import { haptics } from '@/services/haptics';
+import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 
 import { LanguageChips } from './LanguageChips';
@@ -18,11 +22,34 @@ const BACKGROUND = require('../../../assets/app/moscow.png');
 const OVERLAY_COLORS = ['rgba(8,6,28,0.45)', 'rgba(8,6,28,0.15)', 'rgba(8,6,28,0.65)', 'rgba(8,6,28,0.92)'] as const;
 const OVERLAY_LOCATIONS = [0, 0.3, 0.62, 1] as const;
 
+/** Signs a returning learner straight in. Resolves to true while the check is running. */
+function useRestoredSession(): boolean {
+  const [checking, setChecking] = useState(isApiConfigured);
+
+  useEffect(() => {
+    if (!isApiConfigured) return;
+    let active = true;
+    authService.restore().then((user) => {
+      if (!active) return;
+      if (user) router.replace(useUserStore.getState().onboarded ? '/home' : '/onboarding');
+      else setChecking(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return checking;
+}
+
 export function WelcomeScreen() {
   const t = useT();
   const insets = useSafeAreaInsets();
+  const checking = useRestoredSession();
 
   const goToAuth = () => router.push('/auth');
+
+  if (checking) return <View style={styles.root} />;
 
   return (
     <View style={styles.root}>

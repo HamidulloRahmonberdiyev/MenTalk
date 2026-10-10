@@ -1,9 +1,13 @@
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
+import { startSession } from '@/services/session';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
+  useEffect(() => startSession(() => router.replace('/')), []);
+
   return (
     <>
       <StatusBar style="dark" />

@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { submitReviews, type ReviewAnswer } from '@/services/session/vocabularySync';
+
 import { buildRound, exerciseFor, isCorrect, type Exercise } from './exercises';
 import { PERFECT_BONUS, xpForAnswer } from './progress';
 import { useVocabularyStore, visibleStreak } from './vocabularyStore';
@@ -31,6 +33,7 @@ export function usePracticeSession() {
   const [correctCount, setCorrectCount] = useState(0);
   const [summary, setSummary] = useState<RoundSummary | null>(null);
   const answered = useRef(new Set<string>());
+  const answers = useRef<ReviewAnswer[]>([]);
 
   const reviewWord = useVocabularyStore((state) => state.reviewWord);
   const finishRound = useVocabularyStore((state) => state.finishRound);
@@ -46,7 +49,10 @@ export function usePracticeSession() {
 
       const first = !answered.current.has(exercise.card.id);
       answered.current.add(exercise.card.id);
-      if (first) reviewWord(exercise.card.id, correct);
+      if (first) {
+        reviewWord(exercise.card.id, correct);
+        answers.current.push({ word: exercise.card.id, correct, answeredAt: Date.now() });
+      }
 
       if (correct) {
         if (first) {
@@ -78,6 +84,7 @@ export function usePracticeSession() {
     const perfect = correctCount === total;
     const bonus = perfect ? PERFECT_BONUS : 0;
     finishRound(xp + bonus);
+    void submitReviews(answers.current);
     setSummary({ correct: correctCount, total, xp: xp + bonus, bonus, streak: visibleStreak(useVocabularyStore.getState()) });
   }, [index, queue.length, correctCount, total, xp, finishRound]);
 

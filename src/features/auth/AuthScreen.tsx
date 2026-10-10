@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
-import { authService } from '@/services/auth';
+import { SignInCancelled, authService } from '@/services/auth';
 import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
@@ -35,8 +35,8 @@ export function AuthScreen() {
       setName(user.name);
       haptics.success();
       router.replace(useUserStore.getState().onboarded ? '/home' : '/onboarding');
-    } catch {
-      setFailed(true);
+    } catch (error) {
+      setFailed(!(error instanceof SignInCancelled));
       setLoading(false);
     }
   };

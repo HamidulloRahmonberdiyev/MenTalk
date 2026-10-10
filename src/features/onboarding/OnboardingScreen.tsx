@@ -16,6 +16,8 @@ import type { CountryCode, Gender, LearningGoal, RussianLevel } from '@/types';
 
 import { CountryPicker } from './CountryPicker';
 import { BirthDateField, type BirthParts } from './BirthDateField';
+import { pushOnboarding } from '@/services/session';
+
 import { parseBirthDate } from './birthDate';
 import { OptionCard } from './OptionCard';
 import { ProgressSegments } from './ProgressSegments';
@@ -122,7 +124,7 @@ export function OnboardingScreen() {
     }
     if (!gender || !country || !level || !parsedBirth) return;
     haptics.success();
-    completeOnboarding({
+    const answers = {
       name: name.trim(),
       gender,
       country,
@@ -130,7 +132,9 @@ export function OnboardingScreen() {
       level,
       goals,
       dailyGoalMinutes: daily,
-    });
+    };
+    completeOnboarding(answers);
+    void pushOnboarding(answers);
     router.replace('/home');
   };
 

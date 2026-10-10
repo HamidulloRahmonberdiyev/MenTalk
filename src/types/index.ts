@@ -168,4 +168,6 @@ export interface VocabCard extends WordSuggestion {
   /** Correct answers in a row. */
   streak: number;
   lapses: number;
+  /** Last local change (ms). Decides which side wins when the card is synced. */
+  updatedAt?: number;
 }

@@ -40,7 +40,8 @@
           "microphonePermission": "MenTalk использует микрофон, чтобы слушать вашу речь и помогать с произношением."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

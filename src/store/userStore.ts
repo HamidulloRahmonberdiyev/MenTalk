@@ -15,6 +15,8 @@ export interface OnboardingData {
 
 interface UserState extends UserProfile {
   setName: (name: string) => void;
+  /** Replaces profile fields with what the server holds. */
+  hydrate: (profile: Partial<UserProfile>) => void;
   reset: () => void;
   completeOnboarding: (data: OnboardingData) => void;
   recordConversation: (scenarioId: ScenarioId, durationSec: number, score: number) => void;
@@ -23,6 +25,7 @@ interface UserState extends UserProfile {
 export const useUserStore = create<UserState>((set) => ({
   ...INITIAL_USER,
   setName: (name) => set({ name }),
+  hydrate: (profile) => set(profile),
   reset: () => set({ ...INITIAL_USER }),
   completeOnboarding: (data) => set({ ...data, onboarded: true }),
   recordConversation: (scenarioId, durationSec, score) =>

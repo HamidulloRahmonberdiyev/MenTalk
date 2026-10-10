@@ -11,7 +11,7 @@ import {
   buildSystemPrompt,
   glossRule,
 } from '@/services/gemini/prompts';
-import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState, WordSuggestion } from '@/types';
+import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
 
 import type {
   ConversationEvent,
@@ -22,6 +22,7 @@ import type {
   RecordedAudio,
   Unsubscribe,
 } from './ConversationService';
+import { toSuggestions } from './suggestions';
 
 /** Matches expo-audio's HIGH_QUALITY preset (AAC in an MPEG-4 container). */
 const RECORDING_MIME = 'audio/mp4';
@@ -54,25 +55,6 @@ interface EvaluationResult {
 type TurnInput = { kind: 'opening' } | { kind: 'audio'; audio: RecordedAudio } | { kind: 'text'; text: string };
 
 const clampScore = (value: number) => Math.min(10, Math.max(0, Math.round(Number.isFinite(value) ? value : 0)));
-
-const MAX_NEW_WORDS = 5;
-
-/** Keeps only complete entries and trims them into saveable suggestions. */
-function toSuggestions(raw: EvaluationResult['newWords']): WordSuggestion[] {
-  return (raw ?? [])
-    .filter((item) => item?.word?.trim() && item.translation?.trim())
-    .slice(0, MAX_NEW_WORDS)
-    .map((item) => {
-      const word = item.word.trim().toLowerCase();
-      const form = item.form?.trim().toLowerCase();
-      return {
-        word,
-        translation: item.translation.trim(),
-        example: item.example?.trim() || undefined,
-        form: form && form !== word ? form : undefined,
-      };
-    });
-}
 
 function noticeFor(error: unknown): NoticeCode {
   if (error instanceof GeminiError) return error.status === 429 ? 'quota' : 'turnFailed';

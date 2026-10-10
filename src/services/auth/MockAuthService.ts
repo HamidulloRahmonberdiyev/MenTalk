@@ -7,5 +7,9 @@ export class MockAuthService implements AuthService {
     return { name: "Hamidullo", email: "hamidullo0760@gmail.com" };
   }
 
+  async restore(): Promise<AuthUser | null> {
+    return null;
+  }
+
   async signOut(): Promise<void> {}
 }
