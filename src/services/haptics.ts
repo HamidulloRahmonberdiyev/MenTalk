@@ -10,4 +10,5 @@ export const haptics = {
   medium: () => safe(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
   selection: () => safe(Haptics.selectionAsync()),
   success: () => safe(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)),
+  error: () => safe(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)),
 };

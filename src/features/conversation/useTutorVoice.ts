@@ -2,6 +2,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import * as Speech from 'expo-speech';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getDeviceVoiceId } from '@/services/speech/deviceVoice';
 import { stripEmoji } from '@/services/text';
 import type { AiMessage, VoiceState } from '@/types';
 
@@ -27,9 +28,11 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState)
     }
   }, []);
 
-  const speakWithDevice = useCallback((text: string) => {
+  const speakWithDevice = useCallback(async (text: string) => {
+    const voice = await getDeviceVoiceId(LANGUAGE);
     Speech.speak(stripEmoji(text), {
       language: LANGUAGE,
+      voice,
       rate: RATE,
       onStart: () => setSpeaking(true),
       onDone: () => setSpeaking(false),
@@ -42,7 +45,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState)
     (line: AiMessage) => {
       stop();
       if (!line.audioUri) {
-        speakWithDevice(line.text);
+        void speakWithDevice(line.text);
         return;
       }
       try {
@@ -58,7 +61,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState)
         });
         next.play();
       } catch {
-        speakWithDevice(line.text);
+        void speakWithDevice(line.text);
       }
     },
     [stop, speakWithDevice],

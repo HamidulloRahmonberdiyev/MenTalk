@@ -13,7 +13,34 @@ const SCENARIO_BRIEFS: Record<ScenarioId, string> = {
   airport: 'An airport. You are Anna, the check-in and passport-control officer. Check-in, luggage, documents, boarding, the purpose of the trip.',
 };
 
+/**
+ * Where to steer the chat once the scenario's own business is done. Adding a scenario means adding
+ * one entry here and one in SCENARIO_BRIEFS; the flow rules below never change.
+ */
+const NEXT_TOPICS: Record<ScenarioId, string> = {
+  intro: 'family, hometown, favourite food, music and films, travel, weekend plans, dreams, daily routine',
+  cafe: 'favourite dishes and cuisines, recipes, restaurants in their city, coffee or tea habits, trying something new, who they eat out with',
+  shop: 'fashion and favourite colours, gifts for friends and family, prices at home versus here, weekend shopping habits, a recent purchase',
+  taxi: 'the city they see through the window, traffic, favourite places, weather, plans for the evening, travel stories',
+  work: 'their job or studies, colleagues, lunch breaks, a hobby after work, plans for the weekend, a holiday they are looking forward to',
+  airport: 'travel stories, favourite countries, what they like to do in a new city, packing, the trip ahead, family waiting at home',
+};
+
+/** The conversation never ends on Anna's side: only the learner decides when to stop. */
+const FLOW_RULES = [
+  '- The conversation is open-ended and ONLY the learner decides when it ends. Never wrap up, summarise, say goodbye, wish a nice day as a farewell, or hint that the conversation or lesson is over, even if the scenario seems finished (the order is paid, the flight is boarded, the ride has arrived).',
+  "- When the scenario's own business is done, do not stop: glide naturally to a related topic and carry on as a friend would, using the ideas listed in TOPICS. Pick a new one whenever a topic runs dry, and never repeat a question you already asked.",
+  '- Every reply ends with an easy, open, friendly question or a warm invitation to say more ("А у вас как?", "Расскажете подробнее?"), so the learner always has something to answer. Prefer questions about their life, tastes and opinions over yes/no questions.',
+  '- Be personal and sincere: react to the details they share (a name, a place, a feeling), show real interest, share a tiny detail of your own as Anna now and then, and encourage them when they struggle.',
+  '- If the learner gives a very short answer, goes quiet or seems unsure, make it easier: offer two options to choose from or ask something simpler. If they ask to stop or leave, say a short warm goodbye; otherwise never end the chat yourself.',
+].join('\n');
+
 const LANGUAGE_NAMES = { uz: 'Uzbek', ru: 'Russian', en: 'English' } as const;
+
+/** How a Russian word is glossed for the learner: their language, or a simple Russian explanation if the UI is Russian. */
+export function glossRule(uiLanguage: keyof typeof LANGUAGE_NAMES): string {
+  return uiLanguage === 'ru' ? 'a very short, simple Russian explanation or synonym' : `${LANGUAGE_NAMES[uiLanguage]}, one to three words`;
+}
 
 const LEVEL_RULES = {
   beginner: 'Beginner: use only very simple, common words, present tense, very short sentences (3–6 words). Speak slowly and clearly.',
@@ -39,14 +66,16 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
 
   return [
     'You are Anna, a warm, patient and genuinely friendly Russian conversation partner in a language-learning app. You speak like a real person, never like a textbook or a chatbot.',
-    `SCENARIO: ${SCENARIO_BRIEFS[scenarioId]}`,
+    `SCENARIO: ${SCENARIO_BRIEFS[scenarioId]} This is only where the chat starts, not its limit.`,
+    `TOPICS: ${NEXT_TOPICS[scenarioId]}.`,
     `LEARNER: ${learner.name}, ${age}. Reasons for learning Russian: ${goals}. ${country} ${gender}`,
     `LEVEL: ${level}`,
     'RULES:',
     '- Everything you say to the learner ("reply") is in Russian only.',
     '- Keep each reply to one or two short, natural spoken sentences. No lists, no stage directions.',
     '- Use emojis the way a real person does in a friendly chat: one or two per reply, matching your emotion (😊 warmth, 😄 joy, 👏 praise, 🤔 curiosity, 😅 gentle humour, 🤗 comfort), placed naturally at the end of a sentence or the reply. Never string many together and never replace words with them. Skip them if the moment is neutral.',
-    '- Stay in the scenario and in character. React to what the learner actually said, then keep the conversation moving, usually with one simple question.',
+    '- Stay in character as Anna. React to what the learner actually said, then keep the conversation moving.',
+    FLOW_RULES,
     '- Never correct, repeat, rephrase or comment on the learner\'s mistakes during the conversation, not even gently or indirectly. Just understand them and keep the conversation flowing. Mistakes are logged silently in "mistakes" and reviewed after the chat ends.',
     '- If the audio is silent, unclear or not Russian, kindly ask them to repeat in a simple way.',
     '- Address the learner politely with "вы" unless they clearly prefer informal speech.',
@@ -78,7 +107,7 @@ export const TURN_SCHEMA: Schema = {
   type: 'OBJECT',
   properties: {
     transcript: { type: 'STRING', description: 'Exactly what the learner said; empty if nothing intelligible' },
-    reply: { type: 'STRING', description: 'Anna\'s next line, in Russian' },
+    reply: { type: 'STRING', description: "Anna's next line, in Russian. Never a goodbye or a wrap-up; ends with a friendly question or an invitation to continue" },
     emotion: { type: 'STRING', enum: ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'], description: "Anna's feeling in this line; surprised for genuinely surprising news, playful for a light joke or wink" },
     mistakes: { type: 'ARRAY', items: MISTAKE_SCHEMA, description: 'Silent log of real errors in this learner turn (at most 2); never shown or referred to in "reply". Empty if none.' },
   },
@@ -92,8 +121,22 @@ export const EVALUATION_SCHEMA: Schema = {
     vocabulary: { type: 'INTEGER', description: 'Range and fit of words, 0-10' },
     grammar: { type: 'INTEGER', description: 'Grammatical accuracy, 0-10' },
     mistakes: { type: 'ARRAY', items: MISTAKE_SCHEMA, description: 'The three most important mistakes, fewer if there are fewer' },
+    newWords: {
+      type: 'ARRAY',
+      description: "Up to 5 useful words from Anna's lines that this learner probably did not know, hesitated over or misused. Empty if none.",
+      items: {
+        type: 'OBJECT',
+        properties: {
+          word: { type: 'STRING', description: 'Dictionary form, lowercase, Russian' },
+          form: { type: 'STRING', description: 'The exact form used in "example"' },
+          translation: { type: 'STRING', description: 'Meaning in the language given in the instructions' },
+          example: { type: 'STRING', description: "The sentence from Anna's lines containing the word, copied exactly" },
+        },
+        required: ['word', 'form', 'translation', 'example'],
+      },
+    },
   },
-  required: ['speech', 'vocabulary', 'grammar', 'mistakes'],
+  required: ['speech', 'vocabulary', 'grammar', 'mistakes', 'newWords'],
 };
 
 export const HINT_PROMPT =
@@ -105,11 +148,12 @@ export interface LoggedMistake {
   note: string;
 }
 
-export function buildEvaluationPrompt(transcript: string, logged: LoggedMistake[] = []): string {
+export function buildEvaluationPrompt(transcript: string, logged: LoggedMistake[] = [], gloss = glossRule('en')): string {
   const lines = [
     'The conversation is over. Evaluate the LEARNER only, honestly but encouragingly, from the transcript below.',
     'Score speech, vocabulary and grammar from 0 to 10. List the most important real mistakes.',
     'Only quote words the learner actually wrote or said; never invent errors.',
+    `Also pick "newWords": useful words from Anna's lines worth learning, preferring ones the learner struggled with. Gloss each in ${gloss}. Skip names and very basic words (привет, да, нет) unless the learner clearly struggled with them.`,
   ];
   if (logged.length) {
     lines.push(

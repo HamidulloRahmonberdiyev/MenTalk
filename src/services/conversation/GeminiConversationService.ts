@@ -9,8 +9,9 @@ import {
   TURN_SCHEMA,
   buildEvaluationPrompt,
   buildSystemPrompt,
+  glossRule,
 } from '@/services/gemini/prompts';
-import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
+import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState, WordSuggestion } from '@/types';
 
 import type {
   ConversationEvent,
@@ -47,11 +48,31 @@ interface EvaluationResult {
   vocabulary: number;
   grammar: number;
   mistakes: RawMistake[];
+  newWords?: { word: string; form?: string; translation: string; example?: string }[];
 }
 
 type TurnInput = { kind: 'opening' } | { kind: 'audio'; audio: RecordedAudio } | { kind: 'text'; text: string };
 
 const clampScore = (value: number) => Math.min(10, Math.max(0, Math.round(Number.isFinite(value) ? value : 0)));
+
+const MAX_NEW_WORDS = 5;
+
+/** Keeps only complete entries and trims them into saveable suggestions. */
+function toSuggestions(raw: EvaluationResult['newWords']): WordSuggestion[] {
+  return (raw ?? [])
+    .filter((item) => item?.word?.trim() && item.translation?.trim())
+    .slice(0, MAX_NEW_WORDS)
+    .map((item) => {
+      const word = item.word.trim().toLowerCase();
+      const form = item.form?.trim().toLowerCase();
+      return {
+        word,
+        translation: item.translation.trim(),
+        example: item.example?.trim() || undefined,
+        form: form && form !== word ? form : undefined,
+      };
+    });
+}
 
 function noticeFor(error: unknown): NoticeCode {
   if (error instanceof GeminiError) return error.status === 429 ? 'quota' : 'turnFailed';
@@ -75,7 +96,7 @@ class GeminiSession implements ConversationSession {
 
   constructor(
     private readonly scenario: Scenario,
-    learner: LearnerProfile,
+    private readonly learner: LearnerProfile,
   ) {
     this.system = buildSystemPrompt(scenario.id, learner);
   }
@@ -149,7 +170,7 @@ class GeminiSession implements ConversationSession {
       .join('\n');
     const evaluation = await generateJson<EvaluationResult>({
       system: this.system,
-      contents: [{ role: 'user', parts: [{ text: buildEvaluationPrompt(transcript, this.loggedMistakes) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildEvaluationPrompt(transcript, this.loggedMistakes, glossRule(this.learner.uiLanguage)) }] }],
       schema: EVALUATION_SCHEMA,
       temperature: 0.2,
     });
@@ -176,6 +197,7 @@ class GeminiSession implements ConversationSession {
           note: item.note,
         }),
       ),
+      newWords: toSuggestions(evaluation.newWords),
     };
   }
 
@@ -254,10 +276,11 @@ class GeminiSession implements ConversationSession {
   private async speak(text: string): Promise<SpeechFile | null> {
     if (!geminiConfig.ttsEnabled) return null;
     try {
-      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text, 'ru'));
+      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text));
       this.speechFiles.push(file);
       return file;
-    } catch {
+    } catch (error) {
+      if (__DEV__) console.warn('Gemini TTS failed, using the device voice:', error);
       return null;
     }
   }

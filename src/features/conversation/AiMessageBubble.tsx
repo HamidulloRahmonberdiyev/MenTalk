@@ -7,6 +7,7 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { colors, radii, shadows, spacing } from '@/theme';
+import { TappableText } from '@/features/vocabulary/TappableText';
 import type { AiMessage } from '@/types';
 
 interface AiMessageBubbleProps {
@@ -14,10 +15,18 @@ interface AiMessageBubbleProps {
   speaking: boolean;
   /** Plays the line again. */
   onReplay?: () => void;
+  /** A word of the line was tapped (to translate and save it). */
+  onWordPress?: (word: string) => void;
+  /** Normalized forms of words the learner already saved. */
+  savedWords?: ReadonlySet<string>;
+  /** Show the "tap any word" tip. */
+  showTip?: boolean;
 }
 
+const NO_WORDS: ReadonlySet<string> = new Set();
+
 /** The tutor's Russian line in a speech bubble whose tail points up at the avatar. */
-export function AiMessageBubble({ message, speaking, onReplay }: AiMessageBubbleProps) {
+export function AiMessageBubble({ message, speaking, onReplay, onWordPress, savedWords = NO_WORDS, showTip = false }: AiMessageBubbleProps) {
   const t = useT();
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -35,9 +44,20 @@ export function AiMessageBubble({ message, speaking, onReplay }: AiMessageBubble
     >
       <View style={styles.tail} />
       <View style={styles.bubble}>
-        <AppText variant="subheading" style={styles.text}>
-          {message ? message.text : '…'}
-        </AppText>
+        <View style={styles.body}>
+          {message && onWordPress ? (
+            <TappableText variant="subheading" style={styles.text} text={message.text} savedWords={savedWords} onWordPress={onWordPress} />
+          ) : (
+            <AppText variant="subheading" style={styles.text}>
+              {message ? message.text : '…'}
+            </AppText>
+          )}
+          {showTip && message && onWordPress ? (
+            <AppText variant="caption" color={colors.textMuted}>
+              {t('word.tip')}
+            </AppText>
+          ) : null}
+        </View>
         <View style={styles.speakerWrap}>
         <Animated.View pointerEvents="none" style={[styles.ring, ring]} />
         <PressableScale
@@ -82,7 +102,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.9)',
     ...shadows.raised,
   },
-  text: { flex: 1, fontWeight: '600' },
+  body: { flex: 1, gap: spacing.xs },
+  text: { fontWeight: '600' },
   speaker: {
     width: 40,
     height: 40,

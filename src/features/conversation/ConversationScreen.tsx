@@ -8,6 +8,11 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
 import { useMockAudioLevel } from '@/features/face';
+import { useSavedWords } from '@/features/vocabulary/useSavedWords';
+import type { WordRequest } from '@/features/vocabulary/useWordLookup';
+import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
+import { WordSheet } from '@/features/vocabulary/WordSheet';
+import { sentenceOf } from '@/features/vocabulary/words';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -43,6 +48,9 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const conversation = useConversation(scenario);
   const { status, voiceState, message, hint, finishing } = conversation;
   const [keyboardMode, setKeyboardMode] = useState(false);
+  const [wordRequest, setWordRequest] = useState<WordRequest | null>(null);
+  const savedWords = useSavedWords();
+  const tipSeen = useVocabularyStore((state) => state.tipSeen);
   const showTranscript = useSettingsStore((state) => state.showTranscript);
   const toggleTranscript = useSettingsStore((state) => state.toggleTranscript);
 
@@ -95,6 +103,15 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         ]);
       }),
     [navigation, hasAnswered, stopVoice, handleFinish, t],
+  );
+
+  const messageText = message?.text ?? '';
+  const handleWordPress = useCallback(
+    (word: string) => {
+      haptics.selection();
+      setWordRequest({ word, sentence: sentenceOf(messageText, word) });
+    },
+    [messageText],
   );
 
   const handleSendText = useCallback(
@@ -150,7 +167,14 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             </View>
 
             <View style={styles.messages}>
-              <AiMessageBubble message={message} speaking={shownState === 'speaking'} onReplay={tutor.replay} />
+              <AiMessageBubble
+                message={message}
+                speaking={shownState === 'speaking'}
+                onReplay={tutor.replay}
+                onWordPress={handleWordPress}
+                savedWords={savedWords}
+                showTip={!tipSeen}
+              />
               <HintCard hint={hint} />
               <UserTranscript text={conversation.learnerText} visible={showTranscript} />
             </View>
@@ -205,6 +229,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
           </Animated.View>
         )}
       </View>
+      <WordSheet request={wordRequest} onClose={() => setWordRequest(null)} />
     </KeyboardAvoidingView>
   );
 }

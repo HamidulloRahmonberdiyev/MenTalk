@@ -15,7 +15,8 @@ export const geminiConfig = {
   /** Fast, cheap model for the translator. */
   translateModel: process.env.EXPO_PUBLIC_GEMINI_TRANSLATE_MODEL ?? 'gemini-3.5-flash-lite',
   ttsModel: process.env.EXPO_PUBLIC_GEMINI_TTS_MODEL ?? 'gemini-3.8-flash-tts',
-  voice: process.env.EXPO_PUBLIC_GEMINI_VOICE ?? 'Kore',
+  /** A warm, natural female voice. Others worth trying: Achernar, Vindemiatrix, Despina, Leda. */
+  voice: process.env.EXPO_PUBLIC_GEMINI_VOICE ?? 'Sulafat',
   /** Set EXPO_PUBLIC_GEMINI_TTS=off to always use the device voice. */
   ttsEnabled: process.env.EXPO_PUBLIC_GEMINI_TTS !== 'off',
 } as const;

@@ -10,6 +10,7 @@ import { SCENARIOS, SCENARIO_MAP } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
 import { colors, spacing } from '@/theme';
 
+import { WordsPromoCard } from '../vocabulary/WordsPromoCard';
 import { openConversation } from '../scenarios/navigation';
 import { ScenarioRow } from '../scenarios/ScenarioRow';
 import { ContinueCard } from './ContinueCard';
@@ -32,6 +33,7 @@ export function HomeScreen() {
       <HomeHeader name={name} />
       <DailyGoalCard minutesDone={minutesToday} goalMinutes={goalMinutes} />
       <Button title={t('home.start')} icon="mic" onPress={() => router.push('/scenarios')} />
+      <WordsPromoCard />
 
       {lastScenario ? (
         <Section title={t('home.continue')}>

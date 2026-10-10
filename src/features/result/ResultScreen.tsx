@@ -10,6 +10,7 @@ import { useResultStore } from '@/store/resultStore';
 import { useT } from '@/i18n';
 import { colors, spacing } from '@/theme';
 
+import { NewWordsCard } from '../vocabulary/NewWordsCard';
 import { MetricRow } from './MetricRow';
 import { MistakeCard } from './MistakeCard';
 import { getVerdict } from './resultCopy';
@@ -53,6 +54,8 @@ export function ResultScreen() {
             <MetricRow key={metric.id} metric={metric} />
           ))}
         </Card>
+
+        {result.newWords && result.newWords.length > 0 ? <NewWordsCard words={result.newWords} /> : null}
 
         {result.mistakes.length > 0 ? (
           <View style={styles.mistakes}>

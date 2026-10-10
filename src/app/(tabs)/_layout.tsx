@@ -10,6 +10,7 @@ const TABS: readonly { name: string; title: TranslationKey; icons: TabIconMap[st
     title: 'tab.conversations',
     icons: { idle: 'chatbubbles-outline', active: 'chatbubbles' },
   },
+  { name: 'words', title: 'tab.words', icons: { idle: 'albums-outline', active: 'albums' } },
   { name: 'translate', title: 'tab.translate', icons: { idle: 'language-outline', active: 'language' } },
   { name: 'profile', title: 'tab.profile', icons: { idle: 'person-circle-outline', active: 'person-circle' } },
 ];

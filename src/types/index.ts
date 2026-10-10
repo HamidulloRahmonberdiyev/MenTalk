@@ -57,6 +57,8 @@ export interface ConversationResult {
   durationSec: number;
   metrics: Metric[];
   mistakes: Mistake[];
+  /** Words from the chat the learner probably did not know, offered for saving. */
+  newWords?: WordSuggestion[];
 }
 
 export interface HistoryEntry {
@@ -141,4 +143,29 @@ export interface SavedTranslation {
   sourceText: string;
   translation: string;
   createdAt: number;
+}
+
+/** A word as it arrives from a lookup or from the end-of-chat analysis, before it is saved. */
+export interface WordSuggestion {
+  /** Dictionary form, lowercase: what is learned. */
+  word: string;
+  /** Meaning in the learner's language (or a simple Russian explanation for Russian-speaking UI). */
+  translation: string;
+  /** The Russian sentence the word came from. */
+  example?: string;
+  /** The inflected form as it appears in `example`, when it differs from `word`. */
+  form?: string;
+}
+
+/** A saved word plus its spaced-repetition state. */
+export interface VocabCard extends WordSuggestion {
+  id: string;
+  addedAt: number;
+  /** 0 (new) to 6 (mastered): how far along the review ladder the word is. */
+  stage: number;
+  /** When the word is next worth reviewing. */
+  due: number;
+  /** Correct answers in a row. */
+  streak: number;
+  lapses: number;
 }

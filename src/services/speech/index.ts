@@ -69,7 +69,7 @@ export async function speakText(text: string, language: LanguageCode, handlers: 
 
   if (!isGeminiConfigured || !geminiConfig.ttsEnabled) return false;
   try {
-    const file = writeSpeechFile(`speak-${Date.now()}`, await synthesizeSpeech(text, language));
+    const file = writeSpeechFile(`speak-${Date.now()}`, await synthesizeSpeech(text));
     releasePlayer();
     playerFile = file;
     const next = createAudioPlayer({ uri: file.uri });
