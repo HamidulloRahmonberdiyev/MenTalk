@@ -5,13 +5,16 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
+import { Button } from '@/components/ui/Button';
 import { TabScreen } from '@/components/ui/TabScreen';
 import { useT } from '@/i18n';
+import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 
 import { MASTERY_STYLE } from './masteryStyle';
 import { masteryOf, type Mastery } from './srs';
+import { starterWords } from './starterWords';
 import { countDue, useVocabularyStore, visibleStreak } from './vocabularyStore';
 import { WordRow } from './WordRow';
 
@@ -23,6 +26,8 @@ export function WordsScreen() {
   const xp = useVocabularyStore((state) => state.xp);
   const streak = useVocabularyStore((state) => visibleStreak(state));
   const removeWord = useVocabularyStore((state) => state.removeWord);
+  const addWords = useVocabularyStore((state) => state.addWords);
+  const language = useSettingsStore((state) => state.language);
 
   const due = countDue(cards);
   const counts = useMemo(() => {
@@ -80,6 +85,15 @@ export function WordsScreen() {
           <AppText color={colors.textSecondary} style={styles.center}>
             {t('words.empty.text')}
           </AppText>
+          <Button
+            title={t('words.starter')}
+            icon="sparkles"
+            onPress={() => {
+              addWords(starterWords(language));
+              haptics.success();
+            }}
+            style={styles.starter}
+          />
         </View>
       ) : (
         <>
@@ -134,6 +148,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
   emptyIcon: { fontSize: 64, lineHeight: 76 },
   center: { textAlign: 'center' },
+  starter: { alignSelf: 'stretch', marginTop: spacing.md },
   summary: { gap: spacing.md },
   bar: { flexDirection: 'row', height: 10, borderRadius: radii.pill, overflow: 'hidden', gap: 2 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

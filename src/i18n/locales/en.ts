@@ -214,6 +214,7 @@ export const en = {
   'words.xp': '{n} XP',
   'words.count': '{n} words',
   'words.empty.title': 'No words yet',
+  'words.starter': 'Add 15 starter words',
   'words.empty.text': 'Tap any word in Anna’s replies to save it. Then train here with quick games.',
   'words.mastery.new': 'New',
   'words.mastery.learning': 'Learning',

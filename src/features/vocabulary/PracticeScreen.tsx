@@ -10,6 +10,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Screen } from '@/components/ui/Screen';
 import { useT } from '@/i18n';
+import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
 import { colors, radii, spacing } from '@/theme';
@@ -19,6 +20,7 @@ import { surfaceOf } from './exercises';
 import { FeedbackBar } from './FeedbackBar';
 import { SessionSummary } from './SessionSummary';
 import { SpellExercise } from './SpellExercise';
+import { starterWords } from './starterWords';
 import { usePracticeSession } from './usePracticeSession';
 import { useVocabularyStore } from './vocabularyStore';
 
@@ -33,6 +35,8 @@ export function PracticeScreen() {
 
 function EmptyRound() {
   const t = useT();
+  const language = useSettingsStore((state) => state.language);
+  const addWords = useVocabularyStore((state) => state.addWords);
   return (
     <Screen>
       <View style={styles.empty}>
@@ -40,7 +44,10 @@ function EmptyRound() {
         <AppText variant="heading" style={styles.center}>
           {t('practice.empty')}
         </AppText>
-        <Button title={t('practice.done.back')} variant="soft" onPress={() => router.back()} />
+        <View style={styles.actions}>
+          <Button title={t('words.starter')} icon="sparkles" onPress={() => addWords(starterWords(language))} />
+          <Button title={t('practice.done.back')} variant="soft" onPress={() => router.back()} />
+        </View>
       </View>
     </Screen>
   );
@@ -127,4 +134,5 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xl },
   emptyIcon: { fontSize: 72, lineHeight: 88 },
   center: { textAlign: 'center' },
+  actions: { alignSelf: 'stretch', gap: spacing.md },
 });

@@ -216,6 +216,7 @@ export const uz: Dictionary = {
   'words.xp': '{n} XP',
   'words.count': '{n} ta so‘z',
   'words.empty.title': 'Hozircha so‘z yo‘q',
+  'words.starter': '15 ta boshlang‘ich so‘z qo‘shish',
   'words.empty.text': 'Anna javobidagi istalgan so‘zni bosib saqlang. Keyin shu yerda qisqa o‘yinlar bilan mashq qiling.',
   'words.mastery.new': 'Yangi',
   'words.mastery.learning': 'O‘rganilmoqda',

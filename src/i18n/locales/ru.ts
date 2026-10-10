@@ -216,6 +216,7 @@ export const ru: Dictionary = {
   'words.xp': '{n} XP',
   'words.count': 'Слов: {n}',
   'words.empty.title': 'Пока нет слов',
+  'words.starter': 'Добавить 15 слов для старта',
   'words.empty.text': 'Нажмите на любое слово в ответах Анны, чтобы сохранить его. Затем тренируйтесь здесь в коротких играх.',
   'words.mastery.new': 'Новое',
   'words.mastery.learning': 'Учу',

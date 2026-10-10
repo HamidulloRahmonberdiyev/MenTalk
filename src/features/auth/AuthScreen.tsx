@@ -36,6 +36,7 @@ export function AuthScreen() {
       haptics.success();
       router.replace(useUserStore.getState().onboarded ? '/home' : '/onboarding');
     } catch (error) {
+      if (__DEV__) console.warn('Sign-in failed:', error);
       if (error instanceof GoogleUnavailable) setFailure('unavailable');
       else if (!(error instanceof SignInCancelled)) setFailure('failed');
       setLoading(false);

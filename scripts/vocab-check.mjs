@@ -10,13 +10,13 @@ import ts from 'typescript';
 
 const SRC = new URL('../src/features/vocabulary/', import.meta.url);
 const out = mkdtempSync(join(tmpdir(), 'vocab-check-'));
-for (const name of ['words', 'srs', 'progress', 'exercises']) {
+for (const name of ['words', 'srs', 'progress', 'exercises', 'starterWords']) {
   const source = readFileSync(new URL(`${name}.ts`, SRC), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
   writeFileSync(join(out, `${name}.mjs`), outputText.replace(/from '\.\/(\w+)'/g, "from './$1.mjs'"));
 }
 const load = (name) => import(pathToFileURL(join(out, `${name}.mjs`)).href);
-const [words, srs, progress, exercises] = await Promise.all(['words', 'srs', 'progress', 'exercises'].map(load));
+const [words, srs, progress, exercises, starter] = await Promise.all(['words', 'srs', 'progress', 'exercises', 'starterWords'].map(load));
 
 let failed = false;
 const check = (name, fn) => {
@@ -147,3 +147,18 @@ check('isCorrect ignores case and spacing', () => {
 });
 
 process.exitCode = failed ? 1 : 0;
+
+check('starter words are complete, their example holds the word, and they make a full round', () => {
+  for (const language of ['uz', 'ru', 'en']) {
+    const list = starter.starterWords(language);
+    for (const item of list) {
+      assert.ok(item.translation, `${item.word} has no ${language} gloss`);
+      assert.ok(item.example.toLowerCase().includes((item.form ?? item.word).toLowerCase()), `${item.word} is missing from its example`);
+    }
+    const cards = list.map((item) => srs.newCard(item, NOW));
+    const round = exercises.buildRound(cards, NOW, seeded(3));
+    assert.equal(round.length, 10);
+    assert.ok(round.every((exercise) => exercise.options.length === 0 || exercise.options.includes(exercise.answer)));
+  }
+});
+
