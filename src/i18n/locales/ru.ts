@@ -26,6 +26,7 @@ export const ru: Dictionary = {
   'auth.google': 'Продолжить с Google',
   'auth.loading': 'Вход…',
   'auth.error': 'Не удалось войти. Попробуйте ещё раз.',
+  'auth.unavailable': 'Для входа через Google нужна development-сборка приложения, а не Expo Go.',
   'auth.terms': 'Продолжая, вы принимаете Условия использования и Политику конфиденциальности',
 
   'home.greeting': 'Привет,',

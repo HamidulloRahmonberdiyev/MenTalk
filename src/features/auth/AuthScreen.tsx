@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
-import { SignInCancelled, authService } from '@/services/auth';
+import { GoogleUnavailable, SignInCancelled, authService } from '@/services/auth';
 import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
@@ -24,19 +24,20 @@ export function AuthScreen() {
   const insets = useSafeAreaInsets();
   const setName = useUserStore((state) => state.setName);
   const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<'failed' | 'unavailable' | null>(null);
 
   const signIn = async () => {
     haptics.light();
     setLoading(true);
-    setFailed(false);
+    setFailure(null);
     try {
       const user = await authService.signInWithGoogle();
       setName(user.name);
       haptics.success();
       router.replace(useUserStore.getState().onboarded ? '/home' : '/onboarding');
     } catch (error) {
-      setFailed(!(error instanceof SignInCancelled));
+      if (error instanceof GoogleUnavailable) setFailure('unavailable');
+      else if (!(error instanceof SignInCancelled)) setFailure('failed');
       setLoading(false);
     }
   };
@@ -89,9 +90,9 @@ export function AuthScreen() {
             </AppText>
           </PressableScale>
 
-          {failed ? (
+          {failure ? (
             <AppText variant="caption" color="#FF8A8A" style={styles.center}>
-              {t('auth.error')}
+              {t(failure === 'unavailable' ? 'auth.unavailable' : 'auth.error')}
             </AppText>
           ) : null}
 

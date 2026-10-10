@@ -26,6 +26,7 @@ export const uz: Dictionary = {
   'auth.google': 'Google bilan davom etish',
   'auth.loading': 'Kirilmoqda…',
   'auth.error': 'Kirib bo‘lmadi. Qayta urinib ko‘ring.',
+  'auth.unavailable': 'Google orqali kirish uchun Expo Go emas, ilovaning development build‘i kerak.',
   'auth.terms': 'Davom etib, siz Foydalanish shartlari va Maxfiylik siyosatiga rozilik bildirasiz',
 
   'home.greeting': 'Salom,',

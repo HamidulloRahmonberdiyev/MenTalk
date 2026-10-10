@@ -1,3 +1,5 @@
+import { TurboModuleRegistry } from 'react-native';
+
 import { apiConfig } from '@/services/api/config';
 
 /** Where the Google ID token comes from. The server verifies it, so any source that yields one will do. */
@@ -13,15 +15,25 @@ export class SignInCancelled extends Error {
   }
 }
 
+/** The native Google module is missing from this build (Expo Go), or Google is not configured. */
+export class GoogleUnavailable extends Error {
+  constructor() {
+    super('Google sign-in is unavailable in this build');
+    this.name = 'GoogleUnavailable';
+  }
+}
+
 type GoogleModule = typeof import('@react-native-google-signin/google-signin');
 
 let configured = false;
 
 /**
  * The native Google sign-in sheet. The module is loaded on first use, so the app still starts in
- * a build without the native code (Expo Go), where only this sign-in path fails.
+ * a build without the native code (Expo Go); only signing in reports `GoogleUnavailable`.
  */
 async function google(): Promise<GoogleModule> {
+  // Importing the package throws (and Metro logs it) when the binary lacks the native module, so look first.
+  if (!apiConfig.googleWebClientId || !TurboModuleRegistry.get('RNGoogleSignin')) throw new GoogleUnavailable();
   const module = await import('@react-native-google-signin/google-signin');
   if (!configured) {
     module.GoogleSignin.configure({ webClientId: apiConfig.googleWebClientId, iosClientId: apiConfig.googleIosClientId || undefined });
@@ -41,6 +53,10 @@ export class GoogleIdTokenProvider implements IdTokenProvider {
   }
 
   async signOut(): Promise<void> {
-    await (await google()).GoogleSignin.signOut().catch(() => undefined);
+    try {
+      await (await google()).GoogleSignin.signOut();
+    } catch {
+      // Nothing to sign out of when Google is unavailable.
+    }
   }
 }

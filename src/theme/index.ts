@@ -18,6 +18,7 @@ export const colors = {
 
   success: '#22B573',
   danger: '#EF4444',
+  dangerSoft: '#FEE9E9',
   warning: '#F5A524',
   purple: '#5A8DEE',
 } as const;

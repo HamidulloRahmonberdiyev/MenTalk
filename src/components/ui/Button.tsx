@@ -9,7 +9,7 @@ import type { IconName } from '@/types';
 import { AppText } from './AppText';
 import { PressableScale } from './PressableScale';
 
-type ButtonVariant = 'primary' | 'soft';
+type ButtonVariant = 'primary' | 'soft' | 'danger';
 
 interface ButtonProps {
   title: string;
@@ -33,7 +33,7 @@ export function Button({
   style,
 }: ButtonProps) {
   const isPrimary = variant === 'primary';
-  const foreground = isPrimary ? colors.onPrimary : colors.primary;
+  const foreground = variant === 'soft' ? colors.primary : colors.onPrimary;
   const inactive = disabled || loading;
 
   const content = (
@@ -62,7 +62,7 @@ export function Button({
         haptics.light();
         onPress();
       }}
-      style={[styles.base, isPrimary ? shadows.primary : styles.soft, inactive && styles.inactive, style]}
+      style={[styles.base, isPrimary ? shadows.primary : variant === 'danger' ? styles.danger : styles.soft, inactive && styles.inactive, style]}
     >
       {isPrimary ? (
         <LinearGradient
@@ -94,6 +94,9 @@ const styles = StyleSheet.create({
   },
   soft: {
     backgroundColor: colors.primarySoft,
+  },
+  danger: {
+    backgroundColor: colors.danger,
   },
   inactive: {
     opacity: 0.55,

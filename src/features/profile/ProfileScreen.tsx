@@ -1,11 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Card } from '@/components/ui/Card';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { TabScreen } from '@/components/ui/TabScreen';
 import { useT } from '@/i18n';
 import { authService } from '@/services/auth';
@@ -28,20 +30,14 @@ export function ProfileScreen() {
   const totalMinutes = Math.round(sum(history.map((entry) => entry.durationSec)) / 60);
   const average = history.length ? (sum(history.map((entry) => entry.score)) / history.length).toFixed(1) : '–';
 
-  const logout = () => {
-    haptics.light();
-    Alert.alert(t('profile.logoutTitle'), t('profile.logoutMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.logout'),
-        style: 'destructive',
-        onPress: async () => {
-          await authService.signOut();
-          endSession();
-          router.replace('/');
-        },
-      },
-    ]);
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const logout = async () => {
+    setSigningOut(true);
+    await authService.signOut().catch(() => undefined);
+    endSession();
+    router.replace('/');
   };
 
   return (
@@ -88,12 +84,33 @@ export function ProfileScreen() {
         </PressableScale>
       ) : null}
 
-      <PressableScale accessibilityRole="button" accessibilityLabel={t('profile.logout')} onPress={logout} style={styles.logout}>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.logout')}
+        onPress={() => {
+          haptics.light();
+          setConfirmingLogout(true);
+        }}
+        style={styles.logout}
+      >
         <Ionicons name="log-out-outline" size={22} color={colors.danger} />
         <AppText variant="bodyStrong" color={colors.danger}>
           {t('profile.logout')}
         </AppText>
       </PressableScale>
+
+      <ConfirmSheet
+        visible={confirmingLogout}
+        icon="log-out-outline"
+        title={t('profile.logoutTitle')}
+        message={t('profile.logoutMessage')}
+        confirmLabel={t('profile.logout')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        loading={signingOut}
+        onConfirm={logout}
+        onCancel={() => setConfirmingLogout(false)}
+      />
     </TabScreen>
   );
 }
