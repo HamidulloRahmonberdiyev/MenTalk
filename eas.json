@@ -9,6 +9,7 @@
       "environment": "development",
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_AUTH": "prod",
         "EXPO_PUBLIC_API_URL": "https://apimentalk.unicrm.org/api/v1",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "279156957323-ljaaf67a2l01f2ufsl6khi92luss24jl.apps.googleusercontent.com"
       }
@@ -17,6 +18,7 @@
       "environment": "preview",
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_AUTH": "prod",
         "EXPO_PUBLIC_API_URL": "https://apimentalk.unicrm.org/api/v1",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "279156957323-ljaaf67a2l01f2ufsl6khi92luss24jl.apps.googleusercontent.com"
       }
@@ -25,6 +27,7 @@
       "environment": "production",
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_AUTH": "prod",
         "EXPO_PUBLIC_API_URL": "https://apimentalk.unicrm.org/api/v1",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "279156957323-ljaaf67a2l01f2ufsl6khi92luss24jl.apps.googleusercontent.com"
       }

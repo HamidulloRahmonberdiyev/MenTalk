@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
-import { useMockAudioLevel } from '@/features/face';
+import { useLipSync } from '@/features/face';
 import { useSavedWords } from '@/features/vocabulary/useSavedWords';
 import type { WordRequest } from '@/features/vocabulary/useWordLookup';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
@@ -59,11 +59,11 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
 
   const faceSize = Math.min(Math.max(Math.min(height * 0.24, width * 0.52), 130), 220);
   const emotion = pickEmotion(message);
-  const tutor = useTutorVoice(message, voiceState);
+  const lipSync = useLipSync();
+  const tutor = useTutorVoice(message, voiceState, lipSync);
   // The scripted session may report idle while the speech engine is still talking.
   const shownState = voiceState === 'idle' && tutor.speaking ? 'speaking' : voiceState;
   const waving = shownState === 'listening' || shownState === 'speaking';
-  const audioLevel = useMockAudioLevel(shownState === 'speaking');
   const voice = useVoiceTurn(conversation, voiceState);
 
   const navigation = useNavigation();
@@ -163,7 +163,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         ) : (
           <Animated.View entering={FadeIn.duration(400)} style={styles.stage}>
             <View style={styles.avatarWrap}>
-              <FloatingAvatar state={toFaceState(shownState)} emotion={emotion} audioLevel={audioLevel} size={faceSize} />
+              <FloatingAvatar state={toFaceState(shownState)} emotion={emotion} speech={lipSync.face} size={faceSize} />
             </View>
 
             <View style={styles.messages}>
@@ -193,14 +193,14 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             ) : (
               <View style={styles.controls}>
                 <View style={styles.micRow}>
-                  <WaveBars active={waving} />
+                  <WaveBars active={waving} level={shownState === 'speaking' ? lipSync.face.energy : voice.level} />
                   <VoiceOrb
                     state={voiceState}
                     onPress={voice.toggle}
                     level={voice.level}
                     accessibilityLabel={t(`voiceButton.${shownState}`)}
                   />
-                  <WaveBars active={waving} mirrored />
+                  <WaveBars active={waving} mirrored level={shownState === 'speaking' ? lipSync.face.energy : voice.level} />
                 </View>
                 <AppText variant="bodyStrong" color={colors.textSecondary} accessibilityLiveRegion="polite">
                   {t(`voice.${shownState}`)}

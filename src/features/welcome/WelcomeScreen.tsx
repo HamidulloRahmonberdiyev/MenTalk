@@ -22,16 +22,22 @@ const BACKGROUND = require('../../../assets/app/moscow.png');
 const OVERLAY_COLORS = ['rgba(8,6,28,0.45)', 'rgba(8,6,28,0.15)', 'rgba(8,6,28,0.65)', 'rgba(8,6,28,0.92)'] as const;
 const OVERLAY_LOCATIONS = [0, 0.3, 0.62, 1] as const;
 
+const homeRoute = () => (useUserStore.getState().onboarded ? '/home' : '/onboarding');
+
 /** Signs a returning learner straight in. Resolves to true while the check is running. */
 function useRestoredSession(): boolean {
-  const [checking, setChecking] = useState(isApiConfigured);
+  const [checking, setChecking] = useState(isApiConfigured || useUserStore.getState().onboarded);
 
   useEffect(() => {
-    if (!isApiConfigured) return;
+    // Local mode has no accounts: someone who finished onboarding goes straight home.
+    if (!isApiConfigured) {
+      if (useUserStore.getState().onboarded) router.replace('/home');
+      return;
+    }
     let active = true;
     authService.restore().then((user) => {
       if (!active) return;
-      if (user) router.replace(useUserStore.getState().onboarded ? '/home' : '/onboarding');
+      if (user) router.replace(homeRoute());
       else setChecking(false);
     });
     return () => {
@@ -47,7 +53,8 @@ export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const checking = useRestoredSession();
 
-  const goToAuth = () => router.push('/auth');
+  // Local mode skips sign-in entirely.
+  const goToAuth = () => (isApiConfigured ? router.push('/auth') : router.replace(homeRoute()));
 
   if (checking) return <View style={styles.root} />;
 

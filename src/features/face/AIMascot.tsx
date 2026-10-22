@@ -156,7 +156,7 @@ export const AIMascot = memo(function AIMascot({ state, emotion = 'neutral', aud
 });
 
 /** Three dots that pulse in sequence above the mascot's shoulder while it is thinking. */
-function ThinkingDots({ visible, size }: { visible: boolean; size: number }) {
+export function ThinkingDots({ visible, size }: { visible: boolean; size: number }) {
   const presence = useSharedValue(0);
   useEffect(() => {
     presence.value = withTiming(visible ? 1 : 0, { duration: 260 });

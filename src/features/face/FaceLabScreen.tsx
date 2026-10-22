@@ -9,33 +9,50 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 
-import { AIMascot } from './AIMascot';
+import { useTutorVoice } from '@/features/conversation/useTutorVoice';
+import type { AiMessage } from '@/types';
+
+import { TutorAvatar } from './avatar3d/TutorAvatar';
+import { useLipSync } from './lipsync/useLipSync';
 import type { FaceEmotion, FaceState } from './types';
-import { useMockAudioLevel } from './useMockAudioLevel';
 
 const STATES: readonly FaceState[] = ['idle', 'listening', 'thinking', 'speaking', 'happy', 'encouraging', 'wink', 'surprised'];
 const EMOTIONS: readonly FaceEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
+const LINES = [
+  'Привет! Меня зовут Говори. Как у тебя дела?',
+  'Отлично, молодец! Ты говоришь всё лучше и лучше.',
+  'Извини, я не совсем поняла. Можешь повторить, пожалуйста?',
+  'Мама мыла раму, а папа пил утренний кофе… Ух, вкусно!',
+] as const;
 
-/** Dev playground: drive the face with mock state, emotion and audio level. */
+/** Dev playground: drive the face with state and emotion, and hear lines spoken with lip-sync. */
 export function FaceLabScreen() {
   const [state, setState] = useState<FaceState>('idle');
   const [emotion, setEmotion] = useState<FaceEmotion>('neutral');
-  const audioLevel = useMockAudioLevel(state === 'speaking');
+  const [line, setLine] = useState<AiMessage | null>(null);
+  const lipSync = useLipSync();
+  const tutor = useTutorVoice(line, 'idle', lipSync);
+  const shownState = tutor.speaking ? 'speaking' : state;
 
   return (
     <Screen>
       <ScreenHeader title="Mascot lab" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.stage}>
-          <AIMascot state={state} emotion={emotion} audioLevel={audioLevel} size={200} />
+          <TutorAvatar state={shownState} emotion={emotion} speech={lipSync.face} size={210} />
         </View>
 
         <ChipGroup title="state" items={STATES} value={state} onChange={setState} />
         <ChipGroup title="emotion" items={EMOTIONS} value={emotion} onChange={setEmotion} />
-
-        <AppText variant="caption" color={colors.textSecondary}>
-          Speaking uses a mock audio level (a SharedValue). Swap it for the real playback level later.
-        </AppText>
+        <ChipGroup
+          title="say (device voice + lip-sync)"
+          items={LINES.map((_, index) => `line ${index + 1}`)}
+          value={line ? `line ${Number(line.id.split(':')[0]) + 1}` : ''}
+          onChange={(item) => {
+            const index = Number(item.split(' ')[1]) - 1;
+            setLine({ id: `${index}:${Date.now()}`, text: LINES[index] });
+          }}
+        />
       </ScrollView>
     </Screen>
   );

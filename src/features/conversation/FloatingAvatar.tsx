@@ -1,14 +1,15 @@
-import { AIMascot, type AudioLevel, type FaceEmotion, type FaceState } from '@/features/face';
+import { TutorAvatar, type FaceEmotion, type FaceState, type SpeechFace } from '@/features/face';
 
 interface FloatingAvatarProps {
   state: FaceState;
   emotion: FaceEmotion;
-  audioLevel?: AudioLevel;
-  /** Width of the mascot's body. */
+  /** Lip-sync of the line being spoken. */
+  speech?: SpeechFace;
+  /** Nominal head size. */
   size: number;
 }
 
-/** The assistant mascot floating over the scenario backdrop. */
-export function FloatingAvatar({ state, emotion, audioLevel, size }: FloatingAvatarProps) {
-  return <AIMascot state={state} emotion={emotion} audioLevel={audioLevel} size={size} />;
+/** The assistant's 3D head floating over the scenario backdrop. */
+export function FloatingAvatar({ state, emotion, speech, size }: FloatingAvatarProps) {
+  return <TutorAvatar state={state} emotion={emotion} speech={speech} size={size} />;
 }
