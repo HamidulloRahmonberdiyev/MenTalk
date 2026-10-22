@@ -24,7 +24,7 @@ export const en = {
   'auth.google': 'Continue with Google',
   'auth.loading': 'Signing in…',
   'auth.error': 'Sign-in failed. Please try again.',
-  'auth.unavailable': 'Google sign-in needs the development build of the app, not Expo Go.',
+  'auth.unavailable': 'Google sign-in works only in the installed app, not in Expo Go or on the web.',
   'auth.terms': 'By continuing you accept the Terms of Use and Privacy Policy',
 
   'home.greeting': 'Hi,',

@@ -1,11 +1,12 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedProps, useAnimatedStyle } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { colors } from '@/theme';
 
-import { FACE_ASPECT, type AIFaceProps } from './types';
+import { NativeSoboFace } from './loadSoboFace';
+import { FACE_ASPECT, type AIFaceProps, type FaceVariant } from './types';
 import { useFaceMotion, type FaceMotion } from './useFaceMotion';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -83,14 +84,39 @@ function useGlintProps(motion: FaceMotion, index: 0 | 1) {
   });
 }
 
+export interface AIFaceVariantProps extends AIFaceProps {
+  /** Defaults to `svg`. `rive` shows the SOBO mascot and falls back to `svg` on web or if Rive fails. */
+  variant?: FaceVariant;
+}
+
 /**
- * The tutor's face: two eyes, expressive brows and a mouth, drawn with SVG and driven entirely by Reanimated shared values.
+ * The tutor's face: either the SVG face below or the SOBO Rive mascot, with the same props.
  *
  *   <AIFace state="speaking" emotion="happy" audioLevel={level} />
+ *   <AIFace variant="rive" state="speaking" audioLevel={level} />
  *
  * Pass `audioLevel` as a `SharedValue` to move the mouth with the voice without re-rendering React.
  */
-export const AIFace = memo(function AIFace({
+export const AIFace = memo(function AIFace({ variant = 'svg', ...props }: AIFaceVariantProps) {
+  const [riveFailed, setRiveFailed] = useState(false);
+
+  // The Rive runtime is native only and missing from Expo Go; there NativeSoboFace is null and SVG is used.
+  if (variant === 'rive' && NativeSoboFace && !riveFailed) {
+    return (
+      <NativeSoboFace
+        {...props}
+        onFailure={(error) => {
+          if (__DEV__) console.warn(`SoboFace failed, falling back to the SVG face: ${error.message}`);
+          setRiveFailed(true);
+        }}
+      />
+    );
+  }
+  return <SvgFace {...props} />;
+});
+
+/** Two eyes, expressive brows and a mouth, drawn with SVG and driven entirely by Reanimated shared values. */
+const SvgFace = memo(function SvgFace({
   state,
   emotion = 'neutral',
   audioLevel,

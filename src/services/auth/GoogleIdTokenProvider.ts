@@ -1,4 +1,4 @@
-import { TurboModuleRegistry } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
 
 import { apiConfig } from '@/services/api/config';
 
@@ -33,7 +33,8 @@ let configured = false;
  */
 async function google(): Promise<GoogleModule> {
   // Importing the package throws (and Metro logs it) when the binary lacks the native module, so look first.
-  if (!apiConfig.googleWebClientId || !TurboModuleRegistry.get('RNGoogleSignin')) throw new GoogleUnavailable();
+  // The native sheet doesn't exist on web, where react-native-web has no TurboModuleRegistry at all.
+  if (Platform.OS === 'web' || !apiConfig.googleWebClientId || !TurboModuleRegistry?.get('RNGoogleSignin')) throw new GoogleUnavailable();
   const module = await import('@react-native-google-signin/google-signin');
   if (!configured) {
     module.GoogleSignin.configure({ webClientId: apiConfig.googleWebClientId, iosClientId: apiConfig.googleIosClientId || undefined });

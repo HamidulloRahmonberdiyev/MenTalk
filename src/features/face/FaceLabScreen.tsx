@@ -12,9 +12,11 @@ import { colors, radii, spacing } from '@/theme';
 import { useTutorVoice } from '@/features/conversation/useTutorVoice';
 import type { AiMessage } from '@/types';
 
+import { AIFace } from './AIFace';
 import { TutorAvatar } from './avatar3d/TutorAvatar';
 import { useLipSync } from './lipsync/useLipSync';
 import type { FaceEmotion, FaceState } from './types';
+import { useMockAudioLevel } from './useMockAudioLevel';
 
 const STATES: readonly FaceState[] = ['idle', 'listening', 'thinking', 'speaking', 'happy', 'encouraging', 'wink', 'surprised'];
 const EMOTIONS: readonly FaceEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
@@ -33,6 +35,9 @@ export function FaceLabScreen() {
   const lipSync = useLipSync();
   const tutor = useTutorVoice(line, 'idle', lipSync);
   const shownState = tutor.speaking ? 'speaking' : state;
+  const mockLevel = useMockAudioLevel(state === 'speaking');
+  // Remounting the faces replays SOBO's Hello wave.
+  const [helloKey, setHelloKey] = useState(0);
 
   return (
     <Screen>
@@ -41,6 +46,27 @@ export function FaceLabScreen() {
         <View style={styles.stage}>
           <TutorAvatar state={shownState} emotion={emotion} speech={lipSync.face} size={210} />
         </View>
+
+        <View style={styles.compare}>
+          {(['svg', 'rive'] as const).map((variant) => (
+            <View key={variant} style={styles.compareCell}>
+              <AIFace key={`${variant}:${helloKey}`} variant={variant} state={state} emotion={emotion} audioLevel={mockLevel} size={150} />
+              <AppText variant="captionStrong" color={colors.textSecondary}>
+                {variant}
+              </AppText>
+            </View>
+          ))}
+        </View>
+        <PressableScale
+          accessibilityRole="button"
+          onPress={() => {
+            haptics.selection();
+            setHelloKey((key) => key + 1);
+          }}
+          style={styles.chip}
+        >
+          <AppText variant="captionStrong">replay hello (rive)</AppText>
+        </PressableScale>
 
         <ChipGroup title="state" items={STATES} value={state} onChange={setState} />
         <ChipGroup title="emotion" items={EMOTIONS} value={emotion} onChange={setEmotion} />
@@ -107,6 +133,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  compare: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    paddingVertical: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  compareCell: { alignItems: 'center', gap: spacing.sm },
   group: { gap: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {

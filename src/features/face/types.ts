@@ -29,3 +29,16 @@ export interface AIFaceProps {
 }
 
 export const FACE_ASPECT = 0.72;
+
+/** `svg` is the hand-drawn face; `rive` is the SOBO mascot (native only, falls back to `svg`). */
+export type FaceVariant = 'svg' | 'rive';
+
+export interface SoboFaceProps extends AIFaceProps {
+  /** Wave Hello for a moment when the mascot first appears. Defaults to true. */
+  greet?: boolean;
+  /** Called when the Rive file, its view model or the view fails, so the caller can fall back. */
+  onFailure?: (error: Error) => void;
+}
+
+/** SOBO is drawn in a square box (full body, `Fit.Contain`). */
+export const SOBO_ASPECT = 1;
