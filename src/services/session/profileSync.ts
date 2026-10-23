@@ -55,6 +55,17 @@ async function signedIn(): Promise<boolean> {
   return isApiConfigured && (await getToken()) !== null;
 }
 
+/** Pull-to-refresh: reloads the profile, progress, history and word list. Quiet when offline or signed out. */
+export async function refreshFromServer(): Promise<void> {
+  if (!(await signedIn())) return;
+  try {
+    await hydrateFromServer(await endpoints.me());
+    await syncVocabulary();
+  } catch {
+    // Offline: the screens keep showing what is stored on the device.
+  }
+}
+
 /** Saves the onboarding answers on the server. Failures are quiet: the local profile stays valid. */
 export async function pushOnboarding(data: OnboardingData): Promise<void> {
   if (!(await signedIn())) return;

@@ -9,7 +9,7 @@ import { useUserStore } from '@/store/userStore';
 import { pushLanguage } from './profileSync';
 import { scheduleVocabularySync, syncVocabulary } from './vocabularySync';
 
-export { pushOnboarding } from './profileSync';
+export { pushOnboarding, refreshFromServer } from './profileSync';
 export { submitReviews } from './vocabularySync';
 
 /** Forgets the signed-in person's data on this device. */

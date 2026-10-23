@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
+import { ApiError } from '@/services/api/http';
 import { GoogleUnavailable, SignInCancelled, authService } from '@/services/auth';
 import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
@@ -25,11 +26,14 @@ export function AuthScreen() {
   const setName = useUserStore((state) => state.setName);
   const [loading, setLoading] = useState(false);
   const [failure, setFailure] = useState<'failed' | 'unavailable' | null>(null);
+  // TEMP: shows the raw error under the message to diagnose Google sign-in; remove once it works.
+  const [failureDetail, setFailureDetail] = useState<string | null>(null);
 
   const signIn = async () => {
     haptics.light();
     setLoading(true);
     setFailure(null);
+    setFailureDetail(null);
     try {
       const user = await authService.signInWithGoogle();
       setName(user.name);
@@ -39,6 +43,7 @@ export function AuthScreen() {
       if (__DEV__) console.warn('Sign-in failed:', error);
       if (error instanceof GoogleUnavailable) setFailure('unavailable');
       else if (!(error instanceof SignInCancelled)) setFailure('failed');
+      setFailureDetail(describeError(error));
       setLoading(false);
     }
   };
@@ -96,6 +101,11 @@ export function AuthScreen() {
               {t(failure === 'unavailable' ? 'auth.unavailable' : 'auth.error')}
             </AppText>
           ) : null}
+          {failure && failureDetail ? (
+            <AppText variant="caption" color="#FF8A8A" style={styles.center} selectable>
+              {failureDetail}
+            </AppText>
+          ) : null}
 
           <AppText variant="caption" color="rgba(255,255,255,0.6)" style={styles.center}>
             {t('auth.terms')}
@@ -104,6 +114,16 @@ export function AuthScreen() {
       </View>
     </View>
   );
+}
+
+/** Google Sign-In errors carry a `code` (e.g. DEVELOPER_ERROR / 10), API errors an HTTP `status`. */
+function describeError(error: unknown): string {
+  if (error instanceof ApiError) return `API ${error.status}${error.type ? ` · ${error.type}` : ''}`;
+  if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
+    return code !== undefined ? `[${String(code)}] ${error.message}` : `${error.name}: ${error.message}`;
+  }
+  return String(error);
 }
 
 const styles = StyleSheet.create({

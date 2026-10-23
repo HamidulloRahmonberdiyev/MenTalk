@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Fragment } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,7 @@ import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
+import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
@@ -25,6 +27,7 @@ export function TranslateScreen() {
   const t = useT();
   const insets = useSafeAreaInsets();
   const translator = useTranslator();
+  const { refreshControl, version } = useRefreshControl();
   const { result, status, text } = translator;
   const typed = text.trim().length > 0;
 
@@ -45,89 +48,92 @@ export function TranslateScreen() {
           styles.content,
           { paddingTop: insets.top + spacing.xl, paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl },
         ]}
+        refreshControl={refreshControl}
       >
-        <AppText variant="title" accessibilityRole="header">
-          {t('translate.title')}
-        </AppText>
+        <Fragment key={version}>
+          <AppText variant="title" accessibilityRole="header">
+            {t('translate.title')}
+          </AppText>
 
-        <LanguageBar
-          source={translator.source}
-          target={translator.target}
-          detected={result?.sourceLanguage}
-          uzScript={translator.uzScript}
-          onChange={translator.setLanguages}
-          onSwap={translator.swap}
-          onUzScript={translator.setUzScript}
-        />
+          <LanguageBar
+            source={translator.source}
+            target={translator.target}
+            detected={result?.sourceLanguage}
+            uzScript={translator.uzScript}
+            onChange={translator.setLanguages}
+            onSwap={translator.swap}
+            onUzScript={translator.setUzScript}
+          />
 
-        <TranslatorInput
-          value={text}
-          onChangeText={translator.changeText}
-          listening={translator.listening}
-          micLevel={translator.micLevel}
-          onMic={translator.toggleMic}
-          onPaste={translator.paste}
-          onClear={translator.clear}
-        />
+          <TranslatorInput
+            value={text}
+            onChangeText={translator.changeText}
+            listening={translator.listening}
+            micLevel={translator.micLevel}
+            onMic={translator.toggleMic}
+            onPaste={translator.paste}
+            onClear={translator.clear}
+          />
 
-        {!translator.configured ? (
-          <View style={styles.banner}>
-            <Ionicons name="key-outline" size={20} color={colors.warning} />
-            <AppText variant="caption" color={colors.textSecondary} style={styles.flex}>
-              {t('translate.noKey')}
-            </AppText>
-          </View>
-        ) : null}
+          {!translator.configured ? (
+            <View style={styles.banner}>
+              <Ionicons name="key-outline" size={20} color={colors.warning} />
+              <AppText variant="caption" color={colors.textSecondary} style={styles.flex}>
+                {t('translate.noKey')}
+              </AppText>
+            </View>
+          ) : null}
 
-        {result?.correctedInput && result.correctedInput !== text.trim() ? (
-          <PressableScale
-            accessibilityRole="button"
-            onPress={() => translator.changeText(result.correctedInput)}
-            style={styles.suggest}
-          >
-            <AppText variant="caption" color={colors.textSecondary}>
-              {t('translate.didYouMean')}
-            </AppText>
-            <AppText variant="captionStrong" color={colors.primaryDark} style={styles.flex}>
-              {result.correctedInput}
-            </AppText>
-            <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-          </PressableScale>
-        ) : null}
+          {result?.correctedInput && result.correctedInput !== text.trim() ? (
+            <PressableScale
+              accessibilityRole="button"
+              onPress={() => translator.changeText(result.correctedInput)}
+              style={styles.suggest}
+            >
+              <AppText variant="caption" color={colors.textSecondary}>
+                {t('translate.didYouMean')}
+              </AppText>
+              <AppText variant="captionStrong" color={colors.primaryDark} style={styles.flex}>
+                {result.correctedInput}
+              </AppText>
+              <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+            </PressableScale>
+          ) : null}
 
-        {typed && translator.configured ? (
-          <>
-            {result ? (
-              <ResultCard
-                result={result}
-                stale={translator.stale}
-                speaking={translator.speaking}
-                copied={translator.copied}
-                favorite={translator.favorite}
-                onSpeak={speakResult}
-                onCopy={() => void translator.copy(result.translation)}
-                onShare={() => translator.share(result.translation)}
-                onToggleFavorite={translator.toggleFavorite}
-              />
-            ) : status === 'loading' ? (
-              <ResultSkeleton />
-            ) : null}
+          {typed && translator.configured ? (
+            <>
+              {result ? (
+                <ResultCard
+                  result={result}
+                  stale={translator.stale}
+                  speaking={translator.speaking}
+                  copied={translator.copied}
+                  favorite={translator.favorite}
+                  onSpeak={speakResult}
+                  onCopy={() => void translator.copy(result.translation)}
+                  onShare={() => translator.share(result.translation)}
+                  onToggleFavorite={translator.toggleFavorite}
+                />
+              ) : status === 'loading' ? (
+                <ResultSkeleton />
+              ) : null}
 
-            {status === 'error' && translator.error ? (
-              <Animated.View entering={FadeIn.duration(200)} style={styles.error}>
-                <Ionicons name="cloud-offline-outline" size={22} color={colors.danger} />
-                <AppText variant="bodyStrong" style={styles.flex}>
-                  {t(ERROR_KEYS[translator.error])}
-                </AppText>
-                <Button title={t('translate.retry')} onPress={translator.retry} variant="soft" style={styles.retry} />
-              </Animated.View>
-            ) : null}
+              {status === 'error' && translator.error ? (
+                <Animated.View entering={FadeIn.duration(200)} style={styles.error}>
+                  <Ionicons name="cloud-offline-outline" size={22} color={colors.danger} />
+                  <AppText variant="bodyStrong" style={styles.flex}>
+                    {t(ERROR_KEYS[translator.error])}
+                  </AppText>
+                  <Button title={t('translate.retry')} onPress={translator.retry} variant="soft" style={styles.retry} />
+                </Animated.View>
+              ) : null}
 
-            {result && !translator.stale ? <ResultDetails result={result} onPick={(value) => void translator.copy(value)} /> : null}
-          </>
-        ) : (
-          <HistoryPanel onPick={translator.reuse} />
-        )}
+              {result && !translator.stale ? <ResultDetails result={result} onPick={(value) => void translator.copy(value)} /> : null}
+            </>
+          ) : (
+            <HistoryPanel onPick={translator.reuse} />
+          )}
+        </Fragment>
       </ScrollView>
     </View>
   );

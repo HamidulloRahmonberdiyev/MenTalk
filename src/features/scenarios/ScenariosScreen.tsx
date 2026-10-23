@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { SCENARIOS } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
@@ -18,6 +19,7 @@ export function ScenariosScreen() {
   const t = useT();
   const lastScenarioId = useUserStore((state) => state.lastScenarioId);
   const [selectedId, setSelectedId] = useState<ScenarioId>(lastScenarioId ?? SCENARIOS[0].id);
+  const { refreshControl, version } = useRefreshControl();
 
   return (
     <Screen>
@@ -26,16 +28,19 @@ export function ScenariosScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
-        {SCENARIOS.map((scenario) => (
-          <ScenarioRow
-            key={scenario.id}
-            scenario={scenario}
-            size="large"
-            selected={scenario.id === selectedId}
-            onPress={(item) => setSelectedId(item.id)}
-          />
-        ))}
+        <Fragment key={version}>
+          {SCENARIOS.map((scenario) => (
+            <ScenarioRow
+              key={scenario.id}
+              scenario={scenario}
+              size="large"
+              selected={scenario.id === selectedId}
+              onPress={(item) => setSelectedId(item.id)}
+            />
+          ))}
+        </Fragment>
       </ScrollView>
       <View style={styles.footer}>
         <Button title={t('home.start')} icon="arrow-forward" iconPosition="right" onPress={() => openConversation(selectedId)} />

@@ -10,6 +10,9 @@ import type { AiMessage, VoiceState } from '@/types';
 
 const LANGUAGE = 'ru-RU';
 const RATE = 0.95;
+/** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
+const AUDIO_START_TIMEOUT_MS = 6_000;
+const PLAYABLE_URI = /^(https?|file):\/\//i;
 
 /** Loudness 0..1 of a block of PCM frames, on a perceptual (dB) scale. */
 function loudness(sample: AudioSample): number {
@@ -47,8 +50,15 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   const [speaking, setSpeaking] = useState(false);
   const spokenId = useRef<string | null>(null);
   const player = useRef<AudioPlayer | null>(null);
+  const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearStartTimer = useCallback(() => {
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = null;
+  }, []);
 
   const stop = useCallback(() => {
+    clearStartTimer();
     Speech.stop();
     lipSync.stop();
     if (player.current) {
@@ -57,7 +67,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       player.current = null;
       setSpeaking(false);
     }
-  }, [lipSync]);
+  }, [lipSync, clearStartTimer]);
 
   const speakWithDevice = useCallback(
     async (text: string) => {
@@ -91,7 +101,8 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   const play = useCallback(
     (line: AiMessage) => {
       stop();
-      if (!line.audioUri) {
+      if (!line.audioUri || !PLAYABLE_URI.test(line.audioUri)) {
+        if (__DEV__ && line.audioUri) console.warn('Unplayable tutor audio URL:', line.audioUri);
         void speakWithDevice(line.text);
         return;
       }
@@ -100,9 +111,19 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
         player.current = next;
         lipSync.load(stripEmoji(line.text));
         let started = false;
+        // The clip failed to load or play: say the line with the device voice instead of staying silent.
+        const fallBack = (reason: string) => {
+          if (started || player.current !== next) return;
+          if (__DEV__) console.warn(`Tutor audio failed (${reason}):`, line.audioUri);
+          stop();
+          void speakWithDevice(line.text);
+        };
+        startTimer.current = setTimeout(() => fallBack('timeout'), AUDIO_START_TIMEOUT_MS);
         next.addListener('playbackStatusUpdate', (status) => {
+          if (status.error) return fallBack(status.error);
           if (status.playing && !started) {
             started = true;
+            clearStartTimer();
             lipSync.start();
             setSpeaking(true);
           }
@@ -124,7 +145,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
         void speakWithDevice(line.text);
       }
     },
-    [stop, speakWithDevice, lipSync],
+    [stop, speakWithDevice, lipSync, clearStartTimer],
   );
 
   useEffect(() => {

@@ -1,13 +1,16 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { colors, spacing } from '@/theme';
 
+import { useRefreshControl } from './useRefreshControl';
+
 export function TabScreen({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  const { refreshControl, version } = useRefreshControl();
 
   return (
     <View style={styles.root}>
@@ -22,8 +25,9 @@ export function TabScreen({ children }: { children: ReactNode }) {
           { paddingTop: insets.top + spacing.xl, paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
-        {children}
+        <Fragment key={version}>{children}</Fragment>
       </ScrollView>
     </View>
   );
