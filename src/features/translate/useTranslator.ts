@@ -8,14 +8,16 @@ import { GeminiError } from '@/services/gemini/client';
 import { isGeminiConfigured } from '@/services/gemini/config';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
+import { TranslatorError, isAzureTranslatorConfigured } from '@/services/translator/azure';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { LanguageCode, SavedTranslation, TranslationResult } from '@/types';
 
-import { translate, type SourceLanguage, type TranslateRequest } from './translateService';
+import { enrich, translate, translateFast, type SourceLanguage, type TranslateRequest } from './translateService';
 import { isFavorite, useTranslatorStore } from './translatorStore';
 
 /** Pause after the last keystroke before a translation is requested. */
-const DEBOUNCE_MS = 600;
+const DEBOUNCE_MS = isAzureTranslatorConfigured ? 400 : 600;
+const configured = isAzureTranslatorConfigured || isGeminiConfigured;
 
 export type TranslateErrorCode = 'network' | 'quota' | 'failed';
 
@@ -29,11 +31,23 @@ const cacheKey = (text: string, source: SourceLanguage, target: LanguageCode, sc
   `${source}|${target}|${script}|${text.trim().toLowerCase()}`;
 
 function errorCode(error: unknown): TranslateErrorCode {
-  if (error instanceof GeminiError) return error.status === 429 ? 'quota' : 'failed';
+  if (error instanceof GeminiError || error instanceof TranslatorError) return error.status === 429 ? 'quota' : 'failed';
   return 'network';
 }
 
 const isAbort = (error: unknown) => error instanceof Error && error.name === 'AbortError';
+
+/** The instant machine translation, or null when it is unavailable and Gemini can stand in. */
+async function instant(request: TranslateRequest) {
+  if (!isAzureTranslatorConfigured) return null;
+  try {
+    return await translateFast(request);
+  } catch (error) {
+    if (request.signal?.aborted || !isGeminiConfigured) throw error;
+    if (__DEV__) console.warn('Instant translation failed, using Gemini:', error);
+    return null;
+  }
+}
 
 /** All translator behaviour: live translation while typing, caching, voice input, speech and saving. */
 export function useTranslator() {
@@ -51,6 +65,8 @@ export function useTranslator() {
   const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
   const cache = useRef(new Map<string, TranslationResult>());
+  /** Cache keys whose entry already has Gemini's details, not just the instant translation. */
+  const detailed = useRef(new Set<string>());
   const retryTick = useRef(0);
   const [retry, setRetry] = useState(0);
 
@@ -58,21 +74,41 @@ export function useTranslator() {
 
   // Live translation: wait for a pause in typing, reuse cached answers, cancel stale requests.
   useEffect(() => {
-    if (!trimmed || !isGeminiConfigured) return;
+    if (!trimmed || !configured) return;
     const key = cacheKey(trimmed, source, target, uzScript);
     const cached = cache.current.get(key);
     const controller = new AbortController();
+    const translateRequest: TranslateRequest = { text: trimmed, source, target, uzScript, uiLanguage, signal: controller.signal };
+
+    // Meanings, alternatives and notes arrive after the instant translation, without holding it up.
+    const addDetails = (base: TranslationResult) => {
+      if (!isGeminiConfigured || detailed.current.has(key)) return;
+      enrich(translateRequest, base)
+        .then((full) => {
+          if (controller.signal.aborted) return;
+          cache.current.set(key, full);
+          detailed.current.add(key);
+          setRequest({ status: 'done', result: full });
+        })
+        .catch((error: unknown) => {
+          if (__DEV__ && !controller.signal.aborted) console.warn('Translation details failed:', error);
+        });
+    };
 
     const timer = setTimeout(
       async () => {
         if (cached) {
           setRequest({ status: 'done', result: cached });
+          addDetails(cached);
           return;
         }
         setRequest((previous) => ({ status: 'loading', result: 'result' in previous ? previous.result : undefined }));
         try {
-          const result = await translate({ text: trimmed, source, target, uzScript, uiLanguage, signal: controller.signal });
+          const fast = await instant(translateRequest);
+          const result = fast ?? (await translate(translateRequest));
           cache.current.set(key, result);
+          if (fast) addDetails(fast);
+          else detailed.current.add(key);
           setRequest({ status: 'done', result });
           if (trimmed.length > 1) {
             addHistory({
@@ -188,7 +224,9 @@ export function useTranslator() {
         const spoken: TranslateRequest = { text: '', audioUri: audio.uri, source, target, uzScript, uiLanguage };
         const translated = await translate(spoken);
         if (!translated.sourceText) throw new GeminiError('No speech recognised');
-        cache.current.set(cacheKey(translated.sourceText, source, target, uzScript), translated);
+        const key = cacheKey(translated.sourceText, source, target, uzScript);
+        cache.current.set(key, translated);
+        detailed.current.add(key);
         setText(translated.sourceText);
         setRequest({ status: 'done', result: translated });
         addHistory({
@@ -230,7 +268,7 @@ export function useTranslator() {
   useEffect(() => () => stopSpeaking(), []);
 
   return {
-    configured: isGeminiConfigured,
+    configured,
     text,
     source,
     target,

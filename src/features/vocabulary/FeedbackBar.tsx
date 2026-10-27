@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
-import Animated, { SlideInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
+import { enter } from '@/theme/motion';
 
 import type { Exercise } from './exercises';
 import { surfaceOf } from './exercises';
@@ -28,7 +29,7 @@ export function FeedbackBar({ exercise, answer, onContinue }: FeedbackBarProps) 
 
   return (
     <Animated.View
-      entering={SlideInDown.springify().damping(18)}
+      entering={enter.slideUp()}
       style={[styles.bar, { backgroundColor: tone.bg, paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
       accessibilityLiveRegion="polite"
     >

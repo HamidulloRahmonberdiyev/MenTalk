@@ -105,14 +105,15 @@ export const endpoints = {
   sendTurn: (conversationId: number, payload: TurnPayload, signal?: AbortSignal) =>
     api<ApiTurn>('POST', `/conversations/${conversationId}/turns`, { body: payload, timeoutMs: AI_TIMEOUT_MS, signal }),
   hint: (conversationId: number) =>
-    api<{ hint: string }>('POST', `/conversations/${conversationId}/hint`, { timeoutMs: AI_TIMEOUT_MS }),
+    api<{ hint: string }>('POST', `/conversations/${conversationId}/hint`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
   finish: (conversationId: number) =>
-    api<ApiResult>('POST', `/conversations/${conversationId}/finish`, { timeoutMs: AI_TIMEOUT_MS }),
+    api<ApiResult>('POST', `/conversations/${conversationId}/finish`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
 
   lookup: (word: string, sentence: string, language: string, signal?: AbortSignal) =>
     api<{ form: string; translation: string }>('POST', '/vocabulary/lookup', {
       body: { word, sentence, language },
       timeoutMs: AI_TIMEOUT_MS,
+      idempotent: true,
       signal,
     }),
   syncCards: (cursor: string | null, changes: ApiCard[]) =>

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { colors, radii, shadows } from '@/theme';
+import { enter } from '@/theme/motion';
 
 const CONFETTI = [
   { top: 8, left: 22, color: colors.primary, rotate: '30deg' },
@@ -23,7 +24,7 @@ export function TrophyHero() {
           style={[styles.confetti, { backgroundColor: piece.color, transform: [{ rotate: piece.rotate }] }, piece]}
         />
       ))}
-      <Animated.View entering={ZoomIn.springify().damping(12)} style={shadows.primary}>
+      <Animated.View entering={enter.celebrate()} style={shadows.primary}>
         <LinearGradient
           colors={[colors.primaryLight, colors.primaryDark]}
           start={{ x: 0, y: 0 }}

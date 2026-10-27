@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { VocabCard, WordSuggestion } from '@/types';
 
+import type { GameMode } from './exercises';
 import { currentStreak, dayKey, streakAfterRound } from './progress';
 import { isDue, newCard, review } from './srs';
 import { normalizeWord } from './words';
@@ -16,6 +17,8 @@ interface VocabularyState {
   lastDay: string | null;
   /** The "tap any word to save it" tip is shown until the learner has opened a word once. */
   tipSeen: boolean;
+  /** The game type played last, offered first next time. */
+  lastMode: GameMode;
   /** Words deleted on this device (id → time), kept until the server has been told. */
   removed: Record<string, number>;
   /** Where the server's changes were last read up to. */
@@ -30,6 +33,7 @@ interface VocabularyState {
   /** Banks the round's XP and extends the daily streak. */
   finishRound: (xp: number) => void;
   markTipSeen: () => void;
+  setLastMode: (mode: GameMode) => void;
   /** Merges what the server sent back: newer cards replace local ones, deletions remove them. */
   applyRemote: (cards: VocabCard[], deleted: string[], sync: { cursor: string; pushedAt: number }) => void;
   setXp: (xp: number) => void;
@@ -47,6 +51,7 @@ export const useVocabularyStore = create<VocabularyState>()(
       streak: 0,
       lastDay: null,
       tipSeen: false,
+      lastMode: 'mixed',
       ...EMPTY_SYNC,
       addWords: (suggestions) => {
         const known = new Set(get().cards.map((card) => card.id));
@@ -72,6 +77,7 @@ export const useVocabularyStore = create<VocabularyState>()(
           return { xp: state.xp + xp, streak: streakAfterRound(state.streak, state.lastDay, now), lastDay: dayKey(now) };
         }),
       markTipSeen: () => set({ tipSeen: true }),
+      setLastMode: (lastMode) => set({ lastMode }),
       applyRemote: (incoming, deleted, { cursor, pushedAt }) =>
         set((state) => {
           const byId = new Map(state.cards.map((card) => [card.id, card]));

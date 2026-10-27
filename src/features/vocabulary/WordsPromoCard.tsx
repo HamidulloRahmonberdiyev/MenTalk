@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -8,32 +8,37 @@ import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 
+import { GamePickerSheet } from './GamePickerSheet';
 import { countDue, useVocabularyStore } from './vocabularyStore';
 
 /** Home shortcut into the word game. Only appears once the learner has saved words. */
 export function WordsPromoCard() {
   const t = useT();
   const cards = useVocabularyStore((state) => state.cards);
+  const [picking, setPicking] = useState(false);
   if (cards.length === 0) return null;
 
   const due = countDue(cards);
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={t('home.words.title')}
-      onPress={() => {
-        haptics.light();
-        router.push('/practice');
-      }}
-      style={styles.card}
-    >
-      <AppText style={styles.emoji}>🎮</AppText>
-      <View style={styles.texts}>
-        <AppText variant="subheading">{t('home.words.title')}</AppText>
-        <AppText color={colors.textSecondary}>{due > 0 ? t('home.words.due', { n: due }) : t('words.bonus')}</AppText>
-      </View>
-      <Ionicons name="chevron-forward" size={22} color={colors.primary} />
-    </PressableScale>
+    <>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={t('home.words.title')}
+        onPress={() => {
+          haptics.light();
+          setPicking(true);
+        }}
+        style={styles.card}
+      >
+        <AppText style={styles.emoji}>🎮</AppText>
+        <View style={styles.texts}>
+          <AppText variant="subheading">{t('home.words.title')}</AppText>
+          <AppText color={colors.textSecondary}>{due > 0 ? t('home.words.due', { n: due }) : t('words.bonus')}</AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color={colors.primary} />
+      </PressableScale>
+      <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
+    </>
   );
 }
 

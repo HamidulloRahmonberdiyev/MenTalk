@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -32,10 +32,18 @@ export function ProfileScreen() {
 
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const signedOut = useRef(false);
 
+  /** Signs out while the sheet shows progress; the session ends once the sheet has slid away. */
   const logout = async () => {
     setSigningOut(true);
     await authService.signOut().catch(() => undefined);
+    signedOut.current = true;
+    setConfirmingLogout(false);
+  };
+
+  const logoutClosed = () => {
+    if (!signedOut.current) return;
     endSession();
     router.replace('/');
   };
@@ -110,6 +118,7 @@ export function ProfileScreen() {
         loading={signingOut}
         onConfirm={logout}
         onCancel={() => setConfirmingLogout(false)}
+        onClosed={logoutClosed}
       />
     </TabScreen>
   );

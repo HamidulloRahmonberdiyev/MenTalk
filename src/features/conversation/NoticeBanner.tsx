@@ -35,7 +35,11 @@ export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
   return (
     <Animated.View entering={FadeInUp.duration(220)} exiting={FadeOutUp.duration(160)} style={[styles.wrap, { top: insets.top + HEADER_HEIGHT }]}>
       <PressableScale accessibilityRole="alert" onPress={onDismiss} style={styles.banner}>
-        <Ionicons name="alert-circle" size={20} color={colors.danger} />
+        {notice.code === 'slow' ? (
+          <Ionicons name="time-outline" size={20} color={colors.textMuted} />
+        ) : (
+          <Ionicons name="alert-circle" size={20} color={colors.danger} />
+        )}
         <AppText variant="captionStrong" style={styles.text}>
           {t(`notice.${notice.code}`)}
         </AppText>

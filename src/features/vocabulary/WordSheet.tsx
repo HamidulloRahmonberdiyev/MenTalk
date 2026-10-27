@@ -1,16 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
 import { useWordLookup, type WordRequest } from './useWordLookup';
 import { findCard, useVocabularyStore } from './vocabularyStore';
@@ -24,8 +23,10 @@ interface WordSheetProps {
 /** Bottom sheet that translates a tapped word and lets the learner save it for the word game. */
 export function WordSheet({ request, onClose }: WordSheetProps) {
   const t = useT();
-  const insets = useSafeAreaInsets();
-  const lookup = useWordLookup(request);
+  // The last word stays on the sheet while it slides away.
+  const [shown, setShown] = useState(request);
+  if (request && request !== shown) setShown(request);
+  const lookup = useWordLookup(shown);
   const cards = useVocabularyStore((state) => state.cards);
   const addWords = useVocabularyStore((state) => state.addWords);
   const markTipSeen = useVocabularyStore((state) => state.markTipSeen);
@@ -37,17 +38,10 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
 
   const result = lookup.status === 'ready' ? lookup.word : null;
   const isSaved = result ? findCard(cards, result.word) !== undefined : false;
-  const shownWord = result?.word ?? request?.word.toLowerCase() ?? '';
+  const shownWord = result?.word ?? shown?.word.toLowerCase() ?? '';
 
   return (
-    <Modal visible={request !== null} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <Animated.View entering={FadeIn.duration(160)} style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={t('practice.close')} />
-        <Animated.View
-          entering={SlideInDown.springify().damping(20)}
-          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }]}
-        >
-          <View style={styles.grabber} />
+    <BottomSheet visible={request !== null} onClose={onClose} closeLabel={t('practice.close')}>
           <View style={styles.wordRow}>
             <AppText variant="title" style={styles.word}>
               {shownWord}
@@ -102,24 +96,11 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
               />
             </View>
           ) : null}
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(14, 27, 44, 0.45)' },
-  sheet: {
-    gap: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    backgroundColor: colors.surface,
-    ...shadows.raised,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
   wordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   word: { flex: 1 },
   speaker: {

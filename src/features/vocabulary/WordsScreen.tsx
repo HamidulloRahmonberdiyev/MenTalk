@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -12,6 +11,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 
+import { GamePickerSheet } from './GamePickerSheet';
 import { MASTERY_STYLE } from './masteryStyle';
 import { masteryOf, type Mastery } from './srs';
 import { starterWords } from './starterWords';
@@ -28,6 +28,7 @@ export function WordsScreen() {
   const removeWord = useVocabularyStore((state) => state.removeWord);
   const addWords = useVocabularyStore((state) => state.addWords);
   const language = useSettingsStore((state) => state.language);
+  const [picking, setPicking] = useState(false);
 
   const due = countDue(cards);
   const counts = useMemo(() => {
@@ -38,7 +39,7 @@ export function WordsScreen() {
 
   const play = () => {
     haptics.medium();
-    router.push('/practice');
+    setPicking(true);
   };
 
   return (
@@ -122,6 +123,7 @@ export function WordsScreen() {
           </View>
         </>
       )}
+      <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
     </TabScreen>
   );
 }

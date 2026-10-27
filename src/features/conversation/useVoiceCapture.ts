@@ -13,12 +13,12 @@ import { haptics } from '@/services/haptics';
 
 import { DEFAULT_ENDPOINT_CONFIG, SpeechEndpointDetector } from './speechEndpoint';
 
-/** Speech-grade audio: mono, 16 kHz, 48 kbps AAC is ~5x smaller than the high-quality preset, so it uploads fast. */
+/** Speech-grade audio: mono, 16 kHz, 32 kbps AAC is ~8x smaller than the high-quality preset, so it uploads fast on slow links. */
 const RECORDING_OPTIONS = {
   ...RecordingPresets.HIGH_QUALITY,
   sampleRate: 16_000,
   numberOfChannels: 1,
-  bitRate: 48_000,
+  bitRate: 32_000,
   isMeteringEnabled: true,
 };
 

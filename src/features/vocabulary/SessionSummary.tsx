@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { colors, spacing } from '@/theme';
+import { enter } from '@/theme/motion';
 
 import type { RoundSummary } from './usePracticeSession';
 
@@ -30,10 +31,10 @@ export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps
   return (
     <View style={styles.wrap}>
       <View style={styles.hero}>
-        <Animated.Text entering={ZoomIn.springify().damping(8)} style={styles.trophy}>
+        <Animated.Text entering={enter.celebrate()} style={styles.trophy}>
           {trophy}
         </Animated.Text>
-        <Animated.View entering={FadeInUp.delay(150)} style={styles.heroText}>
+        <Animated.View entering={enter.rise(150)} style={styles.heroText}>
           <AppText variant="title" style={styles.center}>
             {t('practice.done.title')}
           </AppText>
@@ -45,7 +46,7 @@ export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInUp.delay(300)}>
+      <Animated.View entering={enter.rise(300)}>
         <Card style={styles.stats}>
           <Stat value={`+${summary.xp}`} label="XP" color={colors.warning} />
           <Stat value={`${accuracy}%`} label={t('practice.stat.accuracy')} color={colors.success} />

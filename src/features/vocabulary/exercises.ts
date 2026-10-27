@@ -9,7 +9,13 @@ import { maskWord, normalizeWord } from './words';
  */
 
 export type ExerciseKind = 'choice' | 'reverse' | 'listen' | 'cloze' | 'spell';
+/** `mixed` picks the type per word by how well it is known; any other mode plays only that type. */
+export type GameMode = 'mixed' | ExerciseKind;
 export type Random = () => number;
+
+export const GAME_MODES: readonly GameMode[] = ['mixed', 'choice', 'reverse', 'listen', 'cloze', 'spell'];
+
+export const isGameMode = (value: unknown): value is GameMode => GAME_MODES.includes(value as GameMode);
 
 export interface Exercise {
   id: string;
@@ -94,9 +100,14 @@ function make(kind: ExerciseKind, card: VocabCard, others: VocabCard[], random: 
   }
 }
 
-/** The exercise for one card: the preferred type for its stage that the word list can support. */
-export function exerciseFor(card: VocabCard, all: VocabCard[], previous: ExerciseKind | null, random: Random): Exercise {
+/**
+ * The exercise for one card: in a single-type mode that type, otherwise the preferred type for its
+ * stage that the word list can support.
+ */
+export function exerciseFor(card: VocabCard, all: VocabCard[], previous: ExerciseKind | null, random: Random, mode: GameMode = 'mixed'): Exercise {
   const others = all.filter((item) => item.id !== card.id);
+  const only = mode === 'mixed' ? null : make(mode, card, others, random);
+  if (only) return only;
   const preferred = shuffle(KINDS_BY_STAGE[Math.min(card.stage, KINDS_BY_STAGE.length - 1)], random);
   const ordered = [...preferred.filter((kind) => kind !== previous), ...preferred.filter((kind) => kind === previous)];
   for (const kind of [...ordered, 'choice', 'spell'] as ExerciseKind[]) {
@@ -114,11 +125,24 @@ export function pickCards(cards: VocabCard[], now: number, size: number, random:
   return shuffle([...due, ...rest].slice(0, size), random);
 }
 
-export function buildRound(cards: VocabCard[], now: number, random: Random = Math.random, size = DEFAULT_ROUND_SIZE): Exercise[] {
+/** Words that can be played in `mode`: a sentence game needs an example, spelling a short single word, and so on. */
+export function playableCards(cards: VocabCard[], mode: GameMode): VocabCard[] {
+  if (mode === 'mixed') return cards;
+  // Only whether an exercise can be made matters here, not its shuffle.
+  return cards.filter((card) => make(mode, card, cards.filter((item) => item.id !== card.id), () => 0) !== null);
+}
+
+export function buildRound(
+  cards: VocabCard[],
+  now: number,
+  random: Random = Math.random,
+  size = DEFAULT_ROUND_SIZE,
+  mode: GameMode = 'mixed',
+): Exercise[] {
   const exercises: Exercise[] = [];
   let previous: ExerciseKind | null = null;
-  for (const card of pickCards(cards, now, size, random)) {
-    const exercise = exerciseFor(card, cards, previous, random);
+  for (const card of pickCards(playableCards(cards, mode), now, size, random)) {
+    const exercise = exerciseFor(card, cards, previous, random, mode);
     exercises.push(exercise);
     previous = exercise.kind;
   }

@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
@@ -92,7 +92,8 @@ export function LanguageBar({ source, target, detected, uzScript, onChange, onSw
 
       <LanguagePicker
         side={picking}
-        selected={picking === 'source' ? source : target}
+        source={source}
+        target={target}
         onClose={() => setPicking(null)}
         onPick={(code) => picking && choose(picking, code)}
       />
@@ -133,25 +134,26 @@ function LanguageChip({ label, hint, detected = false, onPress }: LanguageChipPr
 
 interface LanguagePickerProps {
   side: Side | null;
-  selected: SourceLanguage;
+  source: SourceLanguage;
+  target: LanguageCode;
   onClose: () => void;
   onPick: (code: SourceLanguage) => void;
 }
 
-function LanguagePicker({ side, selected, onClose, onPick }: LanguagePickerProps) {
+function LanguagePicker({ side: requested, source, target, onClose, onPick }: LanguagePickerProps) {
   const t = useT();
-  const insets = useSafeAreaInsets();
+  // The list keeps showing while the sheet slides away after a pick.
+  const [side, setSide] = useState(requested);
+  if (requested && requested !== side) setSide(requested);
+  const selected = side === 'source' ? source : target;
   const options: readonly { code: SourceLanguage; label: string }[] = [
     ...(side === 'source' ? [{ code: 'auto' as const, label: `✨ ${t('translate.auto')}` }] : []),
     ...TRANSLATE_LANGUAGES.map((item) => ({ code: item.code, label: `${item.flag} ${item.name}` })),
   ];
 
   return (
-    <Modal visible={side !== null} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
-        <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]} onPress={() => undefined}>
-          <View style={styles.grabber} />
-          <AppText variant="heading" style={styles.sheetTitle}>
+    <BottomSheet visible={requested !== null} onClose={onClose} closeLabel={t('common.cancel')} style={styles.sheet}>
+          <AppText variant="heading" >
             {side === 'source' ? t('translate.from') : t('translate.to')}
           </AppText>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -173,9 +175,7 @@ function LanguagePicker({ side, selected, onClose, onPick }: LanguagePickerProps
               );
             })}
           </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    </BottomSheet>
   );
 }
 
@@ -204,17 +204,7 @@ const styles = StyleSheet.create({
   script: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
   scriptChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radii.pill, backgroundColor: colors.primarySoft },
   scriptChipOn: { backgroundColor: colors.primary },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(8, 24, 40, 0.45)' },
-  sheet: {
-    maxHeight: '75%',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    backgroundColor: colors.surface,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.md },
-  sheetTitle: { marginBottom: spacing.sm },
+  sheet: { maxHeight: '75%', gap: spacing.sm },
   option: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radii.md },
   optionOn: { backgroundColor: colors.primaryTint },
   optionLabel: { flex: 1 },

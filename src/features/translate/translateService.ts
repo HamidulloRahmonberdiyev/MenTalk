@@ -1,9 +1,11 @@
 import { readBase64 } from '@/services/gemini/audioFiles';
 import { generateJson, type Part, type Schema } from '@/services/gemini/client';
 import { geminiConfig } from '@/services/gemini/config';
+import { TranslatorError, machineTranslate } from '@/services/translator/azure';
 import type { LanguageCode, Register, TranslationResult, UzbekScript } from '@/types';
 
 import { TRANSLATE_LANGUAGES, languageOf } from './languages';
+import { hasCyrillic, looksLikeUzbekCyrillic, uzCyrillicToLatin, uzLatinToCyrillic } from './uzbekScript';
 
 export type SourceLanguage = LanguageCode | 'auto';
 
@@ -149,5 +151,70 @@ export async function translate(request: TranslateRequest): Promise<TranslationR
     })),
     alternatives: (raw.meanings?.length ? [] : (raw.alternatives ?? [])).slice(0, 3),
     note: emptyIfMissing(raw.note),
+  };
+}
+
+const isLanguageCode = (code: string): code is LanguageCode => (LANGUAGE_CODES as string[]).includes(code);
+
+/** The language translated into when the input is already in the target one (same rule as the prompt). */
+const fallbackTarget = (target: LanguageCode): LanguageCode => (['uz', 'ru', 'en'] as const).find((code) => code !== target) ?? 'en';
+
+/**
+ * Instant translation with machine translation: only the translation itself, no meanings or notes
+ * (`enrich` adds those). Throws a `TranslatorError` when the input is in a language the app does
+ * not offer, so the caller can use Gemini instead.
+ */
+export async function translateFast({ text, source, target, uzScript, signal }: TranslateRequest): Promise<TranslationResult> {
+  // The machine translator reads Uzbek only in Latin script.
+  const uzCyrillic = hasCyrillic(text) && (source === 'uz' || (source === 'auto' && looksLikeUzbekCyrillic(text)));
+  const input = uzCyrillic ? uzCyrillicToLatin(text) : text;
+  const from = uzCyrillic ? 'uz' : source === 'auto' ? undefined : source;
+
+  let to = target;
+  let result = await machineTranslate(input, to, from, signal);
+  const detected = result.from;
+  if (!isLanguageCode(detected)) throw new TranslatorError(`Unsupported input language: ${detected}`);
+  if (detected === target) {
+    to = fallbackTarget(target);
+    result = await machineTranslate(input, to, detected, signal);
+  }
+
+  return {
+    sourceLanguage: detected,
+    targetLanguage: to,
+    sourceText: text,
+    translation: to === 'uz' && uzScript === 'cyrillic' ? uzLatinToCyrillic(result.text) : result.text,
+    reading: '',
+    stressed: '',
+    correctedInput: '',
+    meanings: [],
+    alternatives: [],
+    note: '',
+  };
+}
+
+/**
+ * Adds Gemini's meanings, alternatives, notes and reading to an instant translation. The instant
+ * wording stays so the text on screen does not jump; Gemini's wording becomes an alternative when
+ * it differs. A typo in the input is the exception: then the instant one translated the typo.
+ */
+export async function enrich(request: TranslateRequest, base: TranslationResult): Promise<TranslationResult> {
+  const detailed = await translate(request);
+  if (detailed.correctedInput || detailed.targetLanguage !== base.targetLanguage) return detailed;
+
+  const differs = detailed.translation.trim().toLowerCase() !== base.translation.trim().toLowerCase();
+  const alternatives =
+    differs && !detailed.meanings.length && !detailed.alternatives.some((item) => item.text === detailed.translation)
+      ? [{ text: detailed.translation, register: 'neutral' as Register }, ...detailed.alternatives].slice(0, 3)
+      : detailed.alternatives;
+
+  return {
+    ...detailed,
+    sourceLanguage: base.sourceLanguage,
+    translation: base.translation,
+    // Reading and stress marks describe Gemini's wording; they only fit when it matches.
+    reading: differs ? '' : detailed.reading,
+    stressed: differs ? '' : detailed.stressed,
+    alternatives,
   };
 }

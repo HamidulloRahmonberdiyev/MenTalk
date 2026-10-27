@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 
 import { submitReviews, type ReviewAnswer } from '@/services/session/vocabularySync';
 
-import { buildRound, exerciseFor, isCorrect, type Exercise } from './exercises';
+import { DEFAULT_ROUND_SIZE, buildRound, exerciseFor, isCorrect, type Exercise, type GameMode } from './exercises';
 import { PERFECT_BONUS, xpForAnswer } from './progress';
 import { useVocabularyStore, visibleStreak } from './vocabularyStore';
 
@@ -24,8 +24,10 @@ export interface RoundSummary {
  * accuracy: a missed word comes back once at the end of the round in a different format, as a
  * second chance to learn it, not to farm points.
  */
-export function usePracticeSession() {
-  const [queue, setQueue] = useState<Exercise[]>(() => buildRound(useVocabularyStore.getState().cards, Date.now()));
+export function usePracticeSession(mode: GameMode) {
+  const [queue, setQueue] = useState<Exercise[]>(() =>
+    buildRound(useVocabularyStore.getState().cards, Date.now(), Math.random, DEFAULT_ROUND_SIZE, mode),
+  );
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [combo, setCombo] = useState(0);
@@ -66,13 +68,13 @@ export function usePracticeSession() {
 
       setCombo(0);
       if (first) {
-        // One more try at the end of the round, in a different format.
+        // One more try at the end of the round: in a different format, or the same one in a single-type game.
         const cards = useVocabularyStore.getState().cards;
         const card = cards.find((item) => item.id === exercise.card.id) ?? exercise.card;
-        setQueue((items) => [...items, exerciseFor(card, cards, exercise.kind, Math.random)]);
+        setQueue((items) => [...items, exerciseFor(card, cards, exercise.kind, Math.random, mode)]);
       }
     },
-    [exercise, answer, combo, reviewWord],
+    [exercise, answer, combo, reviewWord, mode],
   );
 
   const next = useCallback(() => {

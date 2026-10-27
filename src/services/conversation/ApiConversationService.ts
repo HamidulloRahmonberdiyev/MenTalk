@@ -1,5 +1,5 @@
 import { endpoints, type ApiResult, type ApiTurn, type TurnPayload } from '@/services/api/endpoints';
-import { ApiError } from '@/services/api/http';
+import { ApiError, NetworkError } from '@/services/api/http';
 import { readBase64 } from '@/services/gemini/audioFiles';
 import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
 
@@ -18,14 +18,18 @@ import { toSuggestions } from './suggestions';
 /** Matches expo-audio's HIGH_QUALITY preset (AAC in an MPEG-4 container). */
 const RECORDING_MIME = 'audio/mp4';
 const SPEAKING_MS_PER_CHAR = 55;
+/** A normal turn answers in a few seconds; past this the learner is told the connection is slow. */
+const SLOW_TURN_MS = 12_000;
 const EMOTIONS: readonly TutorEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
 
 function noticeFor(error: unknown): NoticeCode {
+  if (error instanceof NetworkError) return 'network';
   if (error instanceof ApiError) {
     if (error.type === 'quota') return 'quota';
-    return error.status === 502 ? 'turnFailed' : 'network';
+    if (error.type === 'turn_in_progress') return 'busy';
   }
-  return 'network';
+  // The server answered, so the connection is fine; the turn itself failed.
+  return 'turnFailed';
 }
 
 const emotionOf = (value: string): TutorEmotion => (EMOTIONS.includes(value as TutorEmotion) ? (value as TutorEmotion) : 'neutral');
@@ -60,6 +64,7 @@ class ApiSession implements ConversationSession {
   private readonly startedAt = Date.now();
   private conversationId: number | null = null;
   private speakingTimer: ReturnType<typeof setTimeout> | null = null;
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
   private state: VoiceState = 'idle';
   private turn = 0;
   private disposed = false;
@@ -126,6 +131,7 @@ class ApiSession implements ConversationSession {
     this.disposed = true;
     this.turn += 1;
     this.clearSpeakingTimer();
+    this.clearSlowTimer();
     this.listeners.clear();
   }
 
@@ -133,6 +139,9 @@ class ApiSession implements ConversationSession {
     const id = ++this.turn;
     this.clearSpeakingTimer();
     this.setState('thinking');
+    this.slowTimer = setTimeout(() => {
+      if (!this.isStale(id) && this.state === 'thinking') this.emit({ type: 'notice', code: 'slow' });
+    }, SLOW_TURN_MS);
     try {
       const turn = await endpoints.sendTurn(this.requireId(), await payload());
       if (this.isStale(id)) return;
@@ -141,8 +150,9 @@ class ApiSession implements ConversationSession {
     } catch (error) {
       if (this.isStale(id)) return;
       this.setState('idle');
-      // 409: the previous turn is still being processed on the server; nothing to tell the learner.
-      if (!(error instanceof ApiError && error.type === 'turn_in_progress')) this.emit({ type: 'notice', code: noticeFor(error) });
+      this.emit({ type: 'notice', code: noticeFor(error) });
+    } finally {
+      this.clearSlowTimer();
     }
   }
 
@@ -179,6 +189,11 @@ class ApiSession implements ConversationSession {
   private clearSpeakingTimer(): void {
     if (this.speakingTimer) clearTimeout(this.speakingTimer);
     this.speakingTimer = null;
+  }
+
+  private clearSlowTimer(): void {
+    if (this.slowTimer) clearTimeout(this.slowTimer);
+    this.slowTimer = null;
   }
 }
 

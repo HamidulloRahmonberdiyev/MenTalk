@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
@@ -21,14 +23,9 @@ interface WordRowProps {
 export function WordRow({ card, onRemove }: WordRowProps) {
   const t = useT();
   const mastery = MASTERY_STYLE[masteryOf(card.stage)];
-
-  const confirmRemove = () => {
-    haptics.light();
-    Alert.alert(t('words.remove'), `${card.word} — ${card.translation}`, [
-      { text: t('common.back'), style: 'cancel' },
-      { text: t('words.remove'), style: 'destructive', onPress: () => onRemove(card.id) },
-    ]);
-  };
+  const [confirming, setConfirming] = useState(false);
+  /** The row is removed only after the sheet has slid away; removing it first would cut the sheet off. */
+  const removeWhenClosed = useRef(false);
 
   return (
     <Card style={styles.card}>
@@ -53,9 +50,32 @@ export function WordRow({ card, onRemove }: WordRowProps) {
           </View>
         </View>
       </View>
-      <PressableScale accessibilityRole="button" accessibilityLabel={t('words.remove')} hitSlop={10} onPress={confirmRemove}>
+      <PressableScale accessibilityRole="button" accessibilityLabel={t('words.remove')} hitSlop={10}
+        onPress={() => {
+          haptics.light();
+          setConfirming(true);
+        }}
+      >
         <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
       </PressableScale>
+      <ConfirmSheet
+        visible={confirming}
+        icon="trash-outline"
+        title={t('words.removeTitle')}
+        message={`${card.word} — ${card.translation}`}
+        confirmLabel={t('words.remove')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        onConfirm={() => {
+          removeWhenClosed.current = true;
+          haptics.success();
+          setConfirming(false);
+        }}
+        onCancel={() => setConfirming(false)}
+        onClosed={() => {
+          if (removeWhenClosed.current) onRemove(card.id);
+        }}
+      />
     </Card>
   );
 }

@@ -15,7 +15,11 @@ export interface RecordedAudio {
   durationMs: number;
 }
 
-export type NoticeCode = 'turnFailed' | 'network' | 'quota';
+/**
+ * `slow`: the reply is taking unusually long, still waiting. `busy`: the server is still finishing the
+ * previous turn (usually after a timeout), so this one was not taken.
+ */
+export type NoticeCode = 'turnFailed' | 'network' | 'quota' | 'slow' | 'busy';
 
 export type ConversationListener = (event: ConversationEvent) => void;
 export type Unsubscribe = () => void;

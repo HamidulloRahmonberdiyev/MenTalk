@@ -1,10 +1,11 @@
 import { router, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
+import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ErrorView, LoadingView } from '@/components/ui/StateViews';
 import { useLipSync } from '@/features/face';
@@ -70,40 +71,64 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   /** Set once the screen is allowed to close without asking again (result shown, or the user said No). */
   const exitAllowed = useRef(false);
 
-  const handleFinish = useCallback(async () => {
+  /** Scores the conversation and stores the result; false if that failed (the screen shows the error). */
+  const completeConversation = useCallback(async (): Promise<boolean> => {
     await voice.cancel();
     const result = await conversation.finish();
-    if (!result) return;
+    if (!result) return false;
     haptics.success();
     recordConversation(result.scenarioId, result.durationSec, result.overall);
     setResult(result);
     exitAllowed.current = true;
-    router.replace('/result');
+    return true;
   }, [conversation, voice, recordConversation, setResult]);
+
+  const handleFinish = useCallback(async () => {
+    if (await completeConversation()) router.replace('/result');
+  }, [completeConversation]);
 
   // Leaving by any route (back button, swipe, hardware back) asks whether to finish and show the result.
   const { hasAnswered } = conversation;
   const stopVoice = voice.cancel;
+  /** The navigation that was held back to ask first; replayed if the learner leaves anyway. */
+  const [exitAction, setExitAction] = useState<Parameters<typeof navigation.dispatch>[0] | null>(null);
+  const [exitPromptOpen, setExitPromptOpen] = useState(false);
+  /** Where to go once the sheet has slid away, so the next screen never appears under it. */
+  const afterExitPrompt = useRef<'result' | 'leave' | null>(null);
+
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (event) => {
         if (exitAllowed.current || !hasAnswered()) return;
         event.preventDefault();
-        Alert.alert(t('conversation.exitTitle'), t('conversation.exitMessage'), [
-          {
-            text: t('conversation.exitNo'),
-            style: 'destructive',
-            onPress: () => {
-              exitAllowed.current = true;
-              void stopVoice();
-              navigation.dispatch(event.data.action);
-            },
-          },
-          { text: t('conversation.exitYes'), isPreferred: true, onPress: () => void handleFinish() },
-        ]);
+        setExitAction(event.data.action);
+        setExitPromptOpen(true);
       }),
-    [navigation, hasAnswered, stopVoice, handleFinish, t],
+    [navigation, hasAnswered],
   );
+
+  const finishFromPrompt = useCallback(async () => {
+    if (await completeConversation()) afterExitPrompt.current = 'result';
+    setExitPromptOpen(false);
+  }, [completeConversation]);
+
+  const leaveWithoutSaving = useCallback(() => {
+    afterExitPrompt.current = 'leave';
+    setExitPromptOpen(false);
+  }, []);
+
+  const exitPromptClosed = useCallback(() => {
+    const next = afterExitPrompt.current;
+    afterExitPrompt.current = null;
+    setExitAction(null);
+    if (next === 'result') {
+      router.replace('/result');
+    } else if (next === 'leave' && exitAction) {
+      exitAllowed.current = true;
+      void stopVoice();
+      navigation.dispatch(exitAction);
+    }
+  }, [exitAction, navigation, stopVoice]);
 
   const messageText = message?.text ?? '';
   const handleWordPress = useCallback(
@@ -230,6 +255,19 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         )}
       </View>
       <WordSheet request={wordRequest} onClose={() => setWordRequest(null)} />
+      <ConfirmSheet
+        visible={exitPromptOpen}
+        icon="flag-outline"
+        title={t('conversation.exitTitle')}
+        message={t('conversation.exitMessage')}
+        confirmLabel={t('conversation.exitFinish')}
+        cancelLabel={t('conversation.exitLeave')}
+        loading={finishing}
+        onConfirm={() => void finishFromPrompt()}
+        onCancel={leaveWithoutSaving}
+        onDismiss={() => setExitPromptOpen(false)}
+        onClosed={exitPromptClosed}
+      />
     </KeyboardAvoidingView>
   );
 }

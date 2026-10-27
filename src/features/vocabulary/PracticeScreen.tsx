@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { FadeInRight, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Screen } from '@/components/ui/Screen';
@@ -14,23 +15,30 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
 import { colors, radii, spacing } from '@/theme';
+import { duration, easing, enter } from '@/theme/motion';
 
 import { ChoiceExercise } from './ChoiceExercise';
-import { surfaceOf } from './exercises';
+import { isGameMode, surfaceOf, type GameMode } from './exercises';
 import { FeedbackBar } from './FeedbackBar';
+import { gameOf } from './GamePickerSheet';
 import { SessionSummary } from './SessionSummary';
 import { SpellExercise } from './SpellExercise';
 import { starterWords } from './starterWords';
 import { usePracticeSession } from './usePracticeSession';
 import { useVocabularyStore } from './vocabularyStore';
 
-/** The word game: ten short exercises, instant feedback, combo points and a daily streak. */
+/**
+ * The word game: ten short exercises, instant feedback, combo points and a daily streak. `?mode=`
+ * plays a single exercise type; without it the types are mixed by how well each word is known.
+ */
 export function PracticeScreen() {
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const mode: GameMode = isGameMode(params.mode) ? params.mode : 'mixed';
   const hasWords = useVocabularyStore((state) => state.cards.length > 0);
   const [round, setRound] = useState(0);
 
   if (!hasWords) return <EmptyRound />;
-  return <Round key={round} onAgain={() => setRound((value) => value + 1)} />;
+  return <Round key={`${mode}:${round}`} mode={mode} onAgain={() => setRound((value) => value + 1)} />;
 }
 
 function EmptyRound() {
@@ -53,9 +61,9 @@ function EmptyRound() {
   );
 }
 
-function Round({ onAgain }: { onAgain: () => void }) {
+function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
   const t = useT();
-  const session = usePracticeSession();
+  const session = usePracticeSession(mode);
   const { exercise, answer, combo, summary } = session;
 
   // Hearing the word right after answering ties its sound to its meaning.
@@ -84,6 +92,7 @@ function Round({ onAgain }: { onAgain: () => void }) {
   }
 
   if (!exercise) return <EmptyRound />;
+  const game = mode === 'mixed' ? null : gameOf(mode);
 
   return (
     <Screen>
@@ -96,7 +105,7 @@ function Round({ onAgain }: { onAgain: () => void }) {
         </View>
         <View style={styles.comboSlot}>
           {combo >= 2 ? (
-            <Animated.View key={combo} entering={ZoomIn.springify().damping(9)} style={styles.combo}>
+            <Animated.View key={combo} entering={enter.pop()} style={styles.combo}>
               <AppText variant="captionStrong" color="#B45309">
                 🔥 {t('practice.combo', { n: combo })}
               </AppText>
@@ -105,7 +114,16 @@ function Round({ onAgain }: { onAgain: () => void }) {
         </View>
       </View>
 
-      <Animated.View key={`${session.index}:${exercise.id}`} entering={FadeInRight.duration(260)} style={[styles.stage, answer && styles.stageAnswered]}>
+      {game ? (
+        <View style={styles.mode}>
+          <IconTile icon={game.icon} tint={game.tint} size={28} />
+          <AppText variant="captionStrong" color={colors.textSecondary}>
+            {t(game.title)}
+          </AppText>
+        </View>
+      ) : null}
+
+      <Animated.View key={`${session.index}:${exercise.id}`} entering={FadeInRight.duration(duration.base).easing(easing.out)} style={[styles.stage, answer && styles.stageAnswered]}>
         {exercise.kind === 'spell' ? (
           <SpellExercise exercise={exercise} answer={answer} onSubmit={session.submit} />
         ) : (
@@ -126,6 +144,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   close: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progress: { flex: 1 },
+  mode: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.sm },
   comboSlot: { minWidth: 84, alignItems: 'flex-end' },
   combo: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, backgroundColor: '#FEF3C7' },
   stage: { flex: 1, paddingBottom: spacing.lg },
