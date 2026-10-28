@@ -8,7 +8,7 @@ import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
 import { colors, radii, spacing } from '@/theme';
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ onSelect }: { onSelect?: () => void }) {
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
@@ -24,6 +24,7 @@ export function LanguageSwitcher() {
             onPress={() => {
               haptics.selection();
               setLanguage(code);
+              onSelect?.();
             }}
             style={[styles.row, selected && styles.selected]}
           >

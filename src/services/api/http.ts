@@ -36,6 +36,7 @@ interface RequestOptions {
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 export const AI_TIMEOUT_MS = 45_000;
+export const UPLOAD_TIMEOUT_MS = 60_000;
 const MAX_RETRY_WAIT_MS = 6_000;
 /** Waits before each network retry; mobile links usually come back within a couple of seconds. */
 const NETWORK_BACKOFF_MS = [800, 2_000];
@@ -61,15 +62,17 @@ async function send(method: string, path: string, idempotencyKey: string | null,
   signal?.addEventListener('abort', abort);
   try {
     const token = await getToken();
+    // FormData sets its own multipart Content-Type, boundary included.
+    const isForm = body instanceof FormData;
     const response = await fetch(`${apiConfig.baseUrl}${path}`, {
       method,
       headers: {
         Accept: 'application/json',
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(body === undefined || isForm ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined || isForm ? body : JSON.stringify(body),
       signal: controller.signal,
     });
     const payload = response.status === 204 ? null : await response.json().catch(() => null);

@@ -18,9 +18,11 @@ interface BirthDateFieldProps {
   value: BirthParts;
   onChange: (value: BirthParts) => void;
   parsed: ParsedBirth | null;
+  /** Off on forms where this is not the first field. */
+  autoFocus?: boolean;
 }
 
-export function BirthDateField({ value, onChange, parsed }: BirthDateFieldProps) {
+export function BirthDateField({ value, onChange, parsed, autoFocus = true }: BirthDateFieldProps) {
   const t = useT();
   const monthRef = useRef<TextInput>(null);
   const yearRef = useRef<TextInput>(null);
@@ -50,7 +52,7 @@ export function BirthDateField({ value, onChange, parsed }: BirthDateFieldProps)
           placeholder={t('onb.birth.day')}
           maxLength={2}
           onChangeText={onDay}
-          autoFocus
+          autoFocus={autoFocus}
           flex={1}
         />
         <Box

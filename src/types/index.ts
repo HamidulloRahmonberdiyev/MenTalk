@@ -90,6 +90,11 @@ export interface LearnerProfile {
 
 export interface UserProfile {
   name: string;
+  email: string | null;
+  /** The uploaded photo, else the Google one; null shows the initial instead. */
+  avatarUrl: string | null;
+  /** True when the photo was uploaded by the learner, so it can be removed. */
+  avatarCustom: boolean;
   onboarded: boolean;
   gender: Gender | null;
   country: CountryCode | null;

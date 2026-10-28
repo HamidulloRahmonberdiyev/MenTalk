@@ -40,6 +40,13 @@
           "microphonePermission": "MenTalk использует микрофон, чтобы слушать вашу речь и помогать с произношением."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MenTalk открывает галерею, чтобы вы могли выбрать фото профиля.",
+          "cameraPermission": "MenTalk использует камеру, чтобы вы могли сделать фото профиля."
+        }
+      ],
       "expo-asset",
       "expo-secure-store"
     ],

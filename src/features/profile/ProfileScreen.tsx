@@ -1,35 +1,38 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
 import { useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
-import { PressableScale } from '@/components/ui/PressableScale';
-import { Card } from '@/components/ui/Card';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { TabScreen } from '@/components/ui/TabScreen';
-import { useT } from '@/i18n';
+import { LANGUAGES, useT } from '@/i18n';
 import { authService } from '@/services/auth';
-import { haptics } from '@/services/haptics';
 import { endSession } from '@/services/session';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
+import { enter } from '@/theme/motion';
 
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { StatTile } from './StatTile';
+import { ProfileHero } from './ProfileHero';
+import { SettingsGroup, SettingsRow } from './SettingsRow';
+import { StatsCard } from './StatsCard';
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
 export function ProfileScreen() {
   const t = useT();
-  const name = useUserStore((state) => state.name);
-  const goal = useUserStore((state) => state.dailyGoalMinutes);
   const history = useUserStore((state) => state.history);
+  const languageCode = useSettingsStore((state) => state.language);
+  const language = LANGUAGES.find(({ code }) => code === languageCode);
 
   const totalMinutes = Math.round(sum(history.map((entry) => entry.durationSec)) / 60);
   const average = history.length ? (sum(history.map((entry) => entry.score)) / history.length).toFixed(1) : '–';
 
+  const [choosingLanguage, setChoosingLanguage] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const signedOut = useRef(false);
@@ -50,62 +53,52 @@ export function ProfileScreen() {
 
   return (
     <TabScreen>
-      <AppText variant="title" accessibilityRole="header">
-        {t('profile.title')}
-      </AppText>
+      <ProfileHero />
 
-      <Card style={styles.identity}>
-        <LinearGradient
-          colors={[colors.primaryLight, colors.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          <AppText variant="title" color={colors.onPrimary}>
-            {name.charAt(0).toUpperCase()}
-          </AppText>
-        </LinearGradient>
-        <View style={styles.texts}>
-          <AppText variant="heading">{name}</AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
-            {t('profile.goal', { n: goal })}
-          </AppText>
-        </View>
-      </Card>
+      <Animated.View entering={enter.rise(60)} style={styles.section}>
+        <SectionTitle>{t('profile.progress')}</SectionTitle>
+        <StatsCard
+          stats={[
+            { icon: 'chatbubbles', tint: colors.primary, value: `${history.length}`, label: t('profile.statTalks') },
+            { icon: 'time', tint: colors.success, value: `${totalMinutes}`, label: t('profile.statMinutes') },
+            { icon: 'star', tint: colors.warning, value: average, label: t('profile.statRating') },
+          ]}
+        />
+      </Animated.View>
 
-      <View style={styles.stats}>
-        <StatTile icon="chatbubbles" tint={colors.primary} value={`${history.length}`} label={t('profile.statTalks')} />
-        <StatTile icon="time" tint={colors.success} value={`${totalMinutes}`} label={t('profile.statMinutes')} />
-        <StatTile icon="star" tint={colors.warning} value={average} label={t('profile.statRating')} />
-      </View>
+      <Animated.View entering={enter.rise(120)} style={styles.section}>
+        <SectionTitle>{t('profile.settings')}</SectionTitle>
+        <SettingsGroup>
+          <SettingsRow key="edit" icon="person" tint={colors.primary} label={t('profile.edit')} onPress={() => router.push('/profile-edit')} />
+          <SettingsRow
+            key="language"
+            icon="globe"
+            tint={colors.purple}
+            label={t('profile.language')}
+            value={language ? `${language.flag} ${language.label}` : undefined}
+            onPress={() => setChoosingLanguage(true)}
+          />
+          {__DEV__ ? (
+            <SettingsRow key="face" icon="happy" tint={colors.warning} label="Face lab" onPress={() => router.push('/face-lab' as Href)} />
+          ) : null}
+        </SettingsGroup>
+      </Animated.View>
 
-      <View style={styles.language}>
-        <AppText variant="heading">{t('profile.language')}</AppText>
-        <LanguageSwitcher />
-      </View>
-
-      {__DEV__ ? (
-        <PressableScale accessibilityRole="button" onPress={() => router.push('/face-lab' as Href)} style={styles.logout}>
-          <AppText variant="bodyStrong" color={colors.primary}>
-            Face lab
-          </AppText>
-        </PressableScale>
-      ) : null}
-
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.logout')}
-        onPress={() => {
-          haptics.light();
-          setConfirmingLogout(true);
-        }}
-        style={styles.logout}
-      >
-        <Ionicons name="log-out-outline" size={22} color={colors.danger} />
-        <AppText variant="bodyStrong" color={colors.danger}>
-          {t('profile.logout')}
+      <Animated.View entering={enter.rise(180)} style={styles.section}>
+        <SettingsGroup>
+          <SettingsRow icon="log-out" tint={colors.danger} label={t('profile.logout')} destructive onPress={() => setConfirmingLogout(true)} />
+        </SettingsGroup>
+        <AppText variant="caption" color={colors.textMuted} style={styles.version}>
+          {`MenTalk · v${Constants.expoConfig?.version ?? '1.0.0'}`}
         </AppText>
-      </PressableScale>
+      </Animated.View>
+
+      <BottomSheet visible={choosingLanguage} onClose={() => setChoosingLanguage(false)} closeLabel={t('common.cancel')}>
+        <AppText variant="heading" style={styles.sheetTitle} accessibilityRole="header">
+          {t('profile.language')}
+        </AppText>
+        <LanguageSwitcher onSelect={() => setChoosingLanguage(false)} />
+      </BottomSheet>
 
       <ConfirmSheet
         visible={confirmingLogout}
@@ -124,38 +117,17 @@ export function ProfileScreen() {
   );
 }
 
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <AppText variant="captionStrong" color={colors.textSecondary} style={styles.sectionTitle} accessibilityRole="header">
+      {children}
+    </AppText>
+  );
+}
+
 const styles = StyleSheet.create({
-  identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    borderRadius: radii.xl,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.primary,
-  },
-  texts: { flex: 1, gap: 2 },
-  stats: { flexDirection: 'row', gap: spacing.md },
-  logout: {
-    height: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  language: {
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
+  section: { gap: spacing.sm },
+  sectionTitle: { textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: spacing.xs },
+  version: { textAlign: 'center', marginTop: spacing.md },
+  sheetTitle: { textAlign: 'center' },
 });

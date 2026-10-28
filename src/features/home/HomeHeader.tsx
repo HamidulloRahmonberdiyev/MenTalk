@@ -1,14 +1,16 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { Avatar } from '@/components/ui/Avatar';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
+import { useUserStore } from '@/store/userStore';
 import { colors, radii, shadows } from '@/theme';
 
 export function HomeHeader({ name }: { name: string }) {
   const t = useT();
+  const avatarUrl = useUserStore((state) => state.avatarUrl);
 
   return (
     <View style={styles.row}>
@@ -22,9 +24,9 @@ export function HomeHeader({ name }: { name: string }) {
         accessibilityLabel={t('tab.profile')}
         hitSlop={8}
         onPress={() => router.navigate('/profile')}
-        style={styles.settings}
+        style={styles.avatar}
       >
-        <Ionicons name="settings-sharp" size={20} color={colors.primary} />
+        <Avatar name={name} uri={avatarUrl} size={44} />
       </PressableScale>
     </View>
   );
@@ -37,12 +39,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: { flex: 1 },
-  settings: {
-    width: 44,
-    height: 44,
+  avatar: {
+    padding: 2,
     borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.surface,
     ...shadows.card,
   },

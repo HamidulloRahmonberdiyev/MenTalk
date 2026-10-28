@@ -5,7 +5,7 @@ import { getToken } from '@/services/api/tokenStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
-import type { HistoryEntry, LearningGoal } from '@/types';
+import type { HistoryEntry, LearningGoal, UserProfile } from '@/types';
 
 import { syncVocabulary } from './vocabularySync';
 
@@ -19,6 +19,9 @@ const toHistory = (item: ApiHistoryItem): HistoryEntry[] =>
 function applyUser(user: ApiUser): void {
   useUserStore.getState().hydrate({
     name: user.name,
+    email: user.email,
+    avatarUrl: user.avatar_url,
+    avatarCustom: user.avatar_custom,
     gender: user.gender ?? null,
     country: user.country,
     birthDate: user.birth_date,
@@ -82,6 +85,43 @@ export async function pushOnboarding(data: OnboardingData): Promise<void> {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     })
     .catch(() => undefined);
+}
+
+export type ProfileEdits = Pick<UserProfile, 'name' | 'gender' | 'country' | 'birthDate' | 'level' | 'goals' | 'dailyGoalMinutes'>;
+
+/** Saves edits from the profile screen. Unlike the background syncs it throws, so the screen can say it failed. */
+export async function saveProfile(edits: ProfileEdits): Promise<void> {
+  if (!(await signedIn())) {
+    useUserStore.getState().hydrate(edits);
+    return;
+  }
+  applyUser(
+    await endpoints.updateMe({
+      name: edits.name,
+      gender: edits.gender === 'unspecified' ? null : edits.gender,
+      country: edits.country,
+      birth_date: edits.birthDate,
+      level: edits.level,
+      goals: edits.goals,
+      daily_goal_minutes: edits.dailyGoalMinutes,
+    }),
+  );
+}
+
+/** Uploads a prepared JPEG as the profile photo, or removes the uploaded one when `uri` is null. Throws on failure. */
+export async function saveAvatar(uri: string | null): Promise<void> {
+  if (!(await signedIn())) {
+    useUserStore.getState().hydrate({ avatarUrl: uri, avatarCustom: uri !== null });
+    return;
+  }
+  if (uri === null) {
+    applyUser(await endpoints.deleteAvatar());
+    return;
+  }
+  const form = new FormData();
+  // React Native's FormData sends a local file given as { uri, name, type }.
+  form.append('photo', { uri, name: 'avatar.jpg', type: 'image/jpeg' } as unknown as Blob);
+  applyUser(await endpoints.uploadAvatar(form));
 }
 
 /** The tutor writes its explanations in this language, so a change in settings has to reach the server. */

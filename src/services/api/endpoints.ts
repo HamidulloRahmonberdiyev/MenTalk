@@ -1,9 +1,11 @@
-import { AI_TIMEOUT_MS, api } from './http';
+import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
 
 export interface ApiUser {
   id: number;
   name: string;
   email: string;
+  avatar_url: string | null;
+  avatar_custom: boolean;
   gender: 'male' | 'female' | null;
   country: string | null;
   birth_date: string | null;
@@ -97,6 +99,8 @@ export const endpoints = {
 
   me: () => api<ApiUser>('GET', '/me'),
   updateMe: (patch: ApiProfilePatch) => api<ApiUser>('PUT', '/me', { body: patch }),
+  uploadAvatar: (photo: FormData) => api<ApiUser>('POST', '/me/avatar', { body: photo, timeoutMs: UPLOAD_TIMEOUT_MS, idempotent: true }),
+  deleteAvatar: () => api<ApiUser>('DELETE', '/me/avatar'),
   stats: () => api<ApiStats>('GET', '/stats'),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
 
