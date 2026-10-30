@@ -1,19 +1,18 @@
-/** Text helpers for picking Russian words out of the tutor's lines. Pure, no React. */
-
-const WORD = /[А-Яа-яЁё]+(?:-[А-Яа-яЁё]+)*/g;
+/** Text helpers for picking words of the studied language out of the tutor's lines. Pure, no React. */
 
 export interface Token {
   text: string;
-  /** True for a Russian word that can be tapped; false for spaces, punctuation and emoji. */
+  /** True for a word of the studied language that can be tapped; false for spaces, punctuation and emoji. */
   word: boolean;
 }
 
 export const normalizeWord = (word: string): string => word.trim().toLowerCase();
 
-export function tokenize(text: string): Token[] {
+/** Splits `text` into words matched by `wordPattern` (a global pattern, see `StudyLanguagePack`) and the rest. */
+export function tokenize(text: string, wordPattern: RegExp): Token[] {
   const tokens: Token[] = [];
   let last = 0;
-  for (const match of text.matchAll(WORD)) {
+  for (const match of text.matchAll(wordPattern)) {
     const start = match.index ?? 0;
     if (start > last) tokens.push({ text: text.slice(last, start), word: false });
     tokens.push({ text: match[0], word: true });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useT } from '@/i18n';
 import {
+  ConnectError,
   conversationService,
   type ConversationSession,
   type NoticeCode,
@@ -28,9 +29,16 @@ function ageFrom(birthDate: string | null): number | null {
   return age;
 }
 
+/** Only a connection problem is reported as one; a server or AI failure gets its own message. */
+function connectErrorKey(error: unknown) {
+  if (!(error instanceof ConnectError) || error.code === 'network') return 'error.connect' as const;
+  return error.code === 'quota' ? ('notice.quota' as const) : ('error.connectServer' as const);
+}
+
 /** Snapshot of who is talking, taken when a session starts. */
 function currentLearner(): LearnerProfile {
   const user = useUserStore.getState();
+  const settings = useSettingsStore.getState();
   return {
     name: user.name,
     gender: user.gender,
@@ -38,7 +46,8 @@ function currentLearner(): LearnerProfile {
     age: ageFrom(user.birthDate),
     level: user.level,
     goals: user.goals,
-    uiLanguage: useSettingsStore.getState().language,
+    uiLanguage: settings.language,
+    studyLanguage: settings.studyLanguage,
   };
 }
 
@@ -94,8 +103,9 @@ export function useConversation(scenario: Scenario) {
     session
       .connect()
       .then(() => setStatus((current) => (current === 'error' ? current : 'ready')))
-      .catch(() => {
-        setErrorMessage(t('error.connect'));
+      .catch((error: unknown) => {
+        if (__DEV__) console.warn('Conversation failed to start:', error instanceof ConnectError ? error.cause : error);
+        setErrorMessage(t(connectErrorKey(error)));
         setStatus('error');
       });
 

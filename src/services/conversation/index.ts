@@ -6,6 +6,7 @@ import type { ConversationService } from './ConversationService';
 import { GeminiConversationService } from './GeminiConversationService';
 import { MockConversationService } from './MockConversationService';
 
+export { ConnectError } from './ConversationService';
 export type {
   ConversationEvent,
   ConversationService,

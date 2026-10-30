@@ -9,12 +9,12 @@ import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 
 import { GamePickerSheet } from './GamePickerSheet';
-import { countDue, useVocabularyStore } from './vocabularyStore';
+import { countDue, useStudyCards } from './vocabularyStore';
 
 /** Home shortcut into the word game. Only appears once the learner has saved words. */
 export function WordsPromoCard() {
   const t = useT();
-  const cards = useVocabularyStore((state) => state.cards);
+  const cards = useStudyCards();
   const [picking, setPicking] = useState(false);
   if (cards.length === 0) return null;
 

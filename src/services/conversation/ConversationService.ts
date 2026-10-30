@@ -21,6 +21,17 @@ export interface RecordedAudio {
  */
 export type NoticeCode = 'turnFailed' | 'network' | 'quota' | 'slow' | 'busy';
 
+/** Why `connect()` failed, so the UI only blames the connection when the connection is at fault. */
+export class ConnectError extends Error {
+  constructor(
+    readonly code: NoticeCode,
+    readonly cause: unknown,
+  ) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'ConnectError';
+  }
+}
+
 export type ConversationListener = (event: ConversationEvent) => void;
 export type Unsubscribe = () => void;
 

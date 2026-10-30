@@ -55,9 +55,9 @@ app/
 │   ├── Conversation/      StartConversation, SendTurn, RequestHint, FinishConversation
 │   ├── Vocabulary/        SyncCards, ReviewCards, LookupWord
 │   └── Translator/        Translate
-├── Contracts/             AiClient, SpeechSynthesizer, IdentityVerifier
+├── Contracts/             AiClient, SpeechSynthesizer, IdentityVerifier, TutorLanguage
 ├── DTO/                   AiRequest, TurnInput, TurnResult, SpeechClip, CardChange
-├── Enums/                 Level, Gender, TurnRole, TurnKind, ConversationState
+├── Enums/                 Level, Gender, TurnRole, TurnKind, ConversationState, TargetLanguage
 ├── Exceptions/            AiUnavailable, AiRateLimited, AiOverloaded, AiRejected
 ├── Http/
 │   ├── Controllers/       yupqa, faqat Action chaqiradi
@@ -65,6 +65,7 @@ app/
 │   ├── Requests/          validatsiya + DTO'ga o'girish
 │   └── Resources/         JSON shakli
 ├── Jobs/
+├── Languages/             Russian, English, TutorLanguages (o'rganiladigan tillar, 7.11)
 ├── Models/
 ├── Observers/             kesh bekor qilish
 ├── Policies/
@@ -80,10 +81,10 @@ app/
 | Tamoyil | Loyihadagi ko'rinishi                                                                                      |
 | ------- | ---------------------------------------------------------------------------------------------------------- |
 | **S**   | Controller faqat HTTP; Action bitta use-case; `KeyPool` faqat kalit tanlaydi; `GeminiTransport` faqat HTTP |
-| **O**   | Yangi AI provayder = yangi `AiClient` class. Yangi stsenariy = DB'ga qator. Mavjud kod o'zgarmaydi         |
+| **O**   | Yangi AI provayder = yangi `AiClient` class. Yangi stsenariy = DB'ga qator. Yangi o'rganiladigan til = yangi `TutorLanguage` class (7.11). Mavjud kod o'zgarmaydi |
 | **L**   | `CachedSynthesizer` va `MeteredAiClient` o'z interfeysini to'liq almashtiradi (dekoratorlar)               |
 | **I**   | `AiClient` (matn/JSON) va `SpeechSynthesizer` (ovoz) alohida, kichik interfeyslar                          |
-| **D**   | Action'lar konkret `GeminiClient`'ni emas, `AiClient` interfeysini biladi; ulash `AppServiceProvider`da    |
+| **D**   | Action'lar konkret `GeminiClient`'ni emas, `AiClient` interfeysini biladi; tilni `TutorLanguages` registridan oladi; ulash `AppServiceProvider`da |
 
 ### Kod qoidalari
 
@@ -156,6 +157,11 @@ return [
     'fallback_model' => env('GEMINI_FALLBACK_MODEL', 'gemini-3.8-flash'),
     'tts_model' => env('GEMINI_TTS_MODEL', 'gemini-3.8-flash-tts'),
     'voice' => env('GEMINI_VOICE', 'Sulafat'),
+    // Har bir o'rganiladigan til uchun tutor ovozi; berilmasa umumiy `voice`.
+    'voices' => [
+        'ru' => env('GEMINI_VOICE_RU', env('GEMINI_VOICE', 'Sulafat')),
+        'en' => env('GEMINI_VOICE_EN', env('GEMINI_VOICE', 'Sulafat')),
+    ],
     'timeout' => 25,
     'key_cooldown' => 30,
 ];
@@ -196,6 +202,7 @@ Schema::create('learner_profiles', function (Blueprint $t) {
     $t->string('level', 16)->nullable();
     $t->jsonb('goals')->default('[]');
     $t->char('ui_language', 2)->default('uz');
+    $t->char('target_language', 2)->default('ru');
     $t->string('timezone', 40)->default('Asia/Tashkent');
     $t->unsignedSmallInteger('daily_goal_minutes')->default(10);
     $t->unsignedInteger('xp')->default(0);
@@ -211,11 +218,19 @@ Schema::create('scenarios', function (Blueprint $t) {
     $t->string('image_path')->nullable();
     $t->jsonb('title');
     $t->jsonb('subtitle');
-    $t->text('brief');
-    $t->text('next_topics');
     $t->unsignedSmallInteger('sort')->default(0);
     $t->boolean('active')->default(true);
     $t->timestamps();
+});
+
+// Stsenariy har bir o'rganiladigan tilda o'z joyida bo'ladi (Moskvadagi kafe / Londondagi kafe).
+Schema::create('scenario_briefs', function (Blueprint $t) {
+    $t->string('scenario_id', 24);
+    $t->foreign('scenario_id')->references('id')->on('scenarios')->cascadeOnDelete();
+    $t->char('language', 2);
+    $t->text('brief');
+    $t->text('next_topics');
+    $t->primary(['scenario_id', 'language']);
 });
 
 Schema::create('ai_prompts', function (Blueprint $t) {
@@ -232,6 +247,7 @@ Schema::create('conversations', function (Blueprint $t) {
     $t->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
     $t->string('scenario_id', 24);
     $t->foreign('scenario_id')->references('id')->on('scenarios');
+    $t->char('target_language', 2)->default('ru');
     $t->string('state', 12)->default('active');
     $t->unsignedSmallInteger('learner_turns')->default(0);
     $t->unsignedInteger('duration_sec')->default(0);
@@ -269,6 +285,7 @@ Schema::create('vocab_cards', function (Blueprint $t) {
     $t->ulid('id')->primary();
     $t->ulid('user_id');
     $t->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+    $t->char('language', 2)->default('ru');
     $t->string('word', 64);
     $t->string('translation', 160);
     $t->text('example')->nullable();
@@ -280,7 +297,7 @@ Schema::create('vocab_cards', function (Blueprint $t) {
     $t->timestampTz('updated_at');
     $t->timestampTz('synced_at');
     $t->softDeletes();
-    $t->unique(['user_id', 'word']);
+    $t->unique(['user_id', 'language', 'word']);
     $t->index(['user_id', 'synced_at']);
     $t->index(['user_id', 'due_at']);
 });
@@ -310,6 +327,8 @@ Eslatmalar:
 - `ai_usage` oyma-oy partitsiyalanadi (`pg_partman`), 90 kundan eskisi o'chiriladi.
 - Audio fayllar DB'da emas, storage'da. DB'da faqat URL.
 - Mijoz audiosi serverda saqlanmaydi (maxfiylik): Gemini'ga yuboriladi va tashlab yuboriladi.
+- `conversations.target_language` suhbat boshlanganda profildan nusxa olinadi: o'quvchi keyin tilni almashtirsa ham, eski suhbat o'z tilida yakunlanadi.
+- So'z kartasi `(user_id, language, word)` bo'yicha yagona: bir xil yozilgan so'z ikki tilda ikki alohida karta.
 
 ---
 
@@ -322,17 +341,19 @@ Barcha xatolar `application/problem+json`: `{ "type": "quota", "status": 429, "t
 | GET            | `/bootstrap`                 | fast | Stsenariylar, darajalar, maqsadlar, feature flag, minimal versiya (ETag, 5 daq kesh) |
 | POST           | `/auth/google`               | fast | `{ id_token, device }` → `{ token, user }`                                           |
 | DELETE         | `/auth/session`              | fast | Chiqish                                                                              |
-| GET/PUT/DELETE | `/me`                        | fast | Profil, tahrirlash, akkauntni o'chirish                                              |
+| GET/PUT/DELETE | `/me`                        | fast | Profil, tahrirlash, akkauntni o'chirish; `target_language` (`ru`/`en`)               |
 | GET            | `/history`                   | fast | Suhbatlar tarixi (cursor pagination)                                                 |
 | GET            | `/stats`                     | fast | Kunlik maqsad, seriya, XP                                                            |
-| POST           | `/conversations`             | ai   | `{ scenario_id }` → `conversation_id`, ochilish gapi + audio                         |
+| POST           | `/conversations`             | ai   | `{ scenario_id, target_language? }` → `conversation_id`, ochilish gapi + audio       |
 | POST           | `/conversations/{id}/turns`  | ai   | `{ text }` yoki `{ audio, mime }` → tutor javobi                                     |
 | POST           | `/conversations/{id}/hint`   | ai   | Maslahat jumlasi                                                                     |
 | POST           | `/conversations/{id}/finish` | ai   | Natija (idempotent)                                                                  |
 | POST           | `/translate`                 | ai   | Tarjima (matn natijasi keshlanadi)                                                   |
-| POST           | `/vocabulary/lookup`         | ai   | Bosilgan so'z: asosiy shakl + tarjima (keshlanadi)                                   |
-| POST           | `/vocabulary/sync`           | fast | `{ cursor, changes[] }` → `{ cards[], cursor }`                                      |
-| POST           | `/vocabulary/reviews`        | fast | Raund javoblari → server XP va jadvalni hisoblaydi                                   |
+| POST           | `/vocabulary/lookup`         | ai   | `{ word, sentence, language, target_language? }` → asosiy shakl + tarjima (kesh)     |
+| POST           | `/vocabulary/sync`           | fast | `{ cursor, changes[] }` → `{ cards[], cursor }`; har karta `language` bilan          |
+| POST           | `/vocabulary/reviews`        | fast | Raund javoblari (`word`, `language`, ...) → server XP va jadvalni hisoblaydi         |
+
+`target_language` (yoki kartadagi `language`) berilmasa `ru` deb olinadi: ingliz tilidan oldingi ilova versiyalari o'zgarishsiz ishlayveradi.
 
 Tur javobi:
 
@@ -656,6 +677,8 @@ final readonly class MeteredAiClient implements AiClient
 
 Promptlar `ai_prompts` jadvalida; admin o'zgartirsa kesh bekor bo'ladi. Qoidalar kodda emas, ma'lumotda.
 
+Promptlar tilga bog'liq emas: matnda `{language}`, `{tutor}` kabi joylar turadi va ularni `TutorLanguage` to'ldiradi (7.11). Faqat bitta til uchun boshqacha matn kerak bo'lsa, `key@til` kaliti bilan alohida yoziladi (masalan `tutor.flow@en`); topilmasa umumiy `key` ishlatiladi. Ilovadagi i18n ham xuddi shu `@til` qoidasiga amal qiladi.
+
 ```php
 <?php
 
@@ -663,18 +686,27 @@ declare(strict_types=1);
 
 namespace App\Services\Ai;
 
+use App\Enums\TargetLanguage;
 use App\Models\AiPrompt;
 use Illuminate\Support\Facades\Cache;
 
 final class PromptStore
 {
-    public function get(string $key): string
+    public function get(string $key, ?TargetLanguage $language = null): string
     {
+        $variant = $language === null ? null : "{$key}@{$language->value}";
+
         return Cache::rememberForever(
-            "prompt:{$key}",
-            fn () => AiPrompt::query()->where('key', $key)->where('active', true)->value('body')
+            'prompt:'.($variant ?? $key),
+            fn () => ($variant === null ? null : $this->find($variant))
+                ?? $this->find($key)
                 ?? throw new \LogicException("Missing prompt [{$key}]"),
         );
+    }
+
+    private function find(string $key): ?string
+    {
+        return AiPrompt::query()->where('key', $key)->where('active', true)->value('body');
     }
 }
 ```
@@ -686,14 +718,23 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
+use App\Enums\TargetLanguage;
 use App\Models\AiPrompt;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 final class AiPromptObserver
 {
+    /** Umumiy kalit o'zgarsa, uni zaxira sifatida keshlagan til variantlari ham eskiradi. */
     public function saved(AiPrompt $prompt): void
     {
-        Cache::forget("prompt:{$prompt->key}");
+        $base = Str::before($prompt->key, '@');
+
+        Cache::forget("prompt:{$base}");
+
+        foreach (TargetLanguage::cases() as $language) {
+            Cache::forget("prompt:{$base}@{$language->value}");
+        }
     }
 }
 ```
@@ -705,43 +746,73 @@ declare(strict_types=1);
 
 namespace App\Services\Ai;
 
+use App\Contracts\TutorLanguage;
 use App\DTO\TurnInput;
 use App\Enums\TurnKind;
-use App\Models\LearnerProfile;
-use App\Models\Scenario;
+use App\Languages\TutorLanguages;
+use App\Models\Conversation;
 
 final readonly class PromptBuilder
 {
-    public function __construct(private PromptStore $prompts) {}
+    private const UI_LANGUAGE_NAMES = ['uz' => 'Uzbek', 'ru' => 'Russian', 'en' => 'English'];
 
-    public function system(Scenario $scenario, LearnerProfile $learner): string
+    public function __construct(private PromptStore $prompts, private TutorLanguages $languages) {}
+
+    public function system(Conversation $conversation): string
     {
-        return strtr($this->prompts->get('tutor.system'), [
-            '{scenario}' => $scenario->brief,
-            '{topics}' => $scenario->next_topics,
+        $tutor = $this->languages->for($conversation->target_language);
+        $learner = $conversation->user->profile;
+        $brief = $conversation->scenario->briefFor($tutor->code());
+
+        return $this->render('tutor.system', $tutor, [
+            '{scenario}' => $brief->brief,
+            '{topics}' => $brief->next_topics,
             '{learner}' => $learner->describe(),
-            '{level}' => $this->prompts->get('level.'.($learner->level?->value ?? 'beginner')),
-            '{gender}' => $this->prompts->get('gender.'.($learner->gender?->value ?? 'unspecified')),
+            '{level}' => $this->render('level.'.($learner->level?->value ?? 'beginner'), $tutor),
+            '{gender}' => $this->render('gender.'.($learner->gender?->value ?? 'unspecified'), $tutor),
             '{ui_language}' => $learner->uiLanguageName(),
-            '{flow_rules}' => $this->prompts->get('tutor.flow'),
+            '{flow_rules}' => $this->render('tutor.flow', $tutor),
         ]);
     }
 
-    public function userParts(TurnInput $input): array
+    public function userParts(TurnInput $input, TutorLanguage $tutor): array
     {
         return match ($input->kind) {
-            TurnKind::Opening => [['text' => $this->prompts->get('turn.opening')]],
+            TurnKind::Opening => [['text' => $this->render('turn.opening', $tutor)]],
             TurnKind::Text => [['text' => "The learner typed: {$input->text}"]],
             TurnKind::Audio => [
-                ['text' => $this->prompts->get('turn.audio')],
+                ['text' => $this->render('turn.audio', $tutor)],
                 ['inlineData' => ['mimeType' => $input->mime, 'data' => $input->audio]],
             ],
         };
     }
+
+    /** Promptni oladi va til joylarini to'ldiradi. `$extra` dagi qiymatlar qayta skanerlanmaydi (`strtr`). */
+    public function render(string $key, TutorLanguage $tutor, array $extra = []): string
+    {
+        return strtr($this->prompts->get($key, $tutor->code()), [
+            '{language}' => $tutor->name(),
+            '{tutor}' => $tutor->tutorName(),
+            '{script}' => $tutor->scriptNote(),
+            '{follow_ups}' => $tutor->followUps(),
+            '{language_rules}' => $tutor->rules(),
+            '{basic_words}' => $tutor->basicWords(),
+            '{dictionary_form}' => $tutor->dictionaryForm(),
+            ...$extra,
+        ]);
+    }
+
+    /** So'z qanday izohlanadi: o'quvchi tilida, interfeys o'rganilayotgan tilda bo'lsa o'sha tilda sodda izoh bilan. */
+    public function gloss(string $uiLanguage, TutorLanguage $tutor): string
+    {
+        return $uiLanguage === $tutor->code()->value
+            ? "a very short, simple {$tutor->name()} explanation or synonym"
+            : (self::UI_LANGUAGE_NAMES[$uiLanguage] ?? 'Uzbek').', one to three words';
+    }
 }
 ```
 
-Boshlang'ich seed: `tutor.system`, `tutor.flow`, `turn.opening`, `turn.audio`, `level.*`, `gender.*`, `hint`, `evaluation`, `lookup`, `translate`. Matnlari hozirgi ilovadagi `src/services/gemini/prompts.ts` dan ko'chiriladi (suhbat hech qachon o'zi tugamaydi, har javob savol bilan tugaydi, xatolarga ishora qilinmaydi). TTS'ga faqat gapning o'zi yuboriladi, uslub ko'rsatmasi emas (aks holda model ko'rsatmani o'qib yuboradi).
+Boshlang'ich seed: `tutor.system`, `tutor.flow`, `turn.opening`, `turn.audio`, `level.*`, `gender.*`, `hint`, `evaluation`, `lookup`, `translate`. Matnlari hozirgi ilovadagi `src/services/gemini/prompts.ts` dan ko'chiriladi (suhbat hech qachon o'zi tugamaydi, har javob savol bilan tugaydi, xatolarga ishora qilinmaydi). Tilga xos so'zlar o'rniga joylar yoziladi: `Russian` → `{language}`, `Anna` → `{tutor}`, `(Cyrillic)` → `{script}`, misol savollar → `{follow_ups}`, `"вы"` qoidasi → `{language_rules}`, `привет, да, нет` → `{basic_words}` (to'liq ro'yxat 7.11 da). TTS'ga faqat gapning o'zi yuboriladi, uslub ko'rsatmasi emas (aks holda model ko'rsatmani o'qib yuboradi).
 
 ### 7.4 Suhbat: tur yuborish
 
@@ -841,6 +912,7 @@ use App\Contracts\SpeechSynthesizer;
 use App\DTO\AiRequest;
 use App\DTO\TurnInput;
 use App\DTO\TurnResult;
+use App\Languages\TutorLanguages;
 use App\Models\Conversation;
 use App\Models\Turn;
 use App\Services\Ai\PromptBuilder;
@@ -855,21 +927,23 @@ final readonly class SendTurn
         private PromptBuilder $prompts,
         private SpeechSynthesizer $speech,
         private TurnHistory $history,
+        private TutorLanguages $languages,
     ) {}
 
     public function __invoke(Conversation $conversation, TurnInput $input): Turn
     {
         return Cache::lock("conversation:{$conversation->id}", 40)->block(3, function () use ($conversation, $input) {
+            $tutor = $this->languages->for($conversation->target_language);
             $request = new AiRequest(
-                system: $this->prompts->system($conversation->scenario, $conversation->user->profile),
+                system: $this->prompts->system($conversation),
                 contents: [
                     ...$this->history->contents($conversation),
-                    ['role' => 'user', 'parts' => $this->prompts->userParts($input)],
+                    ['role' => 'user', 'parts' => $this->prompts->userParts($input, $tutor)],
                 ],
                 schema: TurnSchema::get(),
             );
             $result = TurnResult::from($this->ai->json($request));
-            $clip = $this->speech->speak($result->reply, config('ai.voice'));
+            $clip = $this->speech->speak($result->reply, $tutor->voice());
 
             return $this->history->append($conversation, $input, $result, $clip->url)
                 ->setAttribute('audio_ms', $clip->durationMs);
@@ -987,9 +1061,10 @@ namespace App\Actions\Conversation;
 
 use App\Contracts\AiClient;
 use App\DTO\AiRequest;
+use App\Languages\TutorLanguages;
 use App\Models\Conversation;
 use App\Models\ConversationResult;
-use App\Services\Ai\PromptStore;
+use App\Services\Ai\PromptBuilder;
 use App\Services\Ai\Schemas\EvaluationSchema;
 use App\Services\Conversation\Transcript;
 use App\Services\Progress\ProgressTracker;
@@ -1000,7 +1075,8 @@ final readonly class FinishConversation
 {
     public function __construct(
         private AiClient $ai,
-        private PromptStore $prompts,
+        private PromptBuilder $prompts,
+        private TutorLanguages $languages,
         private ProgressTracker $progress,
     ) {}
 
@@ -1034,8 +1110,11 @@ final readonly class FinishConversation
 
     private function evaluate(Conversation $conversation): array
     {
+        $tutor = $this->languages->for($conversation->target_language);
         $raw = $this->ai->json(new AiRequest(
-            system: $this->prompts->get('evaluation'),
+            system: $this->prompts->render('evaluation', $tutor, [
+                '{gloss}' => $this->prompts->gloss($conversation->user->profile->ui_language, $tutor),
+            ]),
             contents: [['role' => 'user', 'parts' => [['text' => Transcript::of($conversation)]]]],
             schema: EvaluationSchema::get(),
             temperature: 0.2,
@@ -1210,7 +1289,9 @@ declare(strict_types=1);
 
 namespace App\Actions\Vocabulary;
 
+use App\Enums\TargetLanguage;
 use App\Models\User;
+use App\Models\VocabCard;
 use App\Services\Progress\ProgressTracker;
 use App\Support\CardState;
 use App\Support\Srs;
@@ -1226,13 +1307,15 @@ final readonly class ReviewCards
 
     public function __invoke(User $user, array $answers): int
     {
-        $answers = collect($answers)->take(self::MAX_ANSWERS)->sortBy('answered_at')->values();
-        $cards = $user->cards()->whereIn('word', $answers->pluck('word'))->get()->keyBy('word');
+        $answers = collect($answers)->take(self::MAX_ANSWERS)->sortBy('answered_at')->values()
+            ->map(fn (array $answer) => $answer + ['language' => TargetLanguage::default()->value]);
+        $cards = $user->cards()->whereIn('word', $answers->pluck('word'))->get()
+            ->keyBy(fn (VocabCard $card) => "{$card->language->value}|{$card->word}");
         $xp = Xp::forRound($answers->pluck('correct')->map(fn ($c) => (bool) $c)->all());
 
         DB::transaction(function () use ($answers, $cards, $user, $xp) {
             foreach ($answers as $answer) {
-                $card = $cards->get($answer['word']);
+                $card = $cards->get("{$answer['language']}|{$answer['word']}");
 
                 if ($card === null) {
                     continue;
@@ -1288,15 +1371,17 @@ final readonly class SyncCards
     public function __invoke(User $user, ?CarbonImmutable $cursor, Collection $changes): SyncResult
     {
         $now = CarbonImmutable::now();
-        $existing = $user->cards()->withTrashed()->whereIn('word', $changes->pluck('word'))->get()->keyBy('word');
+        $existing = $user->cards()->withTrashed()->whereIn('word', $changes->pluck('word'))->get()
+            ->keyBy(fn (VocabCard $card) => "{$card->language->value}|{$card->word}");
+        $find = fn (CardChange $change) => $existing->get("{$change->language->value}|{$change->word}");
 
         $rows = $changes
-            ->filter(fn (CardChange $change) => $existing->get($change->word)?->updated_at?->lt($change->updatedAt) ?? true)
-            ->map(fn (CardChange $change) => $change->toRow($user->id, $existing->get($change->word)?->id ?? (string) Str::ulid(), $now))
+            ->filter(fn (CardChange $change) => $find($change)?->updated_at?->lt($change->updatedAt) ?? true)
+            ->map(fn (CardChange $change) => $change->toRow($user->id, $find($change)?->id ?? (string) Str::ulid(), $now))
             ->values()->all();
 
         if ($rows !== []) {
-            VocabCard::upsert($rows, ['user_id', 'word'], self::UPDATABLE);
+            VocabCard::upsert($rows, ['user_id', 'language', 'word'], self::UPDATABLE);
         }
 
         $cards = $user->cards()->withTrashed()
@@ -1309,6 +1394,8 @@ final readonly class SyncCards
 }
 ```
 
+`CardChange` endi `public TargetLanguage $language` maydoniga ega (so'rovda bo'lmasa `TargetLanguage::default()`), `toRow()` esa `'language' => $this->language->value` ni qo'shadi.
+
 Bosilgan so'zni qidirish (hamma foydalanuvchilar uchun umumiy kesh: bir xil so'z+gap ikkinchi marta Gemini'ga bormaydi):
 
 ```php
@@ -1320,33 +1407,27 @@ namespace App\Actions\Vocabulary;
 
 use App\Contracts\AiClient;
 use App\DTO\AiRequest;
-use App\Services\Ai\PromptStore;
+use App\Enums\TargetLanguage;
+use App\Languages\TutorLanguages;
+use App\Services\Ai\PromptBuilder;
 use App\Services\Ai\Schemas\LookupSchema;
 use Illuminate\Support\Facades\Cache;
 
 final readonly class LookupWord
 {
-    public function __construct(private AiClient $ai, private PromptStore $prompts) {}
+    public function __construct(private AiClient $ai, private PromptBuilder $prompts, private TutorLanguages $languages) {}
 
-    public function __invoke(string $word, string $sentence, string $language): array
+    public function __invoke(string $word, string $sentence, string $uiLanguage, TargetLanguage $target): array
     {
-        $key = 'lookup:'.sha1(mb_strtolower($word)."|{$sentence}|{$language}");
+        $tutor = $this->languages->for($target);
+        $key = 'lookup:'.sha1(mb_strtolower($word)."|{$sentence}|{$uiLanguage}|{$target->value}");
 
         return Cache::remember($key, now()->addDays(90), fn () => $this->ai->json(new AiRequest(
-            system: strtr($this->prompts->get('lookup'), ['{gloss}' => $this->gloss($language)]),
+            system: $this->prompts->render('lookup', $tutor, ['{gloss}' => $this->prompts->gloss($uiLanguage, $tutor)]),
             contents: [['role' => 'user', 'parts' => [['text' => "Word: {$word}\nSentence: {$sentence}"]]]],
             schema: LookupSchema::get(),
             temperature: 0.1,
         )));
-    }
-
-    private function gloss(string $language): string
-    {
-        return match ($language) {
-            'ru' => 'a very short, simple Russian explanation or synonym',
-            'en' => 'English, one to three words',
-            default => 'Uzbek, one to three words',
-        };
     }
 }
 ```
@@ -1636,6 +1717,10 @@ public function register(): void
         new GeminiSynthesizer($app->make(GeminiTransport::class), config('ai.tts_model')),
     ));
     $this->app->bind(IdentityVerifier::class, fn () => new GoogleIdentityVerifier(explode(',', (string) env('GOOGLE_CLIENT_IDS'))));
+
+    // Yangi o'rganiladigan til shu ro'yxatga bitta class qo'shish bilan ulanadi.
+    $this->app->tag([Russian::class, English::class], 'tutor-languages');
+    $this->app->singleton(TutorLanguages::class, fn ($app) => new TutorLanguages($app->tagged('tutor-languages')));
 }
 
 public function boot(): void
@@ -1660,16 +1745,18 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ScenarioResource;
+use App\Languages\TutorLanguages;
 use App\Models\Scenario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 
 final class BootstrapController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(TutorLanguages $languages): JsonResponse
     {
         return response()->json(Cache::rememberForever('bootstrap', fn () => [
             'scenarios' => ScenarioResource::collection(Scenario::query()->where('active', true)->orderBy('sort')->get())->resolve(),
+            'target_languages' => $languages->codes(),
             'levels' => ['beginner', 'elementary', 'intermediate', 'advanced'],
             'goals' => ['travel', 'work', 'study', 'relocation', 'family', 'fun'],
             'features' => config('features'),
@@ -1681,14 +1768,424 @@ final class BootstrapController extends Controller
 
 `ScenarioObserver` `saved`/`deleted` da `Cache::forget('bootstrap')`. Admin yangi stsenariy qo'shsa, ilova keyingi ochilishda (5 daqiqa ichida) uni ko'radi; yangi relizsiz.
 
+### 7.11 O'rganiladigan tillar: rus va ingliz
+
+Ilova endi ikki tilni o'rgatadi: rus tili (tutor Anna, Moskva) va ingliz tili (tutor Emma, London). O'quvchi tilni onboarding'ning birinchi qadamida tanlaydi va profilda o'zgartiradi. Tilga xos hamma narsa bitta kichik kontraktga yig'ilgan: Action'lar, promptlar va so'zlar mantiqi konkret tilni bilmaydi, kodda `match ($language)` yo'q.
+
+| Tamoyil | Ko'rinishi                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------ |
+| **S**   | `Russian`/`English` faqat til ma'lumotini beradi; `TutorLanguages` faqat tanlaydi; `PromptBuilder` faqat matn yig'adi |
+| **O**   | Yangi til = `TargetLanguage` qiymati + `TutorLanguage` class + `scenario_briefs` qatorlari. Action'lar o'zgarmaydi  |
+| **L**   | Har qanday `TutorLanguage` boshqasining o'rniga qo'yiladi; chaqiruvchi farqni sezmaydi                              |
+| **I**   | `TutorLanguage` faqat suhbat va so'zlar uchun kerakli narsalarni beradi                                             |
+| **D**   | Action'lar `TutorLanguages` registriga tayanadi; konkret tillar `AppServiceProvider`da teg orqali ulanadi            |
+
+Ilova tomonida ham xuddi shu tuzilma: `src/services/learning/` (`StudyLanguagePack`, `russian.ts`, `english.ts`).
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+enum TargetLanguage: string
+{
+    case Russian = 'ru';
+    case English = 'en';
+
+    /** Ingliz tilidan oldingi yozuvlar va eski ilova versiyalari rus tilini o'rganadi. */
+    public static function default(): self
+    {
+        return self::Russian;
+    }
+}
+```
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Contracts;
+
+use App\Enums\TargetLanguage;
+
+interface TutorLanguage
+{
+    public function code(): TargetLanguage;
+
+    /** Promptlardagi inglizcha nomi ("Russian"). */
+    public function name(): string;
+
+    public function tutorName(): string;
+
+    /** Yozuv eslatmasi (" (Cyrillic)"), kerak bo'lmasa bo'sh. */
+    public function scriptNote(): string;
+
+    /** Javob oxiridagi savollarga misollar, promptga tayyor holda. */
+    public function followUps(): string;
+
+    /** Faqat shu tilga xos qoidalar (masalan, "вы" bilan murojaat). */
+    public function rules(): string;
+
+    /** O'rganishga taklif qilinmaydigan juda oddiy so'zlar. */
+    public function basicWords(): string;
+
+    /** Lug'at shakli nimani anglatadi ("infinitive, nominative singular"). */
+    public function dictionaryForm(): string;
+
+    /** TTS ovozi. */
+    public function voice(): string;
+}
+```
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Languages;
+
+use App\Contracts\TutorLanguage;
+use App\Enums\TargetLanguage;
+
+final readonly class Russian implements TutorLanguage
+{
+    public function code(): TargetLanguage
+    {
+        return TargetLanguage::Russian;
+    }
+
+    public function name(): string
+    {
+        return 'Russian';
+    }
+
+    public function tutorName(): string
+    {
+        return 'Anna';
+    }
+
+    public function scriptNote(): string
+    {
+        return ' (Cyrillic)';
+    }
+
+    public function followUps(): string
+    {
+        return '"А у вас как?", "Расскажете подробнее?"';
+    }
+
+    public function rules(): string
+    {
+        return '- Address the learner politely with "вы" unless they clearly prefer informal speech.';
+    }
+
+    public function basicWords(): string
+    {
+        return 'привет, да, нет';
+    }
+
+    public function dictionaryForm(): string
+    {
+        return 'infinitive, nominative singular';
+    }
+
+    public function voice(): string
+    {
+        return config('ai.voices.ru');
+    }
+}
+```
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Languages;
+
+use App\Contracts\TutorLanguage;
+use App\Enums\TargetLanguage;
+
+final readonly class English implements TutorLanguage
+{
+    public function code(): TargetLanguage
+    {
+        return TargetLanguage::English;
+    }
+
+    public function name(): string
+    {
+        return 'English';
+    }
+
+    public function tutorName(): string
+    {
+        return 'Emma';
+    }
+
+    public function scriptNote(): string
+    {
+        return '';
+    }
+
+    public function followUps(): string
+    {
+        return '"How about you?", "Tell me more?"';
+    }
+
+    public function rules(): string
+    {
+        return '- Use natural British English spelling and everyday expressions; a warm, friendly tone with first names is fine.';
+    }
+
+    public function basicWords(): string
+    {
+        return 'hello, yes, no';
+    }
+
+    public function dictionaryForm(): string
+    {
+        return 'base form: infinitive without "to", singular noun';
+    }
+
+    public function voice(): string
+    {
+        return config('ai.voices.en');
+    }
+}
+```
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Languages;
+
+use App\Contracts\TutorLanguage;
+use App\Enums\TargetLanguage;
+
+final readonly class TutorLanguages
+{
+    /** @var array<string, TutorLanguage> */
+    private array $byCode;
+
+    /** @param iterable<TutorLanguage> $languages */
+    public function __construct(iterable $languages)
+    {
+        $byCode = [];
+
+        foreach ($languages as $language) {
+            $byCode[$language->code()->value] = $language;
+        }
+
+        $this->byCode = $byCode;
+    }
+
+    public function for(TargetLanguage $code): TutorLanguage
+    {
+        return $this->byCode[$code->value] ?? throw new \LogicException("No tutor language [{$code->value}]");
+    }
+
+    /** @return list<string> */
+    public function codes(): array
+    {
+        return array_keys($this->byCode);
+    }
+}
+```
+
+Modellar: `LearnerProfile` va `Conversation` da `'target_language' => TargetLanguage::class`, `VocabCard` da `'language' => TargetLanguage::class` cast. Stsenariy tavsifi tilga qarab olinadi:
+
+```php
+// App\Models\Scenario
+public function briefs(): HasMany
+{
+    return $this->hasMany(ScenarioBrief::class);
+}
+
+public function briefFor(TargetLanguage $language): ScenarioBrief
+{
+    return $this->briefs->firstWhere('language', $language)
+        ?? throw new \LogicException("Scenario [{$this->id}] has no brief for [{$language->value}]");
+}
+```
+
+Suhbatni boshlash: til so'rovdan, bo'lmasa profildan olinadi va suhbatga yoziladi:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Conversation;
+
+use App\DTO\TurnInput;
+use App\Enums\TargetLanguage;
+use App\Enums\TurnKind;
+use App\Models\Scenario;
+use App\Models\Turn;
+use App\Models\User;
+
+final readonly class StartConversation
+{
+    public function __construct(private SendTurn $send) {}
+
+    public function __invoke(User $user, Scenario $scenario, ?TargetLanguage $language): Turn
+    {
+        $conversation = $user->conversations()->create([
+            'scenario_id' => $scenario->id,
+            'target_language' => $language ?? $user->profile->target_language,
+            'started_at' => now(),
+        ]);
+
+        return ($this->send)($conversation, new TurnInput(TurnKind::Opening));
+    }
+}
+```
+
+Validatsiya (`Rule::enum`), hammasi ixtiyoriy, eski mijozlar uchun:
+
+| Request                    | Qoida                                                                     |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `UpdateProfileRequest`     | `'target_language' => ['sometimes', Rule::enum(TargetLanguage::class)]`   |
+| `StartConversationRequest` | `'target_language' => ['nullable', Rule::enum(TargetLanguage::class)]`    |
+| `LookupWordRequest`        | `'target_language' => ['nullable', Rule::enum(TargetLanguage::class)]`    |
+| `SyncCardsRequest`         | `'changes.*.language' => ['nullable', Rule::enum(TargetLanguage::class)]` |
+| `ReviewCardsRequest`       | `'answers.*.language' => ['nullable', Rule::enum(TargetLanguage::class)]` |
+
+Javoblar: `UserResource` ga `target_language`, `HistoryResource` ga `target_language`, `CardResource` ga `language` qo'shiladi.
+
+Ishlab turgan serverni yangilash migratsiyasi (yangi o'rnatishda 5-bo'limdagi sxema yetarli):
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('learner_profiles', fn (Blueprint $t) => $t->char('target_language', 2)->default('ru'));
+        Schema::table('conversations', fn (Blueprint $t) => $t->char('target_language', 2)->default('ru'));
+
+        Schema::table('vocab_cards', function (Blueprint $t) {
+            $t->char('language', 2)->default('ru');
+            $t->dropUnique(['user_id', 'word']);
+            $t->unique(['user_id', 'language', 'word']);
+        });
+
+        Schema::create('scenario_briefs', function (Blueprint $t) {
+            $t->string('scenario_id', 24);
+            $t->foreign('scenario_id')->references('id')->on('scenarios')->cascadeOnDelete();
+            $t->char('language', 2);
+            $t->text('brief');
+            $t->text('next_topics');
+            $t->primary(['scenario_id', 'language']);
+        });
+
+        DB::statement("insert into scenario_briefs (scenario_id, language, brief, next_topics) select id, 'ru', brief, next_topics from scenarios");
+
+        Schema::table('scenarios', fn (Blueprint $t) => $t->dropColumn(['brief', 'next_topics']));
+    }
+};
+```
+
+Ingliz tili stsenariylari (mavzular rus tilidagi bilan bir xil, faqat joy va tutor boshqa):
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders;
+
+use App\Models\ScenarioBrief;
+use Illuminate\Database\Seeder;
+
+final class EnglishScenarioBriefsSeeder extends Seeder
+{
+    private const BRIEFS = [
+        'intro' => 'Two people meeting for the first time at a friendly event in London. You are Emma, getting to know the learner: name, where they are from, work or studies, hobbies.',
+        'cafe' => "A café in London. You are Emma, the waitress. Take the learner's order: drinks, food, dessert, then payment (card or cash).",
+        'shop' => 'A clothing and grocery store in London. You are Emma, the shop assistant. Help the learner find things, answer questions about sizes, prices, payment.',
+        'taxi' => 'A London taxi ride. You are Emma, the driver. Ask where to go, discuss the route, the address, how long it takes and how to pay.',
+        'work' => "An office in London. You are Emma, a friendly colleague. Small talk, today's tasks, a meeting, plans for the week.",
+        'airport' => 'Heathrow Airport. You are Emma, the check-in and passport-control officer. Check-in, luggage, documents, boarding, the purpose of the trip.',
+    ];
+
+    public function run(): void
+    {
+        foreach (self::BRIEFS as $scenario => $brief) {
+            $topics = ScenarioBrief::query()->where('scenario_id', $scenario)->where('language', 'ru')->value('next_topics');
+
+            ScenarioBrief::updateOrCreate(
+                ['scenario_id' => $scenario, 'language' => 'en'],
+                ['brief' => $brief, 'next_topics' => $topics],
+            );
+        }
+    }
+}
+```
+
+Promptlarni tildan ozod qilish (seed yangilanadi, hamma til uchun bitta matn):
+
+| Kalit          | Tilga xos joy                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| `tutor.system` | `You are {tutor}, a ... {language} conversation partner`, `Reasons for learning {language}`, `reply is in {language} only`, `not {language}`, `{language_rules}` |
+| `tutor.flow`   | `(... {follow_ups})`, `as {tutor} now and then`                                                                  |
+| `turn.opening` | `must be written in {language}{script} only`                                                                     |
+| `turn.audio`   | `They are learning {language}, so expect {language}`, `reply as {tutor}`                                         |
+| `level.*`      | `natural everyday {language}`, `fluent {language}`                                                               |
+| `hint`         | `ONE short, natural {language} phrase`                                                                           |
+| `evaluation`   | `words from {tutor}'s lines`, `Gloss each in {gloss}`, `very basic words ({basic_words})`                       |
+| `lookup`       | `You are a {language} lexicographer`, `dictionary form ({dictionary_form})`, `glossed in {gloss}`               |
+
+Testlar (Pest):
+
+```php
+it('builds the system prompt in the conversation language', function () {
+    $conversation = Conversation::factory()->for(Scenario::factory()->withBriefs())->create(['target_language' => 'en']);
+
+    $prompt = app(PromptBuilder::class)->system($conversation);
+
+    expect($prompt)->toContain('Emma')->toContain('English')->not->toContain('Russian');
+});
+
+it('keeps old clients on Russian', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->postJson('/api/v1/conversations', ['scenario_id' => 'cafe'])->assertOk();
+
+    expect($user->conversations()->first()->target_language)->toBe(TargetLanguage::Russian);
+});
+
+it('stores the same spelling as two cards in two languages', function () {
+    $user = User::factory()->create();
+
+    app(SyncCards::class)($user, null, collect([CardChange::fake('ru', 'кофе'), CardChange::fake('en', 'coffee'), CardChange::fake('en', 'кофе')]));
+
+    expect($user->cards()->count())->toBe(3);
+});
+```
+
 ---
 
 ## 8. Admin panel (Filament)
 
 | Resurs            | Nima boshqariladi                                                                  |
 | ----------------- | ---------------------------------------------------------------------------------- |
-| Scenarios         | Nom/tavsif (uz/ru/en), rasm, rang, brif, keyingi mavzular, tartib, faol/nofaol     |
-| AI Prompts        | Tutor qoidalari, daraja qoidalari, baholash promptlari (tahrir qilinsa kesh bekor) |
+| Scenarios         | Nom/tavsif (uz/ru/en), rasm, rang, tartib, faol/nofaol; har o'rganiladigan til uchun brif va keyingi mavzular (`scenario_briefs`, RelationManager) |
+| AI Prompts        | Tutor qoidalari, daraja qoidalari, baholash promptlari; kerak bo'lsa `key@en` kabi til varianti (tahrir qilinsa kesh bekor) |
 | Users             | Ro'yxat, qidiruv, bloklash, kvotani qayta tiklash                                  |
 | AI Usage (widget) | So'rovlar soni, o'rtacha va p95 kechikish, xato foizi, kunlik xarajat              |
 | Feature flags     | `config/features.php` o'rniga DB'dagi jadval (xohlansa)                            |
@@ -1983,6 +2480,7 @@ Ilova allaqachon interfeyslarga tayanadi (`ConversationService`, `AuthService`),
 4. Stsenariylar `GET /bootstrap` dan olinadi (`mocks/scenarios.ts` faqat zaxira); `If-None-Match` bilan.
 5. `vocabularyStore`: mahalliy (offline) ishlashda davom etadi, `POST /vocabulary/sync` fon rejimida (ilova ochilganda va raunddan keyin). Raund tugagach javoblar `POST /vocabulary/reviews` ga yuboriladi.
 6. `EXPO_PUBLIC_GEMINI_API_KEY` o'rniga faqat `EXPO_PUBLIC_API_URL`. Gemini kodi (`src/services/gemini`) o'chiriladi.
+7. O'rganiladigan til `settingsStore.studyLanguage` da; `/me` dagi `target_language` bilan sinxron. `POST /conversations` va `/vocabulary/lookup` ga `target_language`, so'z kartalariga va review javoblariga `language` yuboriladi. Ekranlar va o'yinlar faqat joriy tildagi so'zlarni ko'rsatadi.
 
 ---
 

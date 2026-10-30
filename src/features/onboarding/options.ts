@@ -1,4 +1,10 @@
-import type { Gender, LearningGoal, RussianLevel } from '@/types';
+import type { StudyLanguage } from '@/services/learning';
+import type { Gender, LearningGoal, LearnerLevel } from '@/types';
+
+export const STUDY_OPTIONS: readonly { id: StudyLanguage; emoji: string }[] = [
+  { id: 'ru', emoji: '🇷🇺' },
+  { id: 'en', emoji: '🇬🇧' },
+];
 
 export const GENDERS: readonly { id: Gender; emoji: string }[] = [
   { id: 'male', emoji: '👨' },
@@ -6,7 +12,7 @@ export const GENDERS: readonly { id: Gender; emoji: string }[] = [
   { id: 'unspecified', emoji: '🙂' },
 ];
 
-export const LEVELS: readonly { id: RussianLevel; emoji: string }[] = [
+export const LEVELS: readonly { id: LearnerLevel; emoji: string }[] = [
   { id: 'beginner', emoji: '🌱' },
   { id: 'elementary', emoji: '🌿' },
   { id: 'intermediate', emoji: '🌳' },

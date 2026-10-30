@@ -1,4 +1,5 @@
 import type { TranslationKey } from '@/i18n';
+import type { StudyLanguage } from '@/services/learning/types';
 import type { ComponentProps } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
 import type { ImageSourcePropType } from 'react-native';
@@ -70,7 +71,7 @@ export interface HistoryEntry {
 }
 
 export type Gender = 'male' | 'female' | 'unspecified';
-export type RussianLevel = 'beginner' | 'elementary' | 'intermediate' | 'advanced';
+export type LearnerLevel = 'beginner' | 'elementary' | 'intermediate' | 'advanced';
 export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
 
 /** Everything the tutor should know about the person it is talking to. */
@@ -82,10 +83,12 @@ export interface LearnerProfile {
   gender: Gender | null;
   country: CountryCode | null;
   age: number | null;
-  level: RussianLevel | null;
+  level: LearnerLevel | null;
   goals: LearningGoal[];
   /** Language of the app UI; explanations and hints are written in it. */
   uiLanguage: 'uz' | 'ru' | 'en';
+  /** The language the learner practises with the tutor. */
+  studyLanguage: StudyLanguage;
 }
 
 export interface UserProfile {
@@ -100,7 +103,7 @@ export interface UserProfile {
   country: CountryCode | null;
   /** ISO date (YYYY-MM-DD). */
   birthDate: string | null;
-  level: RussianLevel | null;
+  level: LearnerLevel | null;
   goals: LearningGoal[];
   dailyGoalMinutes: number;
   minutesToday: number;
@@ -154,9 +157,11 @@ export interface SavedTranslation {
 export interface WordSuggestion {
   /** Dictionary form, lowercase: what is learned. */
   word: string;
-  /** Meaning in the learner's language (or a simple Russian explanation for Russian-speaking UI). */
+  /** Meaning in the learner's language (or a simple explanation when the UI is in the studied language). */
   translation: string;
-  /** The Russian sentence the word came from. */
+  /** The language the word belongs to; missing on words saved before English existed (Russian). */
+  language?: StudyLanguage;
+  /** The sentence in the studied language the word came from. */
   example?: string;
   /** The inflected form as it appears in `example`, when it differs from `word`. */
   form?: string;

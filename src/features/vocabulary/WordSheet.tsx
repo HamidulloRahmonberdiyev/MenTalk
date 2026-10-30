@@ -9,10 +9,11 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
+import { useStudyLanguage } from '@/store/settingsStore';
 import { colors, radii, spacing } from '@/theme';
 
 import { useWordLookup, type WordRequest } from './useWordLookup';
-import { findCard, useVocabularyStore } from './vocabularyStore';
+import { findCard, useStudyCards, useVocabularyStore } from './vocabularyStore';
 
 interface WordSheetProps {
   /** The tapped word, or null while the sheet is closed. */
@@ -27,7 +28,8 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
   const [shown, setShown] = useState(request);
   if (request && request !== shown) setShown(request);
   const lookup = useWordLookup(shown);
-  const cards = useVocabularyStore((state) => state.cards);
+  const cards = useStudyCards();
+  const { id: studyLanguage } = useStudyLanguage();
   const addWords = useVocabularyStore((state) => state.addWords);
   const markTipSeen = useVocabularyStore((state) => state.markTipSeen);
 
@@ -52,7 +54,7 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
               hitSlop={8}
               onPress={() => {
                 haptics.light();
-                void speakText(shownWord, 'ru');
+                void speakText(shownWord, studyLanguage);
               }}
               style={styles.speaker}
             >

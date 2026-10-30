@@ -6,9 +6,9 @@ import { Platform } from 'react-native';
 import type { LipSync } from '@/features/face';
 import { getDeviceVoiceId } from '@/services/speech/deviceVoice';
 import { stripEmoji } from '@/services/text';
+import { useStudyLanguage } from '@/store/settingsStore';
 import type { AiMessage, VoiceState } from '@/types';
 
-const LANGUAGE = 'ru-RU';
 const RATE = 0.95;
 /** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
 const AUDIO_START_TIMEOUT_MS = 6_000;
@@ -43,10 +43,11 @@ async function enableSampling(player: AudioPlayer): Promise<void> {
 
 /**
  * Plays the tutor's lines aloud: the synthesized audio that came with the message, or, when there
- * is none (mock backend, TTS failure), the device's Russian text-to-speech. `lipSync` is fed the
+ * is none (mock backend, TTS failure), the device's text-to-speech in the studied language. `lipSync` is fed the
  * spoken text, word boundaries, playback position and loudness so the face moves with the voice.
  */
 export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState, lipSync: LipSync) {
+  const { speechTag } = useStudyLanguage();
   const [speaking, setSpeaking] = useState(false);
   const spokenId = useRef<string | null>(null);
   const player = useRef<AudioPlayer | null>(null);
@@ -72,14 +73,14 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   const speakWithDevice = useCallback(
     async (text: string) => {
       const spoken = stripEmoji(text);
-      const voice = await getDeviceVoiceId(LANGUAGE);
+      const voice = await getDeviceVoiceId(speechTag);
       lipSync.load(spoken, RATE);
       const finish = () => {
         lipSync.stop();
         setSpeaking(false);
       };
       Speech.speak(spoken, {
-        language: LANGUAGE,
+        language: speechTag,
         voice,
         rate: RATE,
         onStart: () => {
@@ -95,7 +96,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
         onError: finish,
       });
     },
-    [lipSync],
+    [lipSync, speechTag],
   );
 
   const play = useCallback(

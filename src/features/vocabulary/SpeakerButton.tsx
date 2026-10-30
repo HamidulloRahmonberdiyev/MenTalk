@@ -6,24 +6,26 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
+import { useStudyLanguage } from '@/store/settingsStore';
 import { colors, radii } from '@/theme';
 
 interface SpeakerButtonProps {
-  /** The Russian text to read aloud. */
+  /** The text in the studied language to read aloud. */
   text: string;
   size?: number;
   /** Read it once when the button appears. */
   autoPlay?: boolean;
 }
 
-/** Round speaker button that pronounces a Russian word. */
+/** Round speaker button that pronounces a word of the studied language. */
 export function SpeakerButton({ text, size = 56, autoPlay = false }: SpeakerButtonProps) {
   const t = useT();
+  const { id: language } = useStudyLanguage();
 
   useEffect(() => {
-    if (autoPlay) void speakText(text, 'ru');
+    if (autoPlay) void speakText(text, language);
     return stopSpeaking;
-  }, [autoPlay, text]);
+  }, [autoPlay, text, language]);
 
   return (
     <PressableScale
@@ -32,7 +34,7 @@ export function SpeakerButton({ text, size = 56, autoPlay = false }: SpeakerButt
       hitSlop={8}
       onPress={() => {
         haptics.light();
-        void speakText(text, 'ru');
+        void speakText(text, language);
       }}
       style={[styles.button, { width: size, height: size }]}
     >

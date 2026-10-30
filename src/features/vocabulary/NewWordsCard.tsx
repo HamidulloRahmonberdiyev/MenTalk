@@ -10,12 +10,12 @@ import { colors, spacing } from '@/theme';
 import type { WordSuggestion } from '@/types';
 
 import { SpeakerButton } from './SpeakerButton';
-import { findCard, useVocabularyStore } from './vocabularyStore';
+import { findCard, useStudyCards, useVocabularyStore } from './vocabularyStore';
 
 /** After a chat: the words worth learning from it, each one tap away from the word game. */
 export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
   const t = useT();
-  const cards = useVocabularyStore((state) => state.cards);
+  const cards = useStudyCards();
   const addWords = useVocabularyStore((state) => state.addWords);
   const unsaved = words.filter((item) => !findCard(cards, item.word));
 

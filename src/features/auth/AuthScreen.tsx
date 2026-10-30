@@ -17,7 +17,7 @@ import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 
-const BACKGROUND = require('../../../assets/app/moscow.png');
+const BACKGROUND = require('../../../assets/app/samarkand.png');
 const OVERLAY_COLORS = ['rgba(8,6,28,0.55)', 'rgba(8,6,28,0.55)', 'rgba(8,6,28,0.92)'] as const;
 
 export function AuthScreen() {

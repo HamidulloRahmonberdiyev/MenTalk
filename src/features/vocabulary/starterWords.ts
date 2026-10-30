@@ -1,4 +1,5 @@
 import type { Language } from '@/i18n';
+import type { StudyLanguage } from '@/services/learning';
 import type { WordSuggestion } from '@/types';
 
 interface StarterWord {
@@ -9,8 +10,7 @@ interface StarterWord {
   gloss: Record<Language, string>;
 }
 
-/** Everyday words for a first game, so the learner can play before any chat has produced words. */
-const STARTER_WORDS: readonly StarterWord[] = [
+const RUSSIAN: readonly StarterWord[] = [
   { word: 'привет', example: 'Привет! Как дела?', gloss: { uz: 'salom', en: 'hi', ru: 'приветствие при встрече' } },
   { word: 'спасибо', example: 'Большое спасибо!', gloss: { uz: 'rahmat', en: 'thank you', ru: 'слово благодарности' } },
   { word: 'пожалуйста', example: 'Кофе, пожалуйста.', gloss: { uz: 'iltimos', en: 'please', ru: 'вежливая просьба' } },
@@ -28,6 +28,34 @@ const STARTER_WORDS: readonly StarterWord[] = [
   { word: 'понимать', form: 'понимаю', example: 'Я не понимаю.', gloss: { uz: 'tushunmoq', en: 'to understand', ru: 'осознавать смысл' } },
 ];
 
-export function starterWords(language: Language): WordSuggestion[] {
-  return STARTER_WORDS.map(({ word, form, example, gloss }) => ({ word, form, example, translation: gloss[language] }));
+const ENGLISH: readonly StarterWord[] = [
+  { word: 'hello', example: 'Hello! How are you?', gloss: { uz: 'salom', ru: 'привет', en: 'a greeting when you meet' } },
+  { word: 'thanks', example: 'Thanks a lot!', gloss: { uz: 'rahmat', ru: 'спасибо', en: 'a word of gratitude' } },
+  { word: 'please', example: 'A coffee, please.', gloss: { uz: 'iltimos', ru: 'пожалуйста', en: 'a polite request' } },
+  { word: 'sorry', example: 'Sorry, where is the station?', gloss: { uz: 'kechirasiz', ru: 'извините', en: 'a polite apology' } },
+  { word: 'water', example: 'I would like some water.', gloss: { uz: 'suv', ru: 'вода', en: 'the drink from the tap' } },
+  { word: 'coffee', example: 'One coffee, please.', gloss: { uz: 'qahva', ru: 'кофе', en: 'a hot energising drink' } },
+  { word: 'bread', example: 'This bread is fresh.', gloss: { uz: 'non', ru: 'хлеб', en: 'baked food from flour' } },
+  { word: 'house', example: 'My house is far away.', gloss: { uz: 'uy', ru: 'дом', en: 'a building people live in' } },
+  { word: 'friend', example: 'This is my friend.', gloss: { uz: 'do‘st', ru: 'друг', en: 'a person you like and trust' } },
+  { word: 'city', example: 'It is a big city.', gloss: { uz: 'shahar', ru: 'город', en: 'a large town' } },
+  { word: 'how much', example: 'How much is it?', gloss: { uz: 'qancha', ru: 'сколько', en: 'a question about price' } },
+  { word: 'where', example: 'Where is the pharmacy?', gloss: { uz: 'qayerda', ru: 'где', en: 'a question about place' } },
+  { word: 'good', example: 'Everything is good.', gloss: { uz: 'yaxshi', ru: 'хорошо', en: 'fine, nice' } },
+  { word: 'can', example: 'Can I have some water?', gloss: { uz: 'mumkin', ru: 'можно', en: 'to be able or allowed' } },
+  { word: 'understand', example: "I don't understand.", gloss: { uz: 'tushunmoq', ru: 'понимать', en: 'to get the meaning' } },
+];
+
+/** Everyday words for a first game, so the learner can play before any chat has produced words. */
+const STARTER_WORDS: Readonly<Record<StudyLanguage, readonly StarterWord[]>> = { ru: RUSSIAN, en: ENGLISH };
+
+/** Starter words of `studyLanguage`, glossed in the UI language. */
+export function starterWords(studyLanguage: StudyLanguage, uiLanguage: Language): WordSuggestion[] {
+  return STARTER_WORDS[studyLanguage].map(({ word, form, example, gloss }) => ({
+    word,
+    form,
+    example,
+    translation: gloss[uiLanguage],
+    language: studyLanguage,
+  }));
 }

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Text, type StyleProp, type TextStyle } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { useStudyLanguage } from '@/store/settingsStore';
 import type { TypographyVariant } from '@/theme';
 import { colors } from '@/theme';
 
@@ -16,9 +17,10 @@ interface TappableTextProps {
   style?: StyleProp<TextStyle>;
 }
 
-/** Russian text in which every word can be tapped. Punctuation and emoji stay plain. */
+/** Text in the studied language in which every word can be tapped. Punctuation and emoji stay plain. */
 export function TappableText({ text, savedWords, onWordPress, variant, style }: TappableTextProps) {
-  const tokens = useMemo(() => tokenize(text), [text]);
+  const { wordPattern } = useStudyLanguage();
+  const tokens = useMemo(() => tokenize(text, wordPattern), [text, wordPattern]);
 
   return (
     <AppText variant={variant} style={style}>

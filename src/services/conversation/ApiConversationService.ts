@@ -1,16 +1,18 @@
 import { endpoints, type ApiResult, type ApiTurn, type TurnPayload } from '@/services/api/endpoints';
 import { ApiError, NetworkError } from '@/services/api/http';
 import { readBase64 } from '@/services/gemini/audioFiles';
+import type { StudyLanguage } from '@/services/learning';
 import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
 
-import type {
-  ConversationEvent,
-  ConversationListener,
-  ConversationService,
-  ConversationSession,
-  NoticeCode,
-  RecordedAudio,
-  Unsubscribe,
+import {
+  ConnectError,
+  type ConversationEvent,
+  type ConversationListener,
+  type ConversationService,
+  type ConversationSession,
+  type NoticeCode,
+  type RecordedAudio,
+  type Unsubscribe,
 } from './ConversationService';
 import { differingPart } from './markDiff';
 import { toSuggestions } from './suggestions';
@@ -34,7 +36,7 @@ function noticeFor(error: unknown): NoticeCode {
 
 const emotionOf = (value: string): TutorEmotion => (EMOTIONS.includes(value as TutorEmotion) ? (value as TutorEmotion) : 'neutral');
 
-function toResult(scenarioId: Scenario['id'], durationSec: number, result: ApiResult): ConversationResult {
+function toResult(scenarioId: Scenario['id'], language: StudyLanguage, durationSec: number, result: ApiResult): ConversationResult {
   return {
     scenarioId,
     overall: result.overall,
@@ -54,7 +56,7 @@ function toResult(scenarioId: Scenario['id'], durationSec: number, result: ApiRe
         note: item.note || undefined,
       }),
     ),
-    newWords: toSuggestions(result.new_words),
+    newWords: toSuggestions(result.new_words, language),
   };
 }
 
@@ -69,7 +71,10 @@ class ApiSession implements ConversationSession {
   private turn = 0;
   private disposed = false;
 
-  constructor(private readonly scenario: Scenario) {}
+  constructor(
+    private readonly scenario: Scenario,
+    private readonly language: StudyLanguage,
+  ) {}
 
   subscribe(listener: ConversationListener): Unsubscribe {
     this.listeners.add(listener);
@@ -82,12 +87,12 @@ class ApiSession implements ConversationSession {
     const id = ++this.turn;
     this.setState('thinking');
     try {
-      const opening = await endpoints.startConversation(this.scenario.id);
+      const opening = await endpoints.startConversation(this.scenario.id, this.language);
       this.conversationId = opening.conversation_id;
       this.publish(id, opening);
     } catch (error) {
       if (!this.isStale(id)) this.setState('idle');
-      throw error;
+      throw new ConnectError(noticeFor(error), error);
     }
   }
 
@@ -124,7 +129,7 @@ class ApiSession implements ConversationSession {
     this.turn += 1;
     this.clearSpeakingTimer();
     const durationSec = Math.round((Date.now() - this.startedAt) / 1000);
-    return toResult(this.scenario.id, durationSec, await endpoints.finish(this.requireId()));
+    return toResult(this.scenario.id, this.language, durationSec, await endpoints.finish(this.requireId()));
   }
 
   dispose(): void {
@@ -198,7 +203,7 @@ class ApiSession implements ConversationSession {
 }
 
 export class ApiConversationService implements ConversationService {
-  createSession(scenario: Scenario, _learner: LearnerProfile): ConversationSession {
-    return new ApiSession(scenario);
+  createSession(scenario: Scenario, learner: LearnerProfile): ConversationSession {
+    return new ApiSession(scenario, learner.studyLanguage);
   }
 }

@@ -19,7 +19,7 @@ interface SpellExerciseProps {
   onSubmit: (spelled: string) => void;
 }
 
-/** Build the Russian word from scrambled letter tiles: recall without a keyboard. */
+/** Build the word from scrambled letter tiles: recall without a keyboard. */
 export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps) {
   const t = useT();
   const [picked, setPicked] = useState<number[]>([]);

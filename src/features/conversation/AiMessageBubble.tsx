@@ -25,7 +25,7 @@ interface AiMessageBubbleProps {
 
 const NO_WORDS: ReadonlySet<string> = new Set();
 
-/** The tutor's Russian line in a speech bubble whose tail points up at the avatar. */
+/** The tutor's line in a speech bubble whose tail points up at the avatar. */
 export function AiMessageBubble({ message, speaking, onReplay, onWordPress, savedWords = NO_WORDS, showTip = false }: AiMessageBubbleProps) {
   const t = useT();
   const pulse = useSharedValue(0);

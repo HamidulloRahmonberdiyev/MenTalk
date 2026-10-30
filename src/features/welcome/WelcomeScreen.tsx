@@ -18,7 +18,7 @@ import { radii, spacing } from '@/theme';
 
 import { LanguageChips } from './LanguageChips';
 
-const BACKGROUND = require('../../../assets/app/moscow.png');
+const BACKGROUND = require('../../../assets/app/samarkand.png');
 const OVERLAY_COLORS = ['rgba(8,6,28,0.45)', 'rgba(8,6,28,0.15)', 'rgba(8,6,28,0.65)', 'rgba(8,6,28,0.92)'] as const;
 const OVERLAY_LOCATIONS = [0, 0.3, 0.62, 1] as const;
 

@@ -2,25 +2,27 @@ import { readBase64, writeSpeechFile, type SpeechFile } from '@/services/gemini/
 import { GeminiError, generateJson, generateText, synthesizeSpeech, type Content, type Part } from '@/services/gemini/client';
 import { geminiConfig } from '@/services/gemini/config';
 import {
-  AUDIO_TURN_PROMPT,
-  EVALUATION_SCHEMA,
-  HINT_PROMPT,
-  OPENING_PROMPT,
-  TURN_SCHEMA,
+  audioTurnPrompt,
   buildEvaluationPrompt,
   buildSystemPrompt,
+  evaluationSchema,
   glossRule,
+  hintPrompt,
+  openingPrompt,
+  turnSchema,
 } from '@/services/gemini/prompts';
+import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
 import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
 
-import type {
-  ConversationEvent,
-  ConversationListener,
-  ConversationService,
-  ConversationSession,
-  NoticeCode,
-  RecordedAudio,
-  Unsubscribe,
+import {
+  ConnectError,
+  type ConversationEvent,
+  type ConversationListener,
+  type ConversationService,
+  type ConversationSession,
+  type NoticeCode,
+  type RecordedAudio,
+  type Unsubscribe,
 } from './ConversationService';
 import { toSuggestions } from './suggestions';
 
@@ -64,6 +66,7 @@ function noticeFor(error: unknown): NoticeCode {
 class GeminiSession implements ConversationSession {
   private readonly listeners = new Set<ConversationListener>();
   private readonly system: string;
+  private readonly pack: StudyLanguagePack;
   private readonly startedAt = Date.now();
   /** Plain-text transcript of the conversation so far; the audio itself is only sent for the current turn. */
   private readonly history: Content[] = [];
@@ -80,6 +83,7 @@ class GeminiSession implements ConversationSession {
     private readonly scenario: Scenario,
     private readonly learner: LearnerProfile,
   ) {
+    this.pack = studyLanguagePack(learner.studyLanguage);
     this.system = buildSystemPrompt(scenario.id, learner);
   }
 
@@ -123,7 +127,7 @@ class GeminiSession implements ConversationSession {
   async requestHint(): Promise<string> {
     return generateText({
       system: this.system,
-      contents: [...this.recentHistory(), { role: 'user', parts: [{ text: HINT_PROMPT }] }],
+      contents: [...this.recentHistory(), { role: 'user', parts: [{ text: hintPrompt(this.pack) }] }],
       temperature: 0.6,
     });
   }
@@ -148,12 +152,17 @@ class GeminiSession implements ConversationSession {
     }
 
     const transcript = this.history
-      .map((item) => `${item.role === 'model' ? 'Anna' : 'Learner'}: ${(item.parts[0] as { text: string }).text}`)
+      .map((item) => `${item.role === 'model' ? this.pack.tutorName : 'Learner'}: ${(item.parts[0] as { text: string }).text}`)
       .join('\n');
     const evaluation = await generateJson<EvaluationResult>({
       system: this.system,
-      contents: [{ role: 'user', parts: [{ text: buildEvaluationPrompt(transcript, this.loggedMistakes, glossRule(this.learner.uiLanguage)) }] }],
-      schema: EVALUATION_SCHEMA,
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: buildEvaluationPrompt(this.pack, transcript, this.loggedMistakes, glossRule(this.learner.uiLanguage, this.pack)) }],
+        },
+      ],
+      schema: evaluationSchema(this.pack),
       temperature: 0.2,
     });
 
@@ -179,7 +188,7 @@ class GeminiSession implements ConversationSession {
           note: item.note,
         }),
       ),
-      newWords: toSuggestions(evaluation.newWords),
+      newWords: toSuggestions(evaluation.newWords, this.pack.id),
     };
   }
 
@@ -206,7 +215,7 @@ class GeminiSession implements ConversationSession {
       const result = await generateJson<TurnResult>({
         system: this.system,
         contents: [...this.recentHistory(), { role: 'user', parts }],
-        schema: TURN_SCHEMA,
+        schema: turnSchema(this.pack),
       });
       if (this.isStale(id)) return;
 
@@ -235,7 +244,7 @@ class GeminiSession implements ConversationSession {
     } catch (error) {
       if (this.isStale(id)) return;
       this.setState('idle');
-      if (input.kind === 'opening') throw error;
+      if (input.kind === 'opening') throw new ConnectError(noticeFor(error), error);
       this.emit({ type: 'notice', code: noticeFor(error) });
     }
   }
@@ -243,12 +252,12 @@ class GeminiSession implements ConversationSession {
   private async partsFor(input: TurnInput): Promise<Part[]> {
     switch (input.kind) {
       case 'opening':
-        return [{ text: OPENING_PROMPT }];
+        return [{ text: openingPrompt(this.pack) }];
       case 'text':
         return [{ text: `The learner typed: ${input.text}` }];
       case 'audio':
         return [
-          { text: AUDIO_TURN_PROMPT },
+          { text: audioTurnPrompt(this.pack) },
           { inlineData: { mimeType: RECORDING_MIME, data: await readBase64(input.audio.uri) } },
         ];
     }

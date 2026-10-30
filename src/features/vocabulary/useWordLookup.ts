@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import type { WordSuggestion } from '@/types';
 
 import { lookupWord } from './lookupService';
-import { findCard, useVocabularyStore } from './vocabularyStore';
+import { findCard, useStudyCards } from './vocabularyStore';
 
 export interface WordRequest {
   word: string;
@@ -16,7 +16,9 @@ export type LookupState = { status: 'loading' } | { status: 'ready'; word: WordS
 /** Resolves a tapped word: from the saved list when it is there, otherwise by asking Gemini. */
 export function useWordLookup(request: WordRequest | null): LookupState & { retry: () => void } {
   const uiLanguage = useSettingsStore((state) => state.language);
-  const saved = useVocabularyStore((state) => (request ? findCard(state.cards, request.word) : undefined));
+  const studyLanguage = useSettingsStore((state) => state.studyLanguage);
+  const cards = useStudyCards();
+  const saved = request ? findCard(cards, request.word) : undefined;
   // The outcome is stored with the request it answers, so "loading" is simply "no outcome for this request yet".
   const [fetched, setFetched] = useState<{ key: string; outcome: Exclude<LookupState, { status: 'loading' }> } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -24,18 +26,18 @@ export function useWordLookup(request: WordRequest | null): LookupState & { retr
   const word = request?.word;
   const sentence = request?.sentence;
   const hasSaved = saved !== undefined;
-  const key = `${word}|${sentence}|${uiLanguage}|${attempt}`;
+  const key = `${word}|${sentence}|${uiLanguage}|${studyLanguage}|${attempt}`;
 
   useEffect(() => {
     if (!word || !sentence || hasSaved) return;
     const controller = new AbortController();
-    lookupWord({ word, sentence, uiLanguage, signal: controller.signal })
+    lookupWord({ word, sentence, uiLanguage, studyLanguage, signal: controller.signal })
       .then((result) => setFetched({ key, outcome: { status: 'ready', word: result } }))
       .catch(() => {
         if (!controller.signal.aborted) setFetched({ key, outcome: { status: 'error' } });
       });
     return () => controller.abort();
-  }, [word, sentence, hasSaved, uiLanguage, key]);
+  }, [word, sentence, hasSaved, uiLanguage, studyLanguage, key]);
 
   const current: LookupState = saved
     ? { status: 'ready', word: saved }

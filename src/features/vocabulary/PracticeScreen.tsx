@@ -25,7 +25,7 @@ import { SessionSummary } from './SessionSummary';
 import { SpellExercise } from './SpellExercise';
 import { starterWords } from './starterWords';
 import { usePracticeSession } from './usePracticeSession';
-import { useVocabularyStore } from './vocabularyStore';
+import { useStudyCards, useVocabularyStore } from './vocabularyStore';
 
 /**
  * The word game: ten short exercises, instant feedback, combo points and a daily streak. `?mode=`
@@ -34,7 +34,7 @@ import { useVocabularyStore } from './vocabularyStore';
 export function PracticeScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const mode: GameMode = isGameMode(params.mode) ? params.mode : 'mixed';
-  const hasWords = useVocabularyStore((state) => state.cards.length > 0);
+  const hasWords = useStudyCards().length > 0;
   const [round, setRound] = useState(0);
 
   if (!hasWords) return <EmptyRound />;
@@ -44,6 +44,7 @@ export function PracticeScreen() {
 function EmptyRound() {
   const t = useT();
   const language = useSettingsStore((state) => state.language);
+  const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const addWords = useVocabularyStore((state) => state.addWords);
   return (
     <Screen>
@@ -53,7 +54,7 @@ function EmptyRound() {
           {t('practice.empty')}
         </AppText>
         <View style={styles.actions}>
-          <Button title={t('words.starter')} icon="sparkles" onPress={() => addWords(starterWords(language))} />
+          <Button title={t('words.starter')} icon="sparkles" onPress={() => addWords(starterWords(studyLanguage, language))} />
           <Button title={t('practice.done.back')} variant="soft" onPress={() => router.back()} />
         </View>
       </View>
@@ -63,6 +64,7 @@ function EmptyRound() {
 
 function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
   const t = useT();
+  const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const session = usePracticeSession(mode);
   const { exercise, answer, combo, summary } = session;
 
@@ -71,9 +73,9 @@ function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
   const kind = exercise?.kind;
   const answeredId = answer && exercise ? exercise.id : null;
   useEffect(() => {
-    if (answeredId && word && kind !== 'listen') void speakText(word, 'ru');
+    if (answeredId && word && kind !== 'listen') void speakText(word, studyLanguage);
     return stopSpeaking;
-  }, [answeredId, word, kind]);
+  }, [answeredId, word, kind, studyLanguage]);
 
   useEffect(() => {
     if (!answer) return;

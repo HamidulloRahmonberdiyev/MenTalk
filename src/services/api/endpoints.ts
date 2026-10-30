@@ -1,3 +1,5 @@
+import type { StudyLanguage } from '@/services/learning';
+
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
 
 export interface ApiUser {
@@ -12,6 +14,8 @@ export interface ApiUser {
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null;
   goals: string[];
   ui_language: 'uz' | 'ru' | 'en' | null;
+  /** The language being learned; null on servers that predate English. */
+  target_language: StudyLanguage | null;
   timezone: string | null;
   daily_goal_minutes: number;
   xp: number;
@@ -19,7 +23,7 @@ export interface ApiUser {
 }
 
 export type ApiProfilePatch = Partial<
-  Pick<ApiUser, 'name' | 'gender' | 'country' | 'birth_date' | 'level' | 'goals' | 'ui_language' | 'timezone' | 'daily_goal_minutes'>
+  Pick<ApiUser, 'name' | 'gender' | 'country' | 'birth_date' | 'level' | 'goals' | 'ui_language' | 'target_language' | 'timezone' | 'daily_goal_minutes'>
 >;
 
 export interface ApiStats {
@@ -33,6 +37,7 @@ export interface ApiStats {
 export interface ApiHistoryItem {
   id: number;
   scenario_id: string;
+  target_language?: StudyLanguage;
   state: 'active' | 'finished';
   score: number | null;
   learner_turns: number;
@@ -79,6 +84,8 @@ export interface ApiResult {
 
 export interface ApiCard {
   word: string;
+  /** Missing on cards stored before English existed: those are Russian. */
+  language?: StudyLanguage;
   translation: string;
   example: string | null;
   form: string | null;
@@ -104,8 +111,12 @@ export const endpoints = {
   stats: () => api<ApiStats>('GET', '/stats'),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
 
-  startConversation: (scenarioId: string, signal?: AbortSignal) =>
-    api<ApiOpening>('POST', '/conversations', { body: { scenario_id: scenarioId }, timeoutMs: AI_TIMEOUT_MS, signal }),
+  startConversation: (scenarioId: string, targetLanguage: StudyLanguage, signal?: AbortSignal) =>
+    api<ApiOpening>('POST', '/conversations', {
+      body: { scenario_id: scenarioId, target_language: targetLanguage },
+      timeoutMs: AI_TIMEOUT_MS,
+      signal,
+    }),
   sendTurn: (conversationId: number, payload: TurnPayload, signal?: AbortSignal) =>
     api<ApiTurn>('POST', `/conversations/${conversationId}/turns`, { body: payload, timeoutMs: AI_TIMEOUT_MS, signal }),
   hint: (conversationId: number) =>
@@ -113,15 +124,15 @@ export const endpoints = {
   finish: (conversationId: number) =>
     api<ApiResult>('POST', `/conversations/${conversationId}/finish`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
 
-  lookup: (word: string, sentence: string, language: string, signal?: AbortSignal) =>
+  lookup: (word: string, sentence: string, language: string, targetLanguage: StudyLanguage, signal?: AbortSignal) =>
     api<{ form: string; translation: string }>('POST', '/vocabulary/lookup', {
-      body: { word, sentence, language },
+      body: { word, sentence, language, target_language: targetLanguage },
       timeoutMs: AI_TIMEOUT_MS,
       idempotent: true,
       signal,
     }),
   syncCards: (cursor: string | null, changes: ApiCard[]) =>
     api<{ cards: ApiCard[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
-  reviewCards: (answers: { word: string; correct: boolean; answered_at: string }[]) =>
+  reviewCards: (answers: { word: string; language: StudyLanguage; correct: boolean; answered_at: string }[]) =>
     api<{ xp: number }>('POST', '/vocabulary/reviews', { body: { answers } }),
 };

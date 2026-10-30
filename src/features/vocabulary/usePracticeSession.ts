@@ -4,7 +4,7 @@ import { submitReviews, type ReviewAnswer } from '@/services/session/vocabularyS
 
 import { DEFAULT_ROUND_SIZE, buildRound, exerciseFor, isCorrect, type Exercise, type GameMode } from './exercises';
 import { PERFECT_BONUS, xpForAnswer } from './progress';
-import { useVocabularyStore, visibleStreak } from './vocabularyStore';
+import { currentStudyCards, useVocabularyStore, visibleStreak } from './vocabularyStore';
 
 export interface Answer {
   given: string;
@@ -26,7 +26,7 @@ export interface RoundSummary {
  */
 export function usePracticeSession(mode: GameMode) {
   const [queue, setQueue] = useState<Exercise[]>(() =>
-    buildRound(useVocabularyStore.getState().cards, Date.now(), Math.random, DEFAULT_ROUND_SIZE, mode),
+    buildRound(currentStudyCards(), Date.now(), Math.random, DEFAULT_ROUND_SIZE, mode),
   );
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -69,7 +69,7 @@ export function usePracticeSession(mode: GameMode) {
       setCombo(0);
       if (first) {
         // One more try at the end of the round: in a different format, or the same one in a single-type game.
-        const cards = useVocabularyStore.getState().cards;
+        const cards = currentStudyCards();
         const card = cards.find((item) => item.id === exercise.card.id) ?? exercise.card;
         setQueue((items) => [...items, exerciseFor(card, cards, exercise.kind, Math.random, mode)]);
       }

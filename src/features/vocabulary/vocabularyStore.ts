@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 
+import { DEFAULT_STUDY_LANGUAGE, type StudyLanguage } from '@/services/learning';
+import { useSettingsStore } from '@/store/settingsStore';
 import type { VocabCard, WordSuggestion } from '@/types';
 
 import type { GameMode } from './exercises';
@@ -99,6 +102,23 @@ export const useVocabularyStore = create<VocabularyState>()(
     { name: 'vocabulary', storage: createJSONStorage(() => AsyncStorage) },
   ),
 );
+
+/** The language a word belongs to; words saved before English existed are Russian. */
+export const cardLanguage = (card: Pick<WordSuggestion, 'language'>): StudyLanguage => card.language ?? DEFAULT_STUDY_LANGUAGE;
+
+export const cardsIn = (cards: VocabCard[], language: StudyLanguage): VocabCard[] => cards.filter((card) => cardLanguage(card) === language);
+
+/**
+ * The saved words of the language being learned. All languages share one list (and one sync), but
+ * every screen and game only ever works with the words of the current one.
+ */
+export function useStudyCards(): VocabCard[] {
+  const language = useSettingsStore((state) => state.studyLanguage);
+  return useVocabularyStore(useShallow((state) => cardsIn(state.cards, language)));
+}
+
+/** `useStudyCards` outside React, read at the moment of the call. */
+export const currentStudyCards = (): VocabCard[] => cardsIn(useVocabularyStore.getState().cards, useSettingsStore.getState().studyLanguage);
 
 export const countDue = (cards: VocabCard[], now: number = Date.now()): number =>
   cards.reduce((total, card) => total + (isDue(card, now) ? 1 : 0), 0);

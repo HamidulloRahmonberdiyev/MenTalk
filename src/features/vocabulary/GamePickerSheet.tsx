@@ -13,7 +13,7 @@ import { colors, radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
 
 import { playableCards, type GameMode } from './exercises';
-import { countDue, useVocabularyStore } from './vocabularyStore';
+import { countDue, useStudyCards, useVocabularyStore } from './vocabularyStore';
 
 /** A game needs this many playable words: one answer and at least two wrong options. */
 const MIN_WORDS = 3;
@@ -50,7 +50,7 @@ interface GamePickerSheetProps {
  */
 export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
   const t = useT();
-  const cards = useVocabularyStore((state) => state.cards);
+  const cards = useStudyCards();
   const lastMode = useVocabularyStore((state) => state.lastMode);
   const setLastMode = useVocabularyStore((state) => state.setLastMode);
   const chosen = useRef<GameMode | null>(null);

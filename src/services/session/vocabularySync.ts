@@ -1,7 +1,8 @@
-import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
+import { cardLanguage, useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { isApiConfigured } from '@/services/api/config';
 import { endpoints, type ApiCard } from '@/services/api/endpoints';
 import { getToken } from '@/services/api/tokenStore';
+import { DEFAULT_STUDY_LANGUAGE, studyLanguageOfWord } from '@/services/learning';
 import type { VocabCard } from '@/types';
 
 const MAX_CHANGES = 500;
@@ -19,6 +20,7 @@ function toApi(card: VocabCard): ApiCard {
   const updated = card.updatedAt ?? card.addedAt;
   return {
     word: card.id,
+    language: cardLanguage(card),
     translation: card.translation,
     example: card.example ?? null,
     form: card.form ?? null,
@@ -31,8 +33,10 @@ function toApi(card: VocabCard): ApiCard {
   };
 }
 
+/** A deleted word. The card is gone, so its language is read from its alphabet. */
 function tombstone(id: string, time: number): ApiCard {
-  return { word: id, translation: id, example: null, form: null, stage: 0, streak: 0, lapses: 0, due_at: iso(time), updated_at: iso(time), deleted: true };
+  const language = studyLanguageOfWord(id) ?? DEFAULT_STUDY_LANGUAGE;
+  return { word: id, language, translation: id, example: null, form: null, stage: 0, streak: 0, lapses: 0, due_at: iso(time), updated_at: iso(time), deleted: true };
 }
 
 function fromApi(card: ApiCard): VocabCard {
@@ -40,6 +44,7 @@ function fromApi(card: ApiCard): VocabCard {
   return {
     id: card.word,
     word: card.word,
+    language: card.language ?? DEFAULT_STUDY_LANGUAGE,
     translation: card.translation,
     example: card.example ?? undefined,
     form: card.form ?? undefined,
@@ -110,8 +115,17 @@ export function scheduleVocabularySync(): void {
 export async function submitReviews(answers: ReviewAnswer[]): Promise<void> {
   if (!isApiConfigured || answers.length === 0 || !(await getToken())) return;
   try {
+    const cards = new Map(useVocabularyStore.getState().cards.map((card) => [card.id, card]));
     const { xp } = await endpoints.reviewCards(
-      answers.slice(0, 30).map((answer) => ({ word: answer.word, correct: answer.correct, answered_at: iso(answer.answeredAt) })),
+      answers.slice(0, 30).map((answer) => {
+        const card = cards.get(answer.word);
+        return {
+          word: answer.word,
+          language: card ? cardLanguage(card) : (studyLanguageOfWord(answer.word) ?? DEFAULT_STUDY_LANGUAGE),
+          correct: answer.correct,
+          answered_at: iso(answer.answeredAt),
+        };
+      }),
     );
     useVocabularyStore.getState().setXp(xp);
   } catch {

@@ -23,7 +23,7 @@ import { parseBirthDate } from '../onboarding/birthDate';
 import { BirthDateField, type BirthParts } from '../onboarding/BirthDateField';
 import { CountryPicker } from '../onboarding/CountryPicker';
 import { countryName, flagOf } from '../onboarding/countries';
-import { DAILY, GENDERS, GOALS, LEVELS } from '../onboarding/options';
+import { DAILY, GENDERS, GOALS, LEVELS, STUDY_OPTIONS } from '../onboarding/options';
 import { Chip } from './Chip';
 
 const toParts = (iso: string | null): BirthParts => {
@@ -33,7 +33,8 @@ const toParts = (iso: string | null): BirthParts => {
 
 function initialForm(): ProfileEdits {
   const { name, gender, country, birthDate, level, goals, dailyGoalMinutes } = useUserStore.getState();
-  return { name, gender: gender ?? 'unspecified', country, birthDate, level, goals, dailyGoalMinutes };
+  const { studyLanguage } = useSettingsStore.getState();
+  return { name, gender: gender ?? 'unspecified', country, birthDate, level, goals, dailyGoalMinutes, studyLanguage };
 }
 
 export function EditProfileScreen() {
@@ -135,6 +136,14 @@ export function EditProfileScreen() {
 
           <Field label={t('profile.field.birth')}>
             <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} autoFocus={false} />
+          </Field>
+
+          <Field label={t('profile.field.study')}>
+            <View style={styles.wrap}>
+              {STUDY_OPTIONS.map(({ id, emoji }) => (
+                <Chip key={id} emoji={emoji} label={t(`study.${id}`)} selected={form.studyLanguage === id} onPress={() => set('studyLanguage', id)} />
+              ))}
+            </View>
           </Field>
 
           <Field label={t('profile.field.level')}>

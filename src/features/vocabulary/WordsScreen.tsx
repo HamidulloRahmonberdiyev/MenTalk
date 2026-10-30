@@ -15,19 +15,20 @@ import { GamePickerSheet } from './GamePickerSheet';
 import { MASTERY_STYLE } from './masteryStyle';
 import { masteryOf, type Mastery } from './srs';
 import { starterWords } from './starterWords';
-import { countDue, useVocabularyStore, visibleStreak } from './vocabularyStore';
+import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from './vocabularyStore';
 import { WordRow } from './WordRow';
 
 const ORDER: Mastery[] = ['new', 'learning', 'known', 'mastered'];
 
 export function WordsScreen() {
   const t = useT();
-  const cards = useVocabularyStore((state) => state.cards);
+  const cards = useStudyCards();
   const xp = useVocabularyStore((state) => state.xp);
   const streak = useVocabularyStore((state) => visibleStreak(state));
   const removeWord = useVocabularyStore((state) => state.removeWord);
   const addWords = useVocabularyStore((state) => state.addWords);
   const language = useSettingsStore((state) => state.language);
+  const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const [picking, setPicking] = useState(false);
 
   const due = countDue(cards);
@@ -90,7 +91,7 @@ export function WordsScreen() {
             title={t('words.starter')}
             icon="sparkles"
             onPress={() => {
-              addWords(starterWords(language));
+              addWords(starterWords(studyLanguage, language));
               haptics.success();
             }}
             style={styles.starter}

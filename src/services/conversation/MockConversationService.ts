@@ -25,8 +25,11 @@ class MockConversationSession implements ConversationSession {
   private state: VoiceState = 'idle';
   private disposed = false;
 
-  constructor(private readonly scenario: Scenario) {
-    this.script = CONVERSATION_SCRIPTS[scenario.id];
+  constructor(
+    private readonly scenario: Scenario,
+    learner: LearnerProfile,
+  ) {
+    this.script = CONVERSATION_SCRIPTS[learner.studyLanguage][scenario.id];
   }
 
   subscribe(listener: ConversationListener): Unsubscribe {
@@ -134,7 +137,7 @@ class MockConversationSession implements ConversationSession {
 }
 
 export class MockConversationService implements ConversationService {
-  createSession(scenario: Scenario, _learner: LearnerProfile): ConversationSession {
-    return new MockConversationSession(scenario);
+  createSession(scenario: Scenario, learner: LearnerProfile): ConversationSession {
+    return new MockConversationSession(scenario, learner);
   }
 }

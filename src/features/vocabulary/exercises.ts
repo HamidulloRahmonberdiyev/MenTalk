@@ -21,7 +21,7 @@ export interface Exercise {
   id: string;
   kind: ExerciseKind;
   card: VocabCard;
-  /** The correct response: a translation, a Russian word, or the spelled word. */
+  /** The correct response: a translation, a word of the studied language, or the spelled word. */
   answer: string;
   /** Multiple-choice options (empty for spelling). */
   options: string[];

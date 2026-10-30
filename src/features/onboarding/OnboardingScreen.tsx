@@ -10,9 +10,11 @@ import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
+import type { StudyLanguage } from '@/services/learning';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
-import type { CountryCode, Gender, LearningGoal, RussianLevel } from '@/types';
+import type { CountryCode, Gender, LearningGoal, LearnerLevel } from '@/types';
 
 import { CountryPicker } from './CountryPicker';
 import { BirthDateField, type BirthParts } from './BirthDateField';
@@ -20,14 +22,15 @@ import { pushOnboarding } from '@/services/session';
 
 import { parseBirthDate } from './birthDate';
 import { OptionCard } from './OptionCard';
-import { DAILY, GENDERS, GOALS, LEVELS } from './options';
+import { DAILY, GENDERS, GOALS, LEVELS, STUDY_OPTIONS } from './options';
 import { ProgressSegments } from './ProgressSegments';
 import { Reveal } from './Reveal';
 import { StepHero } from './StepHero';
 
-type StepId = 'name' | 'gender' | 'country' | 'birth' | 'level' | 'goals' | 'daily';
+type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'level' | 'goals' | 'daily';
 
 const STEPS: readonly { id: StepId; emoji: string }[] = [
+  { id: 'study', emoji: '🗣️' },
   { id: 'name', emoji: '👋' },
   { id: 'gender', emoji: '🙋' },
   { id: 'country', emoji: '🌍' },
@@ -42,14 +45,16 @@ export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const initialName = useUserStore((state) => state.name);
   const completeOnboarding = useUserStore((state) => state.completeOnboarding);
+  const setStudyLanguage = useSettingsStore((state) => state.setStudyLanguage);
 
   const [step, setStep] = useState(0);
   const [forward, setForward] = useState(true);
+  const [study, setStudy] = useState<StudyLanguage | null>(null);
   const [name, setName] = useState(initialName);
   const [gender, setGender] = useState<Gender | null>(null);
   const [country, setCountry] = useState<CountryCode | null>(null);
   const [birth, setBirth] = useState<BirthParts>({ day: '', month: '', year: '' });
-  const [level, setLevel] = useState<RussianLevel | null>(null);
+  const [level, setLevel] = useState<LearnerLevel | null>(null);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [daily, setDaily] = useState<number>(10);
 
@@ -59,6 +64,7 @@ export function OnboardingScreen() {
   const isLast = step === STEPS.length - 1;
 
   const canContinue = {
+    study: study !== null,
     name: name.trim().length >= 2,
     gender: gender !== null,
     country: country !== null,
@@ -94,9 +100,10 @@ export function OnboardingScreen() {
       setStep((value) => value + 1);
       return;
     }
-    if (!gender || !country || !level || !parsedBirth) return;
+    if (!study || !gender || !country || !level || !parsedBirth) return;
     haptics.success();
     const answers = {
+      studyLanguage: study,
       name: name.trim(),
       gender,
       country,
@@ -108,6 +115,12 @@ export function OnboardingScreen() {
     completeOnboarding(answers);
     void pushOnboarding(answers);
     router.replace('/home');
+  };
+
+  // Applied at once, so the next steps already name the right tutor and language.
+  const chooseStudy = (language: StudyLanguage) => {
+    setStudy(language);
+    setStudyLanguage(language);
   };
 
   const toggleGoal = (goal: LearningGoal) =>
@@ -171,6 +184,20 @@ export function OnboardingScreen() {
           </View>
 
           <View style={styles.body}>
+            {current.id === 'study'
+              ? STUDY_OPTIONS.map(({ id, emoji }, index) => (
+                  <Reveal key={id} index={2 + index}>
+                    <OptionCard
+                      emoji={emoji}
+                      title={t(`study.${id}`)}
+                      description={t(`study.${id}.desc`)}
+                      selected={study === id}
+                      onPress={() => chooseStudy(id)}
+                    />
+                  </Reveal>
+                ))
+              : null}
+
             {current.id === 'name' ? (
               <Reveal index={2}>
                 <TextInput

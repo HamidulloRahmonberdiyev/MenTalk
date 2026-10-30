@@ -2,6 +2,7 @@ import { isScenarioId } from '@/mocks/scenarios';
 import { endpoints, type ApiHistoryItem, type ApiUser } from '@/services/api/endpoints';
 import { isApiConfigured } from '@/services/api/config';
 import { getToken } from '@/services/api/tokenStore';
+import { isStudyLanguage, type StudyLanguage } from '@/services/learning';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
@@ -17,6 +18,8 @@ const toHistory = (item: ApiHistoryItem): HistoryEntry[] =>
     : [];
 
 function applyUser(user: ApiUser): void {
+  const settings = useSettingsStore.getState();
+  if (isStudyLanguage(user.target_language) && user.target_language !== settings.studyLanguage) settings.setStudyLanguage(user.target_language);
   useUserStore.getState().hydrate({
     name: user.name,
     email: user.email,
@@ -82,17 +85,21 @@ export async function pushOnboarding(data: OnboardingData): Promise<void> {
       goals: data.goals,
       daily_goal_minutes: data.dailyGoalMinutes,
       ui_language: useSettingsStore.getState().language,
+      target_language: data.studyLanguage,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     })
     .catch(() => undefined);
 }
 
-export type ProfileEdits = Pick<UserProfile, 'name' | 'gender' | 'country' | 'birthDate' | 'level' | 'goals' | 'dailyGoalMinutes'>;
+export type ProfileEdits = Pick<UserProfile, 'name' | 'gender' | 'country' | 'birthDate' | 'level' | 'goals' | 'dailyGoalMinutes'> & {
+  studyLanguage: StudyLanguage;
+};
 
 /** Saves edits from the profile screen. Unlike the background syncs it throws, so the screen can say it failed. */
-export async function saveProfile(edits: ProfileEdits): Promise<void> {
+export async function saveProfile({ studyLanguage, ...edits }: ProfileEdits): Promise<void> {
   if (!(await signedIn())) {
     useUserStore.getState().hydrate(edits);
+    useSettingsStore.getState().setStudyLanguage(studyLanguage);
     return;
   }
   applyUser(
@@ -104,8 +111,11 @@ export async function saveProfile(edits: ProfileEdits): Promise<void> {
       level: edits.level,
       goals: edits.goals,
       daily_goal_minutes: edits.dailyGoalMinutes,
+      target_language: studyLanguage,
     }),
   );
+  // Servers that predate English answer without the field; the choice still applies on this device.
+  useSettingsStore.getState().setStudyLanguage(studyLanguage);
 }
 
 /** Uploads a prepared JPEG as the profile photo, or removes the uploaded one when `uri` is null. Throws on failure. */

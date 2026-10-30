@@ -7,8 +7,8 @@ import * as Speech from 'expo-speech';
  * `scoreVoice` and `pickBestVoice` are pure, so the heuristic can be tested without a device.
  */
 
-const FEMALE_NAMES = /milena|katya|svetlana|dariya|alena|tatyana|irina|anna|olga|female/i;
-const MALE_NAMES = /yuri|pavel|maxim|dmitri|ivan|male/i;
+const FEMALE_NAMES = /milena|katya|svetlana|dariya|alena|tatyana|irina|anna|olga|samantha|karen|serena|moira|tessa|kate|libby|sonia|female/i;
+const MALE_NAMES = /yuri|pavel|maxim|dmitri|ivan|daniel|arthur|oliver|ryan|male/i;
 
 export function scoreVoice(voice: Speech.Voice): number {
   let score = 0;
