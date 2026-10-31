@@ -6,7 +6,7 @@ import Svg, { Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Stop, Text
  * every solid is a gradient face over a darker extruded side, with a gloss on top and a soft
  * shadow under it. All art is drawn on a 100×100 canvas.
  */
-export type ShortcutArtName = 'topics' | 'chat' | 'book' | 'game' | 'translate' | 'play' | 'dice' | 'profile';
+export type ShortcutArtName = 'topics' | 'chat' | 'book' | 'game' | 'translate' | 'play' | 'dice' | 'profile' | 'mic';
 
 type Tone = 'blue' | 'paper' | 'pink';
 
@@ -185,6 +185,20 @@ function Profile() {
   );
 }
 
+function Mic() {
+  return (
+    <>
+      <Shadow cy={93} rx={30} />
+      <Clay d="M24 44C24 67 36 76 50 76C64 76 76 67 76 44H68C68 61 60 68 50 68C40 68 32 61 32 44Z" depth={4} />
+      <Clay d={roundRect(46, 72, 8, 14, 3)} depth={3} />
+      <Clay d={roundRect(32, 82, 36, 8, 4)} depth={4} />
+      <Clay d={roundRect(35, 8, 30, 52, 15)} tone="pink" depth={5} />
+      <Path d="M41 30H59M41 38H59M41 46H59" stroke="#FFFFFF" strokeOpacity={0.55} strokeWidth={3} strokeLinecap="round" />
+      <Ellipse cx={43} cy={18} rx={3.5} ry={5.5} fill="#FFFFFF" fillOpacity={0.8} />
+    </>
+  );
+}
+
 const ART: Record<ShortcutArtName, () => ReactNode> = {
   topics: Topics,
   chat: Chat,
@@ -194,6 +208,7 @@ const ART: Record<ShortcutArtName, () => ReactNode> = {
   play: Play,
   dice: Dice,
   profile: Profile,
+  mic: Mic,
 };
 
 export function ShortcutArt({ name, size }: { name: ShortcutArtName; size: number }) {

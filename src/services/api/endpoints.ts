@@ -125,6 +125,15 @@ export interface ApiCard {
   deleted: boolean;
 }
 
+/** `POST /pronunciation/assess`. `error_type` follows Azure: None, Mispronunciation, Omission, Insertion. */
+export interface ApiPronunciation {
+  score: number;
+  words: { word: string; score: number; error_type: string }[];
+  tips: { word: string; sound: string | null; problem: string; how_to: string }[];
+  /** Words scored below 80, in dictionary form with a meaning in `ui_language`. Missing on older servers. */
+  new_words?: { word: string; form: string | null; translation: string }[];
+}
+
 export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & { tone?: TutorTone };
 
 /**
@@ -174,6 +183,10 @@ export const endpoints = {
     api<{ hint: string }>('POST', `/conversations/${conversationId}/hint`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
   finish: (conversationId: number) =>
     api<ApiResult>('POST', `/conversations/${conversationId}/finish`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
+
+  /** Multipart: `audio` (m4a), `reference`, `language`, `ui_language`. Stateless, so safe to retry. */
+  assessPronunciation: (form: FormData, signal?: AbortSignal) =>
+    api<ApiPronunciation>('POST', '/pronunciation/assess', { body: form, timeoutMs: AI_TIMEOUT_MS, idempotent: true, signal }),
 
   lookup: (word: string, sentence: string, language: string, targetLanguage: StudyLanguage, signal?: AbortSignal) =>
     api<{ form: string; translation: string }>('POST', '/vocabulary/lookup', {

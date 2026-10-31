@@ -79,7 +79,8 @@ export function HomeScreen() {
         art: 'dice',
         onPress: () => openConversation(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id),
       },
-      { key: 'profile', label: t('home.menu.profile'), art: 'profile', onPress: () => router.navigate('/profile') },
+      // Profile already has its own tab, so its slot went to pronunciation practice.
+      { key: 'pronunciation', label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],
     [t, lastScenarioId],
   );

@@ -353,6 +353,7 @@ Barcha xatolar `application/problem+json`: `{ "type": "quota", "status": 429, "t
 | POST           | `/vocabulary/lookup`         | ai   | `{ word, sentence, language, target_language? }` → asosiy shakl + tarjima (kesh)     |
 | POST           | `/vocabulary/sync`           | fast | `{ cursor, changes[] }` → `{ cards[], cursor }`; har karta `language` bilan          |
 | POST           | `/vocabulary/reviews`        | fast | Raund javoblari (`word`, `language`, ...) → server XP va jadvalni hisoblaydi         |
+| POST           | `/pronunciation/assess`      | ai   | multipart `audio`, `reference`, `language`, `ui_language` → so'z ballari, 1–2 izoh, `new_words` (lug'atga yozilgan) (7.13) |
 
 `target_language` (yoki kartadagi `language`) berilmasa `ru` deb olinadi: ingliz tilidan oldingi ilova versiyalari o'zgarishsiz ishlayveradi.
 
@@ -2724,6 +2725,365 @@ it('sends the reply before the voice and stores the turn', function () {
 
 `FakeAi::streaming()` javobni `mb_str_split($json, $chunkSize)` bilan **belgilar** bo'yicha bo'ladi, xuddi Gemini kabi: SSE'dagi har bir qism to'liq UTF-8 satr bo'lib keladi.
 
+### 7.13 Talaffuzni baholash (Pronunciation Practice)
+
+**Vazifa.** O'quvchi o'rganayotgan tilida (ru/en) gapni o'qiydi. Ilova yozuvni **bitta** so'rovda yuboradi va javobda oladi:
+
+- har bir so'zning bahosi: yashil (≥80), sariq (55–79), qizil (<55 yoki aytilmagan);
+- umumiy ball;
+- eng muhim 1–2 xatoning izohi. Izoh **interfeys tilida** (`ui_language`: uz/ru/en) yoziladi.
+
+**Asosiy qarorlar**
+
+| Qaror | Nima uchun |
+| --- | --- |
+| Baholashni **Azure Speech Pronunciation Assessment** qiladi, LLM emas | Fonema darajasidagi barqaror ball beradi. 5 soniyalik yozuv uchun ~0.5–1 s. LLM "eshitib" baholasa sekin, natija har safar har xil, narxi ham yuqori. |
+| LLM **faqat xato bo'lsa** chaqiriladi: 1–2 so'zga izoh + xato so'zlarning lug'at shakli va tarjimasi, **bitta** so'rovda | Xatosiz urinishda LLM chaqirilmaydi. So'rov kichik: ~200 token kiradi, ~200 token chiqadi. |
+| Xato aytilgan so'zlar **shu so'rovning o'zida** lug'atga (`vocab_cards`) yoziladi | O'quvchi bilmagan so'zlar avtomatik so'z o'yinlariga tushadi. Ilova yopilib qolsa ham so'zlar yo'qolmaydi. |
+| Izohlar keshlanadi | Kalit: `(til, ui_til, so'z, xato fonema, xato turi)`. Bir xil xato (masalan, `th` o'rniga `s`) yuzlab o'quvchida takrorlanadi, shuning uchun keshdan javob ~1 ms. |
+| Audio **hech qayerda saqlanmaydi** | Fayl PHP'ning vaqtinchalik yuklamasida turadi. WAV'ga aylantirish xotirada (pipe) bo'ladi. `finally` blokida hammasi o'chiriladi. Bazaga faqat kvota hisoblagichi yoziladi. |
+| Fayl multipart bilan yuboriladi, base64 emas | Hajm 33% kichik. Expo `File` diskdan oqim qilib yuboradi. |
+
+**Oqim va vaqt byudjeti**
+
+```
+Ilova: m4a, 16 kHz mono AAC, 32 kbps (≈4 KB/s; 5 s ≈ 20 KB)
+  │  POST /pronunciation/assess  (multipart: audio, reference, language, ui_language)
+  ▼
+Laravel ── ffmpeg (pipe, xotirada) → 16 kHz PCM WAV ................  ~40 ms
+       ── Azure STT short-audio REST + Pronunciation-Assessment .....  ~500–900 ms
+       ── eng yomon 2 so'z → kesh → (yo'q bo'lsa) Gemini flash-lite JSON  0 ms / ~400–700 ms
+       ── javob; vaqtinchalik fayl o'chiriladi
+```
+
+Mijoz tomonidagi optimallashtirishlar (allaqachon qilingan):
+
+- Yozuv gap tugashi bilan o'zi to'xtaydi (`SpeechEndpointDetector`). Yuklash shu zahoti boshlanadi.
+- So'rov `idempotent`: tarmoq uzilsa avtomatik qayta yuboriladi. Ekrandan chiqilsa `AbortController` so'rovni bekor qiladi.
+- Mijoz natija kelgach yoki xato bo'lganda faylni o'zi ham o'chiradi (`deleteRecording`). Ovoz eshitilmagan yozuv ham o'chiriladi.
+
+#### Endpoint
+
+`POST /api/v1/pronunciation/assess` (`auth:sanctum`, `throttle:ai`, `quota:pronunciation`)
+
+| Maydon | Qoida |
+| --- | --- |
+| `audio` | `required`, `file`, `mimetypes:audio/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/wav,audio/ogg`, `max:1024` (KB, ≈ 4 daqiqa; amalda gap 3–15 s) |
+| `reference` | `required`, `string`, `max:200` |
+| `language` | `required`, `Rule::enum(TargetLanguage::class)` |
+| `ui_language` | `required`, `in:uz,ru,en` |
+
+Javob:
+
+```json
+{
+  "data": {
+    "score": 78,
+    "words": [
+      { "word": "Three", "score": 41, "error_type": "Mispronunciation" },
+      { "word": "thin",  "score": 63, "error_type": "Mispronunciation" },
+      { "word": "trees", "score": 95, "error_type": "None" }
+    ],
+    "tips": [
+      {
+        "word": "Three",
+        "sound": "θ",
+        "problem": "“th” o‘rniga “s” tovushi chiqdi.",
+        "how_to": "Til uchini tishlar orasiga qo‘yib, havoni sekin chiqaring: θ-θ-three."
+      }
+    ],
+    "new_words": [
+      { "word": "three", "form": "Three", "translation": "uch" },
+      { "word": "thin", "form": "thin", "translation": "ingichka" }
+    ]
+  }
+}
+```
+
+- `score` hisoblanadi Azure `PronScore` dan. Agar u bo'lmasa, `AccuracyScore`, `FluencyScore` va `CompletenessScore` o'rtachasidan.
+- `error_type` Azure'dagi kabi: `None`, `Mispronunciation`, `Omission`, `Insertion`. `Insertion` (ortiqcha aytilgan so'z) mijozga yuborilmaydi.
+- `tips` bo'sh bo'lishi mumkin. Mijoz bunda "Xato topilmadi" ko'rsatadi.
+- `new_words`: 80 dan past ball olgan (yoki aytilmagan) har bir so'z. `word` lug'at shakli (kichik harf), `form` gapdagi ko'rinishi, `translation` `ui_language` da. Server ularni foydalanuvchining `vocab_cards` jadvaliga **allaqachon yozgan**. Mijoz ham mahalliy lug'atiga qo'shadi; keyingi `/vocabulary/sync` `(user_id, language, word)` bo'yicha upsert qiladi, dublikat paydo bo'lmaydi. Ism va raqamlar o'tkazib yuboriladi. Lug'atda bor so'z qayta qo'shilmaydi (`insertOrIgnore`). O'quvchi o'zi o'chirgan (soft-deleted) so'z ham qaytib kelmaydi.
+- Xatolar `problem+json` bilan qaytadi:
+  - `422 validation`
+  - `429 quota`
+  - `502 assessment_failed`: Azure ishlamadi. Mijoz "Qayta urinib ko'ring" deydi.
+
+#### Kod
+
+`config/services.php`:
+
+```php
+'azure_speech' => [
+    'key' => env('AZURE_SPEECH_KEY'),
+    'region' => env('AZURE_SPEECH_REGION', 'westeurope'),
+    'timeout' => 8,
+],
+```
+
+`app/Services/Pronunciation/AzurePronunciationAssessor.php`:
+
+```php
+final class AzurePronunciationAssessor
+{
+    private const LOCALES = ['en' => 'en-US', 'ru' => 'ru-RU'];
+
+    public function __construct(private readonly AudioTranscoder $transcoder) {}
+
+    /** @return array{score:int, words:list<array{word:string, score:int, error_type:string, phonemes:list<array{p:string, score:int}>}>} */
+    public function assess(string $path, string $reference, TargetLanguage $language): array
+    {
+        $wav = $this->transcoder->toPcmWav($path); // ffmpeg, xotirada; fayl yaratilmaydi
+
+        $config = base64_encode(json_encode([
+            'ReferenceText' => $reference,
+            'GradingSystem' => 'HundredMark',
+            'Granularity' => 'Phoneme',
+            'EnableMiscue' => true,
+            'PhonemeAlphabet' => 'IPA',
+        ], JSON_UNESCAPED_UNICODE));
+
+        $response = Http::timeout(config('services.azure_speech.timeout'))
+            ->withHeaders([
+                'Ocp-Apim-Subscription-Key' => config('services.azure_speech.key'),
+                'Pronunciation-Assessment' => $config,
+                'Accept' => 'application/json',
+            ])
+            ->withBody($wav, 'audio/wav; codecs=audio/pcm; samplerate=16000')
+            ->post(sprintf(
+                'https://%s.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=detailed',
+                config('services.azure_speech.region'),
+                self::LOCALES[$language->value],
+            ))
+            ->throw();
+
+        $best = $response->json('NBest.0') ?? throw new AssessmentFailed('no_speech');
+        $assessment = $best['PronunciationAssessment'] ?? [];
+
+        $words = collect($best['Words'] ?? [])
+            ->reject(fn (array $w) => ($w['PronunciationAssessment']['ErrorType'] ?? 'None') === 'Insertion')
+            ->map(fn (array $w) => [
+                'word' => $w['Word'],
+                'score' => (int) round($w['PronunciationAssessment']['AccuracyScore'] ?? 0),
+                'error_type' => $w['PronunciationAssessment']['ErrorType'] ?? 'None',
+                'phonemes' => collect($w['Phonemes'] ?? [])
+                    ->map(fn (array $p) => ['p' => $p['Phoneme'], 'score' => (int) round($p['PronunciationAssessment']['AccuracyScore'] ?? 0)])
+                    ->all(),
+            ])
+            ->values()
+            ->all();
+
+        $score = $assessment['PronScore']
+            ?? collect([$assessment['AccuracyScore'] ?? null, $assessment['FluencyScore'] ?? null, $assessment['CompletenessScore'] ?? null])->filter()->avg()
+            ?? 0;
+
+        return ['score' => (int) round($score), 'words' => $words];
+    }
+}
+```
+
+`AudioTranscoder::toPcmWav()` `ffmpeg -hide_banner -loglevel error -i <path> -ac 1 -ar 16000 -f wav pipe:1` ni `Symfony\Process` orqali ishga tushiradi va stdout'ni satr sifatida qaytaradi. Timeout 5 s. Docker image'ga `ffmpeg` qo'shiladi (§10).
+
+`app/Services/Pronunciation/PronunciationExplainer.php` (LLM faqat shu yerda). Bitta chaqiruv ikki ishni qiladi:
+
+1. Eng muhim 1–2 xatoga izoh (`problem`, `how_to`) yozadi.
+2. Barcha xato so'zlarga lug'at shakli va tarjimasini (gloss) beradi.
+
+Ikkalasi alohida keshlanadi. Faqat keshda yo'q qismlar LLM'ga yuboriladi, hammasi keshda bo'lsa LLM chaqirilmaydi.
+
+```php
+final class PronunciationExplainer
+{
+    private const UI = ['uz' => 'Uzbek (Latin script)', 'ru' => 'Russian', 'en' => 'English'];
+    private const TTL_DAYS = 30;
+
+    public function __construct(private readonly GeminiTransport $gemini, private readonly CacheRepository $cache) {}
+
+    /**
+     * @param list<array{word:string, error_type:string, phonemes:list<array{p:string, score:int}>}> $tipWords  eng muhim 1–2 xato
+     * @param list<string> $glossWords  barcha xato so'zlar (gapdagi ko'rinishida)
+     * @return array{tips: list<array>, glosses: list<array{word:string, form:string, translation:string}>}
+     */
+    public function explain(array $tipWords, array $glossWords, string $reference, TargetLanguage $language, string $ui): array
+    {
+        $items = [];
+        $tips = [];
+        foreach ($tipWords as $i => $m) {
+            $sound = collect($m['phonemes'])->sortBy('score')->first()['p'] ?? null;
+            $key = 'pron:tip:'.md5(implode('|', [$language->value, $ui, mb_strtolower($m['word']), $sound, $m['error_type']]));
+            $tips[$i] = ['key' => $key, 'word' => $m['word'], 'sound' => $sound, 'value' => $this->cache->get($key)];
+            if ($tips[$i]['value'] === null) {
+                $items[] = ['id' => "t{$i}", 'kind' => 'tip', 'word' => $m['word'], 'sound' => $sound, 'error' => $m['error_type']];
+            }
+        }
+
+        $glosses = [];
+        foreach (array_values(array_unique($glossWords)) as $i => $form) {
+            $key = 'pron:gloss:'.md5(implode('|', [$language->value, $ui, mb_strtolower($form)]));
+            $glosses[$i] = ['key' => $key, 'form' => $form, 'value' => $this->cache->get($key)];
+            if ($glosses[$i]['value'] === null) {
+                $items[] = ['id' => "g{$i}", 'kind' => 'gloss', 'word' => $form];
+            }
+        }
+
+        if ($items !== []) {
+            $answer = $this->gemini->json(
+                model: config('ai.models.fast'),           // flash-lite, thinking: minimal
+                system: sprintf(
+                    'You are a %1$s pronunciation coach. The learner read: "%2$s". Answer every item by its id, in %3$s. '.
+                    'kind=tip: problem = what the learner most likely did wrong with the sound, how_to = a concrete mouth/tongue instruction, one short sentence each '.
+                    '(error Omission means the word was skipped). '.
+                    'kind=gloss: lemma = the dictionary form in lowercase, translation = its meaning in this sentence in 1-3 words, '.
+                    'or skip=true for names and numbers. No extra text.',
+                    $language->name(), $reference, self::UI[$ui],
+                ),
+                user: json_encode($items, JSON_UNESCAPED_UNICODE),
+                schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [
+                    'id' => ['type' => 'string'],
+                    'problem' => ['type' => 'string'], 'how_to' => ['type' => 'string'],
+                    'lemma' => ['type' => 'string'], 'translation' => ['type' => 'string'], 'skip' => ['type' => 'boolean'],
+                ], 'required' => ['id']]],
+                maxOutputTokens: 400,
+                temperature: 0.3,
+            );
+
+            foreach ($answer as $row) {
+                $index = (int) substr($row['id'], 1);
+                if ($row['id'][0] === 't' && isset($tips[$index], $row['problem'], $row['how_to'])) {
+                    $tips[$index]['value'] = ['problem' => $row['problem'], 'how_to' => $row['how_to']];
+                    $this->cache->put($tips[$index]['key'], $tips[$index]['value'], now()->addDays(self::TTL_DAYS));
+                } elseif ($row['id'][0] === 'g' && isset($glosses[$index])) {
+                    // Ism/raqam ham keshlanadi (skip), keyingi safar yana so'ralmasin.
+                    $glosses[$index]['value'] = ($row['skip'] ?? false) || empty($row['lemma']) || empty($row['translation'])
+                        ? ['skip' => true]
+                        : ['lemma' => mb_strtolower($row['lemma']), 'translation' => $row['translation']];
+                    $this->cache->put($glosses[$index]['key'], $glosses[$index]['value'], now()->addDays(self::TTL_DAYS));
+                }
+            }
+        }
+
+        return [
+            'tips' => collect($tips)->filter(fn ($t) => $t['value'] !== null)
+                ->map(fn ($t) => ['word' => $t['word'], 'sound' => $t['sound'], ...$t['value']])->values()->all(),
+            'glosses' => collect($glosses)->filter(fn ($g) => isset($g['value']['lemma']))
+                ->map(fn ($g) => ['word' => $g['value']['lemma'], 'form' => $g['form'], 'translation' => $g['value']['translation']])->values()->all(),
+        ];
+    }
+}
+```
+
+`app/Actions/AssessPronunciation.php`:
+
+```php
+final class AssessPronunciation
+{
+    private const TIP_BELOW = 80;
+
+    public function __construct(
+        private readonly AzurePronunciationAssessor $assessor,
+        private readonly PronunciationExplainer $explainer,
+    ) {}
+
+    public function __invoke(User $user, UploadedFile $audio, string $reference, TargetLanguage $language, string $ui): array
+    {
+        try {
+            $result = $this->assessor->assess($audio->getRealPath(), $reference, $language);
+        } finally {
+            // Audio saqlanmaydi: baholash tugashi bilan o'chiriladi (PHP ham so'rov oxirida tozalaydi, bu kafolat).
+            @unlink($audio->getRealPath());
+        }
+
+        // Avval aytilmagan so'zlar, keyin eng past ball.
+        $mistakes = collect($result['words'])
+            ->filter(fn (array $w) => $w['error_type'] === 'Omission' || $w['score'] < self::TIP_BELOW)
+            ->sortBy(fn (array $w) => [$w['error_type'] === 'Omission' ? 0 : 1, $w['score']])
+            ->values();
+
+        // Izoh va tarjima qo'shimcha: LLM yiqilsa ham ballar qaytadi (rescue xatoni log qiladi).
+        $extra = $mistakes->isEmpty()
+            ? ['tips' => [], 'glosses' => []]
+            : rescue(fn () => $this->explainer->explain(
+                $mistakes->take(2)->all(),
+                $mistakes->pluck('word')->all(),
+                $reference, $language, $ui,
+            ), ['tips' => [], 'glosses' => []]);
+
+        // Bilmagan so'zlar lug'atga: mavjudlari tegilmaydi, yangi kartalar SRS boshidan boshlanadi.
+        if ($extra['glosses'] !== []) {
+            $now = now();
+            VocabCard::query()->insertOrIgnore(array_map(fn (array $g) => [
+                'id' => (string) Str::ulid(),
+                'user_id' => $user->id,
+                'language' => $language->value,
+                'word' => $g['word'],
+                'form' => $g['form'] !== $g['word'] ? $g['form'] : null,
+                'translation' => $g['translation'],
+                'example' => $reference,
+                'source' => 'pronunciation',
+                'stage' => 0,
+                'due_at' => $now,
+                'updated_at' => $now,
+                // Sync cursor'i shu vaqtdan katta bo'lgani uchun boshqa qurilmalar ham bu kartani oladi.
+                'synced_at' => $now,
+            ], $extra['glosses']));
+        }
+
+        return [
+            'score' => $result['score'],
+            'words' => array_map(fn (array $w) => Arr::only($w, ['word', 'score', 'error_type']), $result['words']),
+            'tips' => $extra['tips'],
+            'new_words' => $extra['glosses'],
+        ];
+    }
+}
+```
+
+Izoh LLM'dan kelmasa (timeout yoki kvota), `tips` va `new_words` bo'sh qaytadi, ballar baribir ko'rsatiladi. Izoh hech qachon butun javobni yiqitmaydi: `explain()` Laravel'ning `rescue()` yordamchisi ichida chaqiriladi, xato log'ga yoziladi.
+
+`app/Http/Controllers/PronunciationController.php`:
+
+```php
+final class PronunciationController extends Controller
+{
+    public function __invoke(AssessPronunciationRequest $request, AssessPronunciation $assess): JsonResponse
+    {
+        try {
+            return response()->json(['data' => $assess(
+                $request->user(),
+                $request->file('audio'),
+                $request->string('reference')->trim()->value(),
+                $request->enum('language', TargetLanguage::class),
+                $request->string('ui_language')->value(),
+            )]);
+        } catch (AssessmentFailed|RequestException|ProcessFailedException $error) {
+            Log::warning('pronunciation.failed', ['error' => $error->getMessage()]);
+            throw new ProblemException(502, 'assessment_failed');
+        }
+    }
+}
+```
+
+`routes/api.php` (`throttle:ai` guruhi ichida):
+
+```php
+Route::post('pronunciation/assess', PronunciationController::class)->middleware('quota:pronunciation');
+```
+
+Kvota: `quota:pronunciation` free tarifda kuniga 30 urinish, premiumda 300. Redis hisoblagich ishlatiladi, bazaga yozilmaydi.
+
+**Migratsiya.** `vocab_cards` ga `source` ustuni qo'shiladi: `string(20)`, nullable, qiymatlari `conversation|translator|pronunciation|starter`. U statistika uchun, sinxron qilishga ta'sir qilmaydi. `(user_id, language, word)` unique indeksi §5 da allaqachon bor, `insertOrIgnore` shunga tayanadi.
+
+**Testlar.** `Http::fake()` bilan Azure'ning tayyor `detailed` javobi beriladi va quyidagilar tekshiriladi:
+
+1. Insertion so'zlar chiqarib tashlanadi.
+2. Faqat 2 ta tip qaytadi.
+3. Xatosiz urinishda Gemini **chaqirilmaydi** (`GeminiTransport` mock'iga `shouldNotReceive`).
+4. Kesh to'lsa, ikkinchi bir xil xatoda ham Gemini chaqirilmaydi.
+5. Xato so'zlar `vocab_cards` ga `source=pronunciation` bilan yoziladi. Lug'atda bor so'z o'zgarmaydi (stage saqlanadi). Ism (`skip`) yozilmaydi.
+6. Vaqtinchalik fayl so'rovdan keyin mavjud emas.
+7. Azure 5xx bo'lsa, `502 assessment_failed` qaytadi.
+
+
 ---
 
 ## 8. Admin panel (Filament)
@@ -3027,6 +3387,7 @@ Ilova allaqachon interfeyslarga tayanadi (`ConversationService`, `AuthService`),
 5. `vocabularyStore`: mahalliy (offline) ishlashda davom etadi, `POST /vocabulary/sync` fon rejimida (ilova ochilganda va raunddan keyin). Raund tugagach javoblar `POST /vocabulary/reviews` ga yuboriladi.
 6. `EXPO_PUBLIC_GEMINI_API_KEY` o'rniga faqat `EXPO_PUBLIC_API_URL`. Gemini kodi (`src/services/gemini`) o'chiriladi.
 7. O'rganiladigan til `settingsStore.studyLanguage` da; `/me` dagi `target_language` bilan sinxron. `POST /conversations` va `/vocabulary/lookup` ga `target_language`, so'z kartalariga va review javoblariga `language` yuboriladi. Ekranlar va o'yinlar faqat joriy tildagi so'zlarni ko'rsatadi.
+8. Talaffuz: `ApiPronunciationService` → `POST /pronunciation/assess` (multipart, bitta so'rov). Server yo'q bo'lsa `GeminiPronunciationService` (mahalliy rejim), kalit ham bo'lmasa mock. Yozuv natijadan keyin mijozda ham o'chiriladi. `new_words` mahalliy lug'atga qo'shiladi (server ularni allaqachon yozgan, sync dublikat qilmaydi).
 
 ---
 

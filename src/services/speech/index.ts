@@ -18,6 +18,8 @@ const TAGS: Record<LanguageCode, string> = {
 };
 
 export interface SpeakHandlers {
+  /** Device voice speed, 1 = normal. Slow (~0.6) is for hearing each sound. */
+  rate?: number;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -59,6 +61,7 @@ export async function speakText(text: string, language: LanguageCode, handlers: 
   if ((await loadDeviceLanguages()).has(language)) {
     Speech.speak(text, {
       language: TAGS[language],
+      rate: handlers.rate,
       onStart: handlers.onStart,
       onDone: handlers.onEnd,
       onStopped: handlers.onEnd,

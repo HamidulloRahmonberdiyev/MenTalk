@@ -10,6 +10,7 @@ import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 
 import type { RecordedAudio } from '@/services/conversation';
 import { haptics } from '@/services/haptics';
+import { deleteRecording } from '@/services/pronunciation/tempAudio';
 
 import { DEFAULT_ENDPOINT_CONFIG, SpeechEndpointDetector } from './speechEndpoint';
 
@@ -86,8 +87,13 @@ export function useVoiceCapture({ onSpeechEnd, onNoSpeech }: VoiceCaptureOptions
   const finish = useCallback(
     async (spoken: boolean, durationMs: number) => {
       const uri = await close();
-      if (spoken && uri) handlers.current.onSpeechEnd({ uri, durationMs });
-      else handlers.current.onNoSpeech();
+      if (spoken && uri) {
+        handlers.current.onSpeechEnd({ uri, durationMs });
+        return;
+      }
+      // Nothing worth sending: the silent recording is not needed either.
+      if (uri) deleteRecording(uri);
+      handlers.current.onNoSpeech();
     },
     [close],
   );

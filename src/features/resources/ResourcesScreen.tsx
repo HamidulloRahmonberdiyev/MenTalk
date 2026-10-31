@@ -61,6 +61,15 @@ export function ResourcesScreen() {
       onPress: () => router.push('/scenarios'),
     },
     {
+      key: 'pronunciation',
+      title: t('pron.title'),
+      hint: t('pron.hint'),
+      icon: 'mic-circle',
+      gradient: ['#FFB86B', '#FF5F8A'],
+      edge: '#D93A6A',
+      onPress: () => router.push('/pronunciation'),
+    },
+    {
       key: 'translate',
       title: t('home.menu.translate'),
       icon: 'language',
