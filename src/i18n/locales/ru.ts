@@ -155,6 +155,7 @@ export const ru: Dictionary = {
   'profile.photo.remove': 'Удалить фото',
   'profile.photo.failed': 'Не удалось обновить фото. Попробуйте ещё раз.',
   'profile.photo.denied': 'Разрешите доступ к камере в настройках, чтобы сделать фото.',
+  'profile.photo.tooLarge': "Фото больше 5 МБ. Выберите фото поменьше.",
   'profile.discardTitle': 'Отменить изменения?',
   'profile.discardMessage': 'Ваши правки не сохранятся.',
   'profile.discard': 'Не сохранять',

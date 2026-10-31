@@ -1,3 +1,4 @@
+import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -7,6 +8,16 @@ export class CameraPermissionDenied extends Error {
   constructor() {
     super('Camera permission denied');
     this.name = 'CameraPermissionDenied';
+  }
+}
+
+/** The server's limit (5 MB); checked here too so an oversized file fails with a clear message. */
+export const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
+export class AvatarTooLarge extends Error {
+  constructor() {
+    super('Avatar exceeds 5 MB');
+    this.name = 'AvatarTooLarge';
   }
 }
 
@@ -25,5 +36,6 @@ export async function pickAvatar(source: AvatarSource): Promise<string | null> {
 
   const image = await ImageManipulator.manipulate(result.assets[0].uri).resize({ width: SIZE, height: null }).renderAsync();
   const { uri } = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+  if (new File(uri).size > AVATAR_MAX_BYTES) throw new AvatarTooLarge();
   return uri;
 }

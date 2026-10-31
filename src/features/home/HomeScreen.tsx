@@ -62,26 +62,24 @@ export function HomeScreen() {
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
-      { key: 'topics', label: t('home.menu.topics'), icon: 'grid', tint: '#1CB0F6', onPress: () => router.push('/scenarios') },
-      { key: 'history', label: t('home.menu.history'), icon: 'chatbubbles', tint: '#7B61FF', onPress: () => router.navigate('/conversations') },
-      { key: 'words', label: t('home.menu.words'), icon: 'book', tint: '#CE82FF', onPress: () => router.navigate('/words') },
-      { key: 'game', label: t('home.menu.game'), icon: 'game-controller', tint: '#FF4B91', onPress: () => setPicking(true) },
-      { key: 'translate', label: t('home.menu.translate'), icon: 'language', tint: '#00B8A9', onPress: () => router.navigate('/translate') },
+      { key: 'topics', label: t('home.menu.topics'), art: 'topics', onPress: () => router.push('/scenarios') },
+      { key: 'history', label: t('home.menu.history'), art: 'chat', onPress: () => router.navigate('/conversations') },
+      { key: 'words', label: t('home.menu.words'), art: 'book', onPress: () => router.navigate('/words') },
+      { key: 'game', label: t('home.menu.game'), art: 'game', onPress: () => setPicking(true) },
+      { key: 'translate', label: t('home.menu.translate'), art: 'translate', onPress: () => router.navigate('/translate') },
       {
         key: 'continue',
         label: t('home.menu.continue'),
-        icon: 'play-circle',
-        tint: '#58CC02',
+        art: 'play',
         onPress: () => openConversation(lastScenarioId ?? SCENARIOS[0].id),
       },
       {
         key: 'random',
         label: t('home.menu.random'),
-        icon: 'shuffle',
-        tint: '#FF9600',
+        art: 'dice',
         onPress: () => openConversation(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id),
       },
-      { key: 'profile', label: t('home.menu.profile'), icon: 'person-circle', tint: '#2AABEE', onPress: () => router.navigate('/profile') },
+      { key: 'profile', label: t('home.menu.profile'), art: 'profile', onPress: () => router.navigate('/profile') },
     ],
     [t, lastScenarioId],
   );

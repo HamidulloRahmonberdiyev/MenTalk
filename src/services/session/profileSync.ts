@@ -1,3 +1,5 @@
+import { File } from 'expo-file-system';
+
 import { isScenarioId } from '@/mocks/scenarios';
 import { endpoints, type ApiHistoryItem, type ApiUser } from '@/services/api/endpoints';
 import { isApiConfigured } from '@/services/api/config';
@@ -144,8 +146,9 @@ export async function saveAvatar(uri: string | null): Promise<void> {
     return;
   }
   const form = new FormData();
-  // React Native's FormData sends a local file given as { uri, name, type }.
-  form.append('photo', { uri, name: 'avatar.jpg', type: 'image/jpeg' } as unknown as Blob);
+  // Expo's fetch only uploads real Blobs; the old React Native `{ uri, name, type }` part is rejected
+  // before anything is sent. An expo-file-system File is a Blob that streams from disk.
+  form.append('photo', new File(uri));
   applyUser(await endpoints.uploadAvatar(form));
 }
 

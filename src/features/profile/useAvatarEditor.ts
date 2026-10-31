@@ -4,9 +4,17 @@ import { haptics } from '@/services/haptics';
 import { saveAvatar } from '@/services/session';
 
 import type { AvatarAction } from './AvatarSheet';
-import { CameraPermissionDenied, pickAvatar } from './pickAvatar';
+import { ApiError } from '@/services/api/http';
 
-type AvatarError = 'denied' | 'failed' | null;
+import { AvatarTooLarge, CameraPermissionDenied, pickAvatar } from './pickAvatar';
+
+type AvatarError = 'denied' | 'tooLarge' | 'failed' | null;
+
+const errorOf = (cause: unknown): Exclude<AvatarError, null> => {
+  if (cause instanceof CameraPermissionDenied) return 'denied';
+  if (cause instanceof AvatarTooLarge || (cause instanceof ApiError && cause.status === 413)) return 'tooLarge';
+  return 'failed';
+};
 
 /**
  * The photo sheet's flow. The picker opens only after the sheet has slid away: two native modals
@@ -38,9 +46,9 @@ export function useAvatarEditor() {
       await saveAvatar(uri);
       haptics.success();
     } catch (cause) {
-      if (__DEV__) console.warn('Avatar update failed', cause);
+      if (__DEV__) console.warn('Avatar update failed', cause, (cause as Error)?.cause);
       haptics.error();
-      setError(cause instanceof CameraPermissionDenied ? 'denied' : 'failed');
+      setError(errorOf(cause));
     } finally {
       setBusy(false);
     }

@@ -153,6 +153,7 @@ export const en = {
   'profile.photo.remove': 'Remove photo',
   'profile.photo.failed': 'Could not update the photo. Please try again.',
   'profile.photo.denied': 'Allow camera access in Settings to take a photo.',
+  'profile.photo.tooLarge': "The photo is larger than 5 MB. Please choose a smaller one.",
   'profile.discardTitle': 'Discard changes?',
   'profile.discardMessage': 'Your edits will not be saved.',
   'profile.discard': 'Discard',

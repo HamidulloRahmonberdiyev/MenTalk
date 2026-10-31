@@ -88,7 +88,7 @@ export function ProfileHero() {
         <Animated.View entering={enter.fade()} style={styles.error}>
           <Ionicons name="alert-circle" size={18} color={colors.danger} />
           <AppText variant="caption" color={colors.danger} style={styles.flex}>
-            {t(avatar.error === 'denied' ? 'profile.photo.denied' : 'profile.photo.failed')}
+            {t(`profile.photo.${avatar.error}`)}
           </AppText>
         </Animated.View>
       ) : null}

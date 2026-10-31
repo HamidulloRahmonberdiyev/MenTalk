@@ -15,8 +15,11 @@ export class ApiError extends Error {
 
 /** The server was never heard from: no connection, a dropped connection, or no answer in time. */
 export class NetworkError extends Error {
-  constructor(readonly timedOut: boolean) {
-    super(timedOut ? 'API request timed out' : 'Network request failed');
+  constructor(
+    readonly timedOut: boolean,
+    cause?: unknown,
+  ) {
+    super(timedOut ? 'API request timed out' : 'Network request failed', { cause });
     this.name = 'NetworkError';
   }
 }
@@ -80,7 +83,7 @@ async function send(method: string, path: string, idempotencyKey: string | null,
   } catch (error) {
     // The caller cancelled: let its AbortError through untouched.
     if (signal?.aborted) throw error;
-    throw new NetworkError(timedOut);
+    throw new NetworkError(timedOut, error);
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abort);

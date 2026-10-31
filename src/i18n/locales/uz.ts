@@ -155,6 +155,7 @@ export const uz: Dictionary = {
   'profile.photo.remove': 'Rasmni o‘chirish',
   'profile.photo.failed': 'Rasmni yangilab bo‘lmadi. Qayta urinib ko‘ring.',
   'profile.photo.denied': 'Rasmga olish uchun sozlamalarda kameraga ruxsat bering.',
+  'profile.photo.tooLarge': "Rasm 5 MB dan katta. Kichikroq rasm tanlang.",
   'profile.discardTitle': 'O‘zgarishlar saqlanmasinmi?',
   'profile.discardMessage': 'Kiritgan o‘zgarishlaringiz yo‘qoladi.',
   'profile.discard': 'Saqlamaslik',

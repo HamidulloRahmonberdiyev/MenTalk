@@ -1,66 +1,76 @@
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { Pressable3D } from '@/components/ui/Pressable3D';
+import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
-import type { IconName } from '@/types';
+
+import { ShortcutArt, type ShortcutArtName } from './ShortcutArt';
 
 export interface Shortcut {
   key: string;
   label: string;
-  icon: IconName;
-  /** The tile's own colour: a soft fill, a deeper edge, and the icon in full strength. */
-  tint: string;
+  art: ShortcutArtName;
   onPress: () => void;
 }
 
 const TILE = 62;
-const RADIUS = 20;
+const ART = 74;
+/** Slate tile, a touch lighter at the top, like a recessed slot the illustration sits in. */
+const TILE_COLORS = {
+  dark: ['#46516E', '#353E57'],
+  light: ['#E6EFFA', '#D2E1F4'],
+} as const;
 
-function ShortcutTile({ label, icon, tint, onPress }: Omit<Shortcut, 'key'>) {
+function ShortcutTile({ label, art, onPress }: Omit<Shortcut, 'key'>) {
   const home = usePalette();
-  const styles = useThemedStyles(createStyles);
-  const dark = home.appearance === 'dark';
+  const themed = useThemedStyles(createStyles);
 
   return (
-    <View style={styles.item}>
-      <Pressable3D
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={() => {
-          haptics.light();
-          onPress();
-        }}
-        // Hex alpha suffixes: the fill and edge are the tint at low strength over the sheet.
-        edgeColor={`${tint}${dark ? '55' : '40'}`}
-        depth={4}
-        radius={RADIUS}
-        style={styles.tile}
-        faceStyle={[styles.face, { borderColor: `${tint}${dark ? '40' : '33'}` }]}
-      >
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${tint}${dark ? '2E' : '1F'}` }]} />
-        <Ionicons name={icon} size={28} color={tint} />
-      </Pressable3D>
-      <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={styles.label}>
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      scaleTo={0.92}
+      onPress={() => {
+        haptics.light();
+        onPress();
+      }}
+      style={themed.item}
+    >
+      <View style={themed.tileArea}>
+        <LinearGradient colors={TILE_COLORS[home.appearance]} style={themed.tile} />
+        {/* The illustration is bigger than its tile and spills over the top-right corner, as in Englify. */}
+        <View style={styles.art} pointerEvents="none">
+          <ShortcutArt name={art} size={ART} />
+        </View>
+      </View>
+      <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={themed.label}>
         {label}
       </AppText>
-    </View>
+    </PressableScale>
   );
 }
 
 export function ShortcutGrid({ items }: { items: Shortcut[] }) {
-  const styles = useThemedStyles(createStyles);
+  const themed = useThemedStyles(createStyles);
   return (
-    <View style={styles.grid}>
+    <View style={themed.grid}>
       {items.map(({ key, ...item }) => (
         <ShortcutTile key={key} {...item} />
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  art: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+  },
+});
 
 const createStyles = (home: Palette) =>
   StyleSheet.create({
@@ -74,13 +84,19 @@ const createStyles = (home: Palette) =>
       alignItems: 'center',
       gap: spacing.sm,
     },
-    tile: { width: TILE, height: TILE + 4 },
-    face: {
+    tileArea: {
+      width: TILE + 22,
+      height: TILE + 16,
+      justifyContent: 'flex-end',
       alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1.5,
-      // Opaque base under the translucent tint, so the edge behind the face never shows through.
-      backgroundColor: home.panel,
+    },
+    tile: {
+      width: TILE,
+      height: TILE,
+      marginRight: 10,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: home.appearance === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(47, 119, 225, 0.12)',
     },
     label: {
       paddingHorizontal: 2,
