@@ -3,18 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { startSession } from '@/services/session';
-import { colors } from '@/theme';
+import { usePalette } from '@/theme/appearance';
 
 export default function RootLayout() {
+  const home = usePalette();
   useEffect(() => startSession(() => router.replace('/')), []);
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={home.statusBar} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
+          contentStyle: { backgroundColor: home.background },
           animation: 'slide_from_right',
         }}
       >

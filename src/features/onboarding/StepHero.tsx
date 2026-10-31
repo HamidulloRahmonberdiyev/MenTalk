@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { colors, radii } from '@/theme';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 const SIZE = 108;
 const EASE_OUT = Easing.out(Easing.cubic);
@@ -37,6 +38,7 @@ const WAVE_DEGREES = [0, 16, -6, 13, -4, 0] as const;
  * soft halo, and morphs between emojis instead of being rebuilt for every step.
  */
 export const StepHero = memo(function StepHero({ emoji }: { emoji: string }) {
+  const styles = useThemedStyles(createStyles);
   const float = useSharedValue(0);
   const halo = useSharedValue(0);
   const wave = useSharedValue(0);
@@ -98,7 +100,7 @@ export const StepHero = memo(function StepHero({ emoji }: { emoji: string }) {
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { alignSelf: 'center', width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' },
   halo: {
     position: 'absolute',
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
     width: SIZE,
     height: SIZE,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     boxShadow: '0 14px 34px rgba(42, 171, 238, 0.26)',
   },
   gesture: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', transformOrigin: '70% 82%' },

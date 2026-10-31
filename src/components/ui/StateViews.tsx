@@ -6,6 +6,7 @@ import { colors, spacing } from '@/theme';
 
 import { AppText } from './AppText';
 import { Button } from './Button';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface LoadingViewProps {
   label?: string;
@@ -13,11 +14,13 @@ interface LoadingViewProps {
 }
 
 export function LoadingView({ label, inverted = false }: LoadingViewProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.center} accessibilityRole="progressbar">
       <ActivityIndicator size="large" color={inverted ? '#FFFFFF' : colors.primary} />
       {label ? (
-        <AppText color={inverted ? '#FFFFFF' : colors.textSecondary} style={styles.text}>
+        <AppText color={inverted ? '#FFFFFF' : home.textSecondary} style={styles.text}>
           {label}
         </AppText>
       ) : null}
@@ -31,14 +34,16 @@ interface ErrorViewProps {
 }
 
 export function ErrorView({ message, onRetry }: ErrorViewProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   return (
     <View style={styles.center}>
-      <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+      <Ionicons name="cloud-offline-outline" size={48} color={home.textMuted} />
       <AppText variant="subheading" style={styles.text}>
         {t('error.title')}
       </AppText>
-      <AppText color={colors.textSecondary} style={styles.text}>
+      <AppText color={home.textSecondary} style={styles.text}>
         {message}
       </AppText>
       {onRetry ? <Button title={t('common.retry')} onPress={onRetry} style={styles.retry} /> : null}
@@ -46,7 +51,7 @@ export function ErrorView({ message, onRetry }: ErrorViewProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   center: {
     flex: 1,
     alignItems: 'center',

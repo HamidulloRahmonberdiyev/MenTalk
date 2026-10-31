@@ -6,12 +6,15 @@ import { useT } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 
 import type { HintState } from './useConversation';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface HintCardProps {
   hint: HintState;
 }
 
 export function HintCard({ hint }: HintCardProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   if (hint.status === 'hidden') return null;
 
@@ -25,7 +28,7 @@ export function HintCard({ hint }: HintCardProps) {
         {hint.status === 'loading' ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : (
-          <AppText color={colors.textSecondary}>
+          <AppText color={home.textSecondary}>
             {t('conversation.hintSay', { text: hint.text })}
           </AppText>
         )}
@@ -34,14 +37,16 @@ export function HintCard({ hint }: HintCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(230, 244, 251, 0.96)',
+    backgroundColor: home.primarySoft,
+    borderWidth: 1.5,
+    borderColor: home.rim,
   },
   badge: {
     width: 36,
@@ -49,7 +54,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
   },
   texts: {
     flex: 1,

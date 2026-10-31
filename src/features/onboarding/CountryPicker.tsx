@@ -10,6 +10,7 @@ import { colors, radii, shadows, spacing, typography } from '@/theme';
 import type { CountryCode } from '@/types';
 
 import { COUNTRIES, POPULAR_IDS, findCountry, normalize, type Country } from './countries';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface CountryPickerProps {
   value: CountryCode | null;
@@ -23,6 +24,8 @@ type Item =
 const ROW_HEIGHT = 64;
 
 export function CountryPicker({ value, onChange }: CountryPickerProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const language = useSettingsStore((state) => state.language);
   const [query, setQuery] = useState('');
@@ -74,12 +77,12 @@ export function CountryPicker({ value, onChange }: CountryPickerProps) {
   return (
     <View style={styles.root}>
       <View style={styles.searchBox}>
-        <Ionicons name="search" size={20} color={colors.textMuted} />
+        <Ionicons name="search" size={20} color={home.textMuted} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder={t('country.search')}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={home.textMuted}
           selectionColor={colors.primary}
           autoCorrect={false}
           autoCapitalize="none"
@@ -89,7 +92,7 @@ export function CountryPicker({ value, onChange }: CountryPickerProps) {
         />
         {query ? (
           <Pressable accessibilityRole="button" hitSlop={10} onPress={() => setQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={20} color={home.textMuted} />
           </Pressable>
         ) : null}
       </View>
@@ -98,7 +101,7 @@ export function CountryPicker({ value, onChange }: CountryPickerProps) {
         <View style={styles.chosen}>
           <AppText style={styles.chosenFlag}>{selected.emoji}</AppText>
           <View style={styles.chosenTexts}>
-            <AppText variant="caption" color={colors.primaryDark} style={styles.chosenLabel}>
+            <AppText variant="caption" color={home.accent} style={styles.chosenLabel}>
               {t('country.yours')}
             </AppText>
             <AppText variant="bodyStrong" numberOfLines={1}>
@@ -123,14 +126,14 @@ export function CountryPicker({ value, onChange }: CountryPickerProps) {
         ListEmptyComponent={
           <View style={styles.empty}>
             <AppText style={styles.emptyEmoji}>🧭</AppText>
-            <AppText variant="bodyStrong" color={colors.textSecondary}>
+            <AppText variant="bodyStrong" color={home.textSecondary}>
               {t('country.empty')}
             </AppText>
           </View>
         }
         renderItem={({ item }) =>
           item.kind === 'header' ? (
-            <AppText variant="captionStrong" color={colors.textMuted} style={styles.header}>
+            <AppText variant="captionStrong" color={home.textMuted} style={styles.header}>
               {item.label}
             </AppText>
           ) : (
@@ -155,6 +158,7 @@ interface CountryRowProps {
 }
 
 const CountryRow = memo(function CountryRow({ country, name, selected, onSelect }: CountryRowProps) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable
       accessibilityRole="radio"
@@ -176,7 +180,7 @@ const CountryRow = memo(function CountryRow({ country, name, selected, onSelect 
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, gap: spacing.md },
   searchBox: {
     flexDirection: 'row',
@@ -185,19 +189,19 @@ const styles = StyleSheet.create({
     height: 54,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: home.rim,
     ...shadows.card,
   },
-  searchInput: { ...typography.body, flex: 1, paddingVertical: 0, color: colors.text },
+  searchInput: { ...typography.body, flex: 1, paddingVertical: 0, color: home.text },
   chosen: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: home.primaryTint,
     borderWidth: 2,
     borderColor: colors.primary,
   },
@@ -229,19 +233,19 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 2,
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
   },
-  rowSelected: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  rowPressed: { backgroundColor: colors.primarySoft },
+  rowSelected: { borderColor: colors.primary, backgroundColor: home.primaryTint },
+  rowPressed: { backgroundColor: home.primarySoft },
   flagWrap: {
     width: 42,
     height: 42,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: home.background,
   },
-  flagWrapSelected: { backgroundColor: colors.surface },
+  flagWrapSelected: { backgroundColor: home.panel },
   flag: { fontSize: 24, lineHeight: 30 },
   name: { flex: 1 },
   check: {
@@ -249,7 +253,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: radii.pill,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: home.rim,
     alignItems: 'center',
     justifyContent: 'center',
   },

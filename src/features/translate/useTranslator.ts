@@ -4,6 +4,7 @@ import { Alert, Linking, Share } from 'react-native';
 
 import { useT } from '@/i18n';
 import { useVoiceCapture } from '@/features/conversation/useVoiceCapture';
+import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { GeminiError } from '@/services/gemini/client';
 import { isGeminiConfigured } from '@/services/gemini/config';
 import { haptics } from '@/services/haptics';
@@ -14,6 +15,7 @@ import type { LanguageCode, SavedTranslation, TranslationResult } from '@/types'
 
 import { enrich, translate, translateFast, type SourceLanguage, type TranslateRequest } from './translateService';
 import { isFavorite, useTranslatorStore } from './translatorStore';
+import { vocabularyWordOf } from './vocabularyWord';
 
 /** Pause after the last keystroke before a translation is requested. */
 const DEBOUNCE_MS = isAzureTranslatorConfigured ? 400 : 600;
@@ -196,10 +198,25 @@ export function useTranslator() {
     if (value.trim()) changeText(value);
   }, [changeText]);
 
+  /**
+   * Saving also puts the word into the learner's vocabulary, which syncs to the server with the
+   * rest of the word list. Unsaving takes it out again only while it has not been practised yet.
+   */
   const toggleFavorite = useCallback(() => {
     if (!entry) return;
     haptics.selection();
+    const saving = !isFavorite(useTranslatorStore.getState().favorites, entry);
     toggleFavoriteInStore(entry);
+
+    const word = vocabularyWordOf(entry, useSettingsStore.getState().studyLanguage);
+    if (!word) return;
+    const vocabulary = useVocabularyStore.getState();
+    if (saving) {
+      vocabulary.addWords([word]);
+      return;
+    }
+    const card = vocabulary.cards.find((item) => item.id === word.word.toLowerCase());
+    if (card && card.stage === 0) vocabulary.removeWord(card.id);
   }, [entry, toggleFavoriteInStore]);
 
   const reuse = useCallback(

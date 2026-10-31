@@ -132,7 +132,7 @@ function LanguageChip({ label, hint, detected = false, onPress }: LanguageChipPr
         haptics.light();
         onPress();
       }}
-      edgeColor={home.rim}
+      edgeColor={home.rimBottom}
       depth={4}
       radius={radii.md}
       style={styles.flex}
@@ -233,5 +233,5 @@ const createStyles = (home: Palette) =>
     // The picker lives in the light bottom sheet, so it keeps the light tokens.
     sheet: { maxHeight: '75%', gap: spacing.sm },
     option: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radii.md },
-    optionOn: { backgroundColor: colors.primaryTint },
+    optionOn: { backgroundColor: home.primaryTint },
   });

@@ -7,12 +7,12 @@ import type { IconName } from '@/types';
 
 import { AppText } from './AppText';
 import { Pressable3D } from './Pressable3D';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 type ButtonVariant = 'primary' | 'soft' | 'danger';
 
-const LOOKS: Record<ButtonVariant, { face: string; edge: string }> = {
+const LOOKS: Record<Exclude<ButtonVariant, 'soft'>, { face: string; edge: string }> = {
   primary: { face: colors.primary, edge: '#1A84BF' },
-  soft: { face: colors.primarySoft, edge: '#B5DDF2' },
   danger: { face: colors.danger, edge: '#B91C1C' },
 };
 
@@ -37,7 +37,9 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
-  const foreground = variant === 'soft' ? colors.primary : colors.onPrimary;
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
+  const foreground = variant === 'soft' ? home.accent : colors.onPrimary;
   const inactive = disabled || loading;
 
   const content = (
@@ -56,7 +58,8 @@ export function Button({
     </View>
   );
 
-  const look = LOOKS[variant];
+  const look =
+    variant === 'soft' ? { face: home.primarySoft, edge: home.appearance === 'dark' ? '#2A5272' : '#B5DDF2' } : LOOKS[variant];
   const radius = StyleSheet.flatten(style)?.borderRadius ?? radii.md;
 
   return (
@@ -80,7 +83,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   base: {
     height: 58,
     borderRadius: radii.md,

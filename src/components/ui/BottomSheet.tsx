@@ -5,8 +5,9 @@ import Animated, { Easing, LinearTransition, useAnimatedStyle, useReducedMotion,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { colors, radii, shadows, spacing } from '@/theme';
+import { radii, shadows, spacing } from '@/theme';
 import { duration, easing } from '@/theme/motion';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 const OPEN = { duration: duration.sheetIn, easing: easing.out };
 const CLOSE = { duration: duration.sheetOut, easing: easing.in };
@@ -35,6 +36,7 @@ interface BottomSheetProps {
  * slid out, eases between heights, and can be dragged down by its handle.
  */
 export function BottomSheet({ visible, onClose, onClosed, closeLabel, children, style }: BottomSheetProps) {
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
@@ -124,7 +126,7 @@ export function BottomSheet({ visible, onClose, onClosed, closeLabel, children, 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { backgroundColor: 'rgba(14, 27, 44, 0.45)' },
   sheet: {
@@ -132,9 +134,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     ...shadows.raised,
   },
   handleArea: { alignItems: 'center', paddingTop: spacing.md, paddingBottom: spacing.xs, marginHorizontal: -spacing.xl },
-  grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  grabber: { width: 40, height: 4, borderRadius: 2, backgroundColor: home.rim },
 });

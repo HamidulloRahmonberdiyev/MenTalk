@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme';
+import { spacing } from '@/theme';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ScreenProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface ScreenProps {
 
 /** Base screen container that respects the device safe area. */
 export function Screen({ children, padded = true, style }: ScreenProps) {
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -31,9 +33,9 @@ export function Screen({ children, padded = true, style }: ScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: home.background,
   },
 });

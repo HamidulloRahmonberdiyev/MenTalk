@@ -18,6 +18,7 @@ import type { Exercise } from './exercises';
 import { surfaceOf } from './exercises';
 import type { Answer } from './usePracticeSession';
 import { SpeakerButton } from './SpeakerButton';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ChoiceExerciseProps {
   exercise: Exercise;
@@ -34,13 +35,15 @@ const QUESTION: Record<'choice' | 'reverse' | 'listen' | 'cloze', TranslationKey
 
 /** Multiple choice in four flavours: meaning, reverse, listening and fill-in-the-blank. */
 export function ChoiceExercise({ exercise, answer, onSelect }: ChoiceExerciseProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const { kind, card } = exercise;
   const word = surfaceOf(card);
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="captionStrong" color={colors.textSecondary} style={styles.question}>
+      <AppText variant="captionStrong" color={home.textSecondary} style={styles.question}>
         {t(QUESTION[kind as keyof typeof QUESTION])}
       </AppText>
 
@@ -64,7 +67,7 @@ export function ChoiceExercise({ exercise, answer, onSelect }: ChoiceExercisePro
             <AppText variant="title" style={styles.center}>
               {exercise.sentence}
             </AppText>
-            <AppText color={colors.textSecondary} style={styles.center}>
+            <AppText color={home.textSecondary} style={styles.center}>
               {card.translation}
             </AppText>
           </>
@@ -104,6 +107,8 @@ interface OptionProps {
 }
 
 function Option({ label, index, state, locked, onPress }: OptionProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const shake = useSharedValue(0);
   useEffect(() => {
     if (state === 'wrong') {
@@ -113,10 +118,10 @@ function Option({ label, index, state, locked, onPress }: OptionProps) {
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
   const tone = {
-    idle: { bg: colors.surface, border: colors.border, text: colors.text },
-    correct: { bg: '#E3F8EE', border: colors.success, text: '#0F7A4B' },
-    wrong: { bg: '#FDE8E8', border: colors.danger, text: '#B42318' },
-    dimmed: { bg: colors.surface, border: colors.border, text: colors.textMuted },
+    idle: { bg: home.panel, border: home.rim, text: home.text },
+    correct: { bg: home.successFill, border: colors.success, text: home.successInk },
+    wrong: { bg: home.dangerFill, border: colors.danger, text: home.dangerInk },
+    dimmed: { bg: home.panel, border: home.rim, text: home.textMuted },
   }[state];
 
   return (
@@ -138,7 +143,7 @@ function Option({ label, index, state, locked, onPress }: OptionProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { flex: 1, gap: spacing.xl },
   question: { textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
   prompt: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, minHeight: 140 },

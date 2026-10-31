@@ -4,7 +4,8 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 
 import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
-import { colors, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface UserTranscriptProps {
   /** What the learner just said; nothing is rendered when empty or when the feature is off. */
@@ -14,6 +15,8 @@ interface UserTranscriptProps {
 
 /** A compact, right-aligned chip with the learner's recognised sentence, like their side of a chat. */
 export function UserTranscript({ text, visible }: UserTranscriptProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   if (!visible || !text) return null;
 
@@ -28,12 +31,12 @@ export function UserTranscript({ text, visible }: UserTranscriptProps) {
     >
       <View style={styles.chip}>
         <View style={styles.label}>
-          <Ionicons name="mic" size={11} color={colors.primaryDark} />
-          <AppText variant="caption" color={colors.primaryDark} style={styles.labelText}>
+          <Ionicons name="mic" size={11} color={home.accent} />
+          <AppText variant="caption" color={home.accent} style={styles.labelText}>
             {t('conversation.youSaid')}
           </AppText>
         </View>
-        <AppText variant="caption" color={colors.text} style={styles.text} numberOfLines={4}>
+        <AppText variant="caption" color={home.text} style={styles.text} numberOfLines={4}>
           {text}
         </AppText>
       </View>
@@ -41,7 +44,7 @@ export function UserTranscript({ text, visible }: UserTranscriptProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   row: { alignItems: 'flex-end' },
   chip: {
     maxWidth: '86%',
@@ -50,7 +53,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radii.md,
     borderBottomRightRadius: radii.sm / 3,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
     borderWidth: 1,
     borderColor: 'rgba(42, 171, 238, 0.22)',
   },

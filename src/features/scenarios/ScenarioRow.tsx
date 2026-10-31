@@ -10,6 +10,7 @@ import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 import type { Scenario } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ScenarioRowProps {
   scenario: Scenario;
@@ -20,6 +21,8 @@ interface ScenarioRowProps {
 }
 
 export function ScenarioRow({ scenario, onPress, size = 'compact', selected = false }: ScenarioRowProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const title = t(`scenario.${scenario.id}.title`);
   const subtitle = t(`scenario.${scenario.id}.subtitle`);
@@ -76,7 +79,7 @@ export function ScenarioRow({ scenario, onPress, size = 'compact', selected = fa
         <AppText variant="bodyStrong" numberOfLines={1}>
           {title}
         </AppText>
-        <AppText variant="caption" color={colors.textSecondary} numberOfLines={2}>
+        <AppText variant="caption" color={home.textSecondary} numberOfLines={2}>
           {subtitle}
         </AppText>
       </View>
@@ -87,7 +90,7 @@ export function ScenarioRow({ scenario, onPress, size = 'compact', selected = fa
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: {
     height: 168,
     borderRadius: radii.xl,
@@ -95,7 +98,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     borderWidth: 3,
     borderColor: 'transparent',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
     ...shadows.raised,
   },
   cardSelected: { borderColor: colors.primary },
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     ...shadows.card,
   },
   texts: { flex: 1, gap: 2 },
@@ -141,6 +144,6 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
   },
 });

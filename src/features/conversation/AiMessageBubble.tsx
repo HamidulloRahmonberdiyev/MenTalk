@@ -9,6 +9,7 @@ import { useT } from '@/i18n';
 import { colors, radii, shadows, spacing } from '@/theme';
 import { TappableText } from '@/features/vocabulary/TappableText';
 import type { AiMessage } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface AiMessageBubbleProps {
   message: AiMessage | null;
@@ -27,6 +28,8 @@ const NO_WORDS: ReadonlySet<string> = new Set();
 
 /** The tutor's line in a speech bubble whose tail points up at the avatar. */
 export function AiMessageBubble({ message, speaking, onReplay, onWordPress, savedWords = NO_WORDS, showTip = false }: AiMessageBubbleProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -53,7 +56,7 @@ export function AiMessageBubble({ message, speaking, onReplay, onWordPress, save
             </AppText>
           )}
           {showTip && message && onWordPress ? (
-            <AppText variant="caption" color={colors.textMuted}>
+            <AppText variant="caption" color={home.textMuted}>
               {t('word.tip')}
             </AppText>
           ) : null}
@@ -78,7 +81,7 @@ export function AiMessageBubble({ message, speaking, onReplay, onWordPress, save
 
 const TAIL = 18;
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { paddingTop: TAIL / 2 },
   tail: {
     position: 'absolute',
@@ -88,7 +91,7 @@ const styles = StyleSheet.create({
     width: TAIL,
     height: TAIL,
     borderRadius: 4,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     transform: [{ rotate: '45deg' }],
   },
   bubble: {
@@ -97,9 +100,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: home.panel,
+    borderWidth: 1.5,
+    borderColor: home.rim,
     ...shadows.raised,
   },
   body: { flex: 1, gap: spacing.xs },
@@ -110,7 +113,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
   },
   speakerWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.primary },

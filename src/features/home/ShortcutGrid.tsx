@@ -2,44 +2,52 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { haptics } from '@/services/haptics';
 import { spacing } from '@/theme';
-import type { IconName } from '@/types';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import type { IconName } from '@/types';
 
 export interface Shortcut {
   key: string;
   label: string;
   icon: IconName;
+  /** The tile's own colour: a soft fill, a deeper edge, and the icon in full strength. */
+  tint: string;
   onPress: () => void;
 }
 
-const TILE = 64;
+const TILE = 62;
+const RADIUS = 20;
 
-function ShortcutTile({ label, icon, onPress }: Shortcut) {
+function ShortcutTile({ label, icon, tint, onPress }: Omit<Shortcut, 'key'>) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
+  const dark = home.appearance === 'dark';
+
   return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      scaleTo={0.92}
-      onPress={() => {
-        haptics.light();
-        onPress();
-      }}
-      style={styles.item}
-    >
-      <View style={styles.tile}>
-        {/* A darker copy underneath gives the glyph a bit of depth, like the 3D icons it imitates. */}
-        <Ionicons name={icon} size={44} color={home.glyphShadow} style={[styles.glyph, styles.glyphShadow]} />
-        <Ionicons name={icon} size={44} color={home.glyph} style={styles.glyph} />
-      </View>
+    <View style={styles.item}>
+      <Pressable3D
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={() => {
+          haptics.light();
+          onPress();
+        }}
+        // Hex alpha suffixes: the fill and edge are the tint at low strength over the sheet.
+        edgeColor={`${tint}${dark ? '55' : '40'}`}
+        depth={4}
+        radius={RADIUS}
+        style={styles.tile}
+        faceStyle={[styles.face, { borderColor: `${tint}${dark ? '40' : '33'}` }]}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${tint}${dark ? '2E' : '1F'}` }]} />
+        <Ionicons name={icon} size={28} color={tint} />
+      </Pressable3D>
       <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={styles.label}>
         {label}
       </AppText>
-    </PressableScale>
+    </View>
   );
 }
 
@@ -54,34 +62,28 @@ export function ShortcutGrid({ items }: { items: Shortcut[] }) {
   );
 }
 
-const createStyles = (home: Palette) => StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    rowGap: spacing.xl,
-  },
-  item: {
-    width: '25%',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  tile: {
-    width: TILE,
-    height: TILE,
-    borderRadius: 18,
-    backgroundColor: home.tile,
-    borderBottomWidth: 4,
-    borderBottomColor: home.tileEdge,
-  },
-  glyph: {
-    position: 'absolute',
-    top: -6,
-    right: -8,
-  },
-  glyphShadow: {
-    transform: [{ translateX: 2 }, { translateY: 3 }],
-  },
-  label: {
-    paddingHorizontal: 2,
-  },
-});
+const createStyles = (home: Palette) =>
+  StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      rowGap: spacing.lg,
+    },
+    item: {
+      width: '25%',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    tile: { width: TILE, height: TILE + 4 },
+    face: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      // Opaque base under the translucent tint, so the edge behind the face never shows through.
+      backgroundColor: home.panel,
+    },
+    label: {
+      paddingHorizontal: 2,
+      fontSize: 12,
+    },
+  });

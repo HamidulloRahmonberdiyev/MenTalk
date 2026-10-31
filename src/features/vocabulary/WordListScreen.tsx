@@ -14,15 +14,18 @@ import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 
 import { GamePickerSheet } from './GamePickerSheet';
-import { MASTERY_STYLE } from './masteryStyle';
+import { masteryStyle } from './masteryStyle';
 import { masteryOf, type Mastery } from './srs';
 import { starterWords } from './starterWords';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from './vocabularyStore';
 import { WordRow } from './WordRow';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 const ORDER: Mastery[] = ['new', 'learning', 'known', 'mastered'];
 
 export function WordListScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const cards = useStudyCards();
   const xp = useVocabularyStore((state) => state.xp);
@@ -49,7 +52,7 @@ export function WordListScreen() {
     <Screen padded={false}>
       <ScreenHeader title={t('words.title')} onBack={() => router.back()} style={styles.header} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={[colors.primaryLight, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <LinearGradient colors={[colors.primaryLight, home.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
           <View style={styles.heroTop}>
             <View style={styles.heroTexts}>
               <AppText variant="heading" color={colors.onPrimary}>
@@ -86,7 +89,7 @@ export function WordListScreen() {
             <AppText variant="heading" style={styles.center}>
               {t('words.empty.title')}
             </AppText>
-            <AppText color={colors.textSecondary} style={styles.center}>
+            <AppText color={home.textSecondary} style={styles.center}>
               {t('words.empty.text')}
             </AppText>
             <Button
@@ -105,15 +108,15 @@ export function WordListScreen() {
               <AppText variant="heading">{t('words.count', { n: cards.length })}</AppText>
               <View style={styles.bar}>
                 {ORDER.filter((key) => counts[key] > 0).map((key) => (
-                  <View key={key} style={{ flex: counts[key], backgroundColor: MASTERY_STYLE[key].color }} />
+                  <View key={key} style={{ flex: counts[key], backgroundColor: masteryStyle(home)[key].color }} />
                 ))}
               </View>
               <View style={styles.legend}>
                 {ORDER.map((key) => (
                   <View key={key} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: MASTERY_STYLE[key].color }]} />
-                    <AppText variant="caption" color={colors.textSecondary}>
-                      {t(MASTERY_STYLE[key].label)} {counts[key]}
+                    <View style={[styles.legendDot, { backgroundColor: masteryStyle(home)[key].color }]} />
+                    <AppText variant="caption" color={home.textSecondary}>
+                      {t(masteryStyle(home)[key].label)} {counts[key]}
                     </AppText>
                   </View>
                 ))}
@@ -133,6 +136,7 @@ export function WordListScreen() {
 }
 
 function Chip({ label }: { label: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.chip}>
       <AppText variant="captionStrong" color={colors.onPrimary}>
@@ -142,7 +146,7 @@ function Chip({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   header: { paddingHorizontal: spacing.lg },
   content: { gap: spacing.xl, padding: spacing.xl },
   hero: { gap: spacing.lg, padding: spacing.xl, borderRadius: radii.xl, ...shadows.primary },
@@ -152,7 +156,8 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.22)' },
   play: { height: 58 },
-  playFace: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  // White on the blue card in both looks.
+  playFace: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   playOff: { opacity: 0.55 },
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
   emptyIcon: { fontSize: 64, lineHeight: 76 },

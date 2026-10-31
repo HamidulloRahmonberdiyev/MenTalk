@@ -5,7 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
 import { colors, radii, spacing, typography } from '@/theme';
-import { usePalette } from '@/theme/appearance';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import type { ParsedBirth } from './birthDate';
 
@@ -26,6 +26,8 @@ interface BirthDateFieldProps {
 }
 
 export function BirthDateField({ value, onChange, parsed, autoFocus = true, themed = false }: BirthDateFieldProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const monthRef = useRef<TextInput>(null);
   const yearRef = useRef<TextInput>(null);
@@ -81,7 +83,7 @@ export function BirthDateField({ value, onChange, parsed, autoFocus = true, them
 
       {parsed ? (
         <Animated.View entering={FadeIn.duration(250)} style={[styles.pill, styles.pillOk]}>
-          <AppText variant="captionStrong" color={colors.primaryDark}>
+          <AppText variant="captionStrong" color={home.accent}>
             {`🎂 ${t('onb.birth.age', { n: parsed.age })}`}
           </AppText>
         </Animated.View>
@@ -108,13 +110,14 @@ interface BoxProps {
 }
 
 function Box({ ref, flex, themed, ...rest }: BoxProps) {
+  const styles = useThemedStyles(createStyles);
   const home = usePalette();
   return (
     <TextInput
       ref={ref}
       {...rest}
       keyboardType="number-pad"
-      placeholderTextColor={colors.textMuted}
+      placeholderTextColor={home.textMuted}
       selectionColor={colors.primary}
       accessibilityLabel={rest.placeholder}
       style={[styles.box, themed && [styles.boxThemed, { borderColor: home.rim, backgroundColor: home.track, color: home.text }], { flex }]}
@@ -122,7 +125,7 @@ function Box({ ref, flex, themed, ...rest }: BoxProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { gap: spacing.lg, alignItems: 'center' },
   row: { flexDirection: 'row', gap: spacing.md, alignSelf: 'stretch' },
   box: {
@@ -131,12 +134,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     borderRadius: radii.lg,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    color: colors.text,
+    borderColor: home.rim,
+    backgroundColor: home.panel,
+    color: home.text,
   },
   boxThemed: { height: 64, borderBottomWidth: 4 },
   pill: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill },
-  pillOk: { backgroundColor: colors.primarySoft },
-  pillError: { backgroundColor: '#FDECEC' },
+  pillOk: { backgroundColor: home.primarySoft },
+  pillError: { backgroundColor: home.dangerFill },
 });

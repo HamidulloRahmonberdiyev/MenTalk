@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { colors, radii } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ProgressBarProps {
   /** 0..1 */
@@ -11,7 +12,10 @@ interface ProgressBarProps {
   trackColor?: string;
 }
 
-export function ProgressBar({ value, color = colors.primary, trackColor = colors.border }: ProgressBarProps) {
+export function ProgressBar({ value, color = colors.primary, trackColor: track }: ProgressBarProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
+  const trackColor = track ?? home.rim;
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -30,11 +34,11 @@ export function ProgressBar({ value, color = colors.primary, trackColor = colors
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   track: {
     height: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.border,
+    backgroundColor: home.rim,
     overflow: 'hidden',
   },
   fill: {

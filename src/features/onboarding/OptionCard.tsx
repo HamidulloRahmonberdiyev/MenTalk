@@ -5,6 +5,7 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface OptionCardProps {
   emoji: string;
@@ -19,6 +20,8 @@ interface OptionCardProps {
 }
 
 export function OptionCard({ emoji, title, description, selected, onPress, tile = false, multi = false }: OptionCardProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <PressableScale
       accessibilityRole={multi ? 'checkbox' : 'radio'}
@@ -38,7 +41,7 @@ export function OptionCard({ emoji, title, description, selected, onPress, tile 
           {title}
         </AppText>
         {description ? (
-          <AppText variant="caption" color={colors.textSecondary}>
+          <AppText variant="caption" color={home.textSecondary}>
             {description}
           </AppText>
         ) : null}
@@ -50,27 +53,27 @@ export function OptionCard({ emoji, title, description, selected, onPress, tile 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: {
     padding: spacing.lg,
     borderRadius: radii.lg,
     borderWidth: 2,
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     ...shadows.card,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   tile: { flex: 1, alignItems: 'flex-start', gap: spacing.md, minHeight: 124 },
-  selected: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  selected: { borderColor: colors.primary, backgroundColor: home.primaryTint },
   emojiWrap: {
     width: 48,
     height: 48,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryTint,
+    backgroundColor: home.primaryTint,
   },
-  emojiWrapSelected: { backgroundColor: colors.surface },
+  emojiWrapSelected: { backgroundColor: home.panel },
   emoji: { fontSize: 26, lineHeight: 32 },
   texts: { flex: 1, gap: 2 },
   tileTexts: { gap: 2 },
@@ -79,7 +82,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: radii.pill,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: home.rim,
     alignItems: 'center',
     justifyContent: 'center',
   },

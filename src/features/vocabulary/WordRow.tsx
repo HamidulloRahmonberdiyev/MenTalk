@@ -8,12 +8,13 @@ import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
-import { colors, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
 import type { VocabCard } from '@/types';
 
-import { MASTERY_STYLE } from './masteryStyle';
+import { masteryStyle } from './masteryStyle';
 import { MAX_STAGE, masteryOf } from './srs';
 import { SpeakerButton } from './SpeakerButton';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface WordRowProps {
   card: VocabCard;
@@ -21,8 +22,10 @@ interface WordRowProps {
 }
 
 export function WordRow({ card, onRemove }: WordRowProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
-  const mastery = MASTERY_STYLE[masteryOf(card.stage)];
+  const mastery = masteryStyle(home)[masteryOf(card.stage)];
   const [confirming, setConfirming] = useState(false);
   /** The row is removed only after the sheet has slid away; removing it first would cut the sheet off. */
   const removeWhenClosed = useRef(false);
@@ -34,7 +37,7 @@ export function WordRow({ card, onRemove }: WordRowProps) {
         <AppText variant="subheading" numberOfLines={1}>
           {card.word}
         </AppText>
-        <AppText color={colors.textSecondary} numberOfLines={1}>
+        <AppText color={home.textSecondary} numberOfLines={1}>
           {card.translation}
         </AppText>
         <View style={styles.meta}>
@@ -56,7 +59,7 @@ export function WordRow({ card, onRemove }: WordRowProps) {
           setConfirming(true);
         }}
       >
-        <Ionicons name="trash-outline" size={20} color={colors.textMuted} />
+        <Ionicons name="trash-outline" size={20} color={home.textMuted} />
       </PressableScale>
       <ConfirmSheet
         visible={confirming}
@@ -80,12 +83,12 @@ export function WordRow({ card, onRemove }: WordRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   texts: { flex: 1, gap: 2 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xs },
   chip: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.pill },
   chipText: { fontWeight: '600' },
   dots: { flexDirection: 'row', gap: 3 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: home.rim },
 });

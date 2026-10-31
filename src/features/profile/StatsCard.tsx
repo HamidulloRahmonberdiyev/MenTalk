@@ -46,6 +46,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderWidth: 2,
     borderBottomWidth: 5,
     borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
     backgroundColor: home.panel,
   },
   value: { marginTop: spacing.xs, fontWeight: '800' },

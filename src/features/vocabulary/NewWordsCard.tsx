@@ -11,9 +11,12 @@ import type { WordSuggestion } from '@/types';
 
 import { SpeakerButton } from './SpeakerButton';
 import { findCard, useStudyCards, useVocabularyStore } from './vocabularyStore';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 /** After a chat: the words worth learning from it, each one tap away from the word game. */
 export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const cards = useStudyCards();
   const addWords = useVocabularyStore((state) => state.addWords);
@@ -26,7 +29,7 @@ export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
           <AppText variant="heading" accessibilityRole="header">
             {t('result.newWords')}
           </AppText>
-          <AppText variant="caption" color={colors.textSecondary}>
+          <AppText variant="caption" color={home.textSecondary}>
             {t('result.newWords.hint')}
           </AppText>
         </View>
@@ -53,7 +56,7 @@ export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
             <SpeakerButton text={item.form ?? item.word} size={40} />
             <View style={styles.texts}>
               <AppText variant="subheading">{item.word}</AppText>
-              <AppText color={colors.textSecondary}>{item.translation}</AppText>
+              <AppText color={home.textSecondary}>{item.translation}</AppText>
             </View>
             <PressableScale
               accessibilityRole="button"
@@ -78,7 +81,7 @@ export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   headTexts: { flex: 1, gap: 2 },

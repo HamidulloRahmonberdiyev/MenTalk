@@ -11,6 +11,7 @@ import { colors, radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
 
 import type { AvatarSource } from './pickAvatar';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 export type AvatarAction = AvatarSource | 'remove';
 
@@ -29,6 +30,8 @@ const ACTIONS: readonly { id: AvatarAction; icon: IconName; label: TranslationKe
 ];
 
 export function AvatarSheet({ visible, canRemove, onSelect, onClose, onClosed }: AvatarSheetProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
 
   return (
@@ -50,10 +53,10 @@ export function AvatarSheet({ visible, canRemove, onSelect, onClose, onClosed }:
               style={styles.row}
             >
               <IconTile icon={icon} tint={tint} size={42} />
-              <AppText variant="bodyStrong" color={id === 'remove' ? colors.danger : colors.text} style={styles.label}>
+              <AppText variant="bodyStrong" color={id === 'remove' ? colors.danger : home.text} style={styles.label}>
                 {t(label)}
               </AppText>
-              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={20} color={home.textMuted} />
             </PressableScale>
           );
         })}
@@ -62,7 +65,7 @@ export function AvatarSheet({ visible, canRemove, onSelect, onClose, onClosed }:
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   title: { textAlign: 'center' },
   list: { gap: spacing.sm },
   row: {
@@ -71,7 +74,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: colors.background,
+    backgroundColor: home.background,
   },
   label: { flex: 1 },
 });

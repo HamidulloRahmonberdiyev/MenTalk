@@ -37,12 +37,15 @@ import { useTutorVoice } from './useTutorVoice';
 import { useVoiceTurn } from './useVoiceTurn';
 import { VoiceOrb } from './VoiceOrb';
 import { WaveBars } from './WaveBars';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ConversationScreenProps {
   scenario: Scenario;
 }
 
 export function ConversationScreen({ scenario }: ConversationScreenProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
   const { height, width } = useWindowDimensions();
@@ -168,7 +171,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
                 onPress={handleFinish}
                 style={styles.finish}
               >
-                <AppText variant="captionStrong" color={colors.primaryDark}>
+                <AppText variant="captionStrong" color={home.accent}>
                   {finishing ? '…' : t('conversation.finishShort')}
                 </AppText>
               </PressableScale>
@@ -227,7 +230,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
                   />
                   <WaveBars active={waving} mirrored level={shownState === 'speaking' ? lipSync.face.energy : voice.level} />
                 </View>
-                <AppText variant="bodyStrong" color={colors.textSecondary} accessibilityLiveRegion="polite">
+                <AppText variant="bodyStrong" color={home.textSecondary} accessibilityLiveRegion="polite">
                   {t(`voice.${shownState}`)}
                 </AppText>
                 <View style={styles.actions}>
@@ -272,10 +275,10 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: home.background,
   },
   backdrop: {
     position: 'absolute',
@@ -296,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
   },
   stage: {
     flex: 1,

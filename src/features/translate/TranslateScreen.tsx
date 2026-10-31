@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useIsFocused } from 'expo-router';
+
 import { StatusBar } from 'expo-status-bar';
 import { Fragment } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
@@ -30,7 +30,6 @@ export function TranslateScreen() {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
-  const focused = useIsFocused();
   const translator = useTranslator();
   const { refreshControl, version } = useRefreshControl();
   const { result, status, text } = translator;
@@ -44,7 +43,7 @@ export function TranslateScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style={focused ? home.statusBar : 'dark'} />
+      <StatusBar style={home.statusBar} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <AppText variant="title" color={home.text} accessibilityRole="header">
           {t('translate.title')}

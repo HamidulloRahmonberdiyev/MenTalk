@@ -5,6 +5,7 @@ import Animated from 'react-native-reanimated';
 
 import { colors, radii, shadows } from '@/theme';
 import { enter } from '@/theme/motion';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 const CONFETTI = [
   { top: 8, left: 22, color: colors.primary, rotate: '30deg' },
@@ -16,6 +17,8 @@ const CONFETTI = [
 ] as const;
 
 export function TrophyHero() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.wrap} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {CONFETTI.map((piece, index) => (
@@ -26,7 +29,7 @@ export function TrophyHero() {
       ))}
       <Animated.View entering={enter.celebrate()} style={shadows.primary}>
         <LinearGradient
-          colors={[colors.primaryLight, colors.primaryDark]}
+          colors={[colors.primaryLight, home.accent]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.badge}
@@ -38,7 +41,7 @@ export function TrophyHero() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: {
     height: 150,
     alignSelf: 'stretch',

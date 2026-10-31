@@ -70,7 +70,7 @@ function Item({ label, onPress, children }: { label: string; onPress: () => void
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   return (
-    <Pressable3D accessibilityRole="button" accessibilityLabel={label} onPress={onPress} edgeColor={home.rim} depth={4} radius={radii.lg} faceStyle={styles.item}>
+    <Pressable3D accessibilityRole="button" accessibilityLabel={label} onPress={onPress} edgeColor={home.rimBottom} depth={4} radius={radii.lg} faceStyle={styles.item}>
       {children}
     </Pressable3D>
   );

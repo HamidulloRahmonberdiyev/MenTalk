@@ -1,4 +1,4 @@
-import { router, useIsFocused } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -34,7 +34,6 @@ export function HomeScreen() {
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
-  const focused = useIsFocused();
   const { refreshControl, version } = useRefreshControl();
   const [picking, setPicking] = useState(false);
 
@@ -63,24 +62,26 @@ export function HomeScreen() {
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
-      { key: 'topics', label: t('home.menu.topics'), icon: 'grid', onPress: () => router.push('/scenarios') },
-      { key: 'history', label: t('home.menu.history'), icon: 'chatbubbles', onPress: () => router.navigate('/conversations') },
-      { key: 'words', label: t('home.menu.words'), icon: 'book', onPress: () => router.navigate('/words') },
-      { key: 'game', label: t('home.menu.game'), icon: 'game-controller', onPress: () => setPicking(true) },
-      { key: 'translate', label: t('home.menu.translate'), icon: 'language', onPress: () => router.navigate('/translate') },
+      { key: 'topics', label: t('home.menu.topics'), icon: 'grid', tint: '#1CB0F6', onPress: () => router.push('/scenarios') },
+      { key: 'history', label: t('home.menu.history'), icon: 'chatbubbles', tint: '#7B61FF', onPress: () => router.navigate('/conversations') },
+      { key: 'words', label: t('home.menu.words'), icon: 'book', tint: '#CE82FF', onPress: () => router.navigate('/words') },
+      { key: 'game', label: t('home.menu.game'), icon: 'game-controller', tint: '#FF4B91', onPress: () => setPicking(true) },
+      { key: 'translate', label: t('home.menu.translate'), icon: 'language', tint: '#00B8A9', onPress: () => router.navigate('/translate') },
       {
         key: 'continue',
         label: t('home.menu.continue'),
         icon: 'play-circle',
+        tint: '#58CC02',
         onPress: () => openConversation(lastScenarioId ?? SCENARIOS[0].id),
       },
       {
         key: 'random',
         label: t('home.menu.random'),
         icon: 'shuffle',
+        tint: '#FF9600',
         onPress: () => openConversation(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id),
       },
-      { key: 'profile', label: t('home.menu.profile'), icon: 'person-circle', onPress: () => router.navigate('/profile') },
+      { key: 'profile', label: t('home.menu.profile'), icon: 'person-circle', tint: '#2AABEE', onPress: () => router.navigate('/profile') },
     ],
     [t, lastScenarioId],
   );
@@ -88,7 +89,7 @@ export function HomeScreen() {
   return (
     <View style={styles.root}>
       {/* Only this tab is dark, so the status bar flips back once another screen takes over. */}
-      <StatusBar style={focused ? home.statusBar : 'dark'} />
+      <StatusBar style={home.statusBar} />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
         showsVerticalScrollIndicator={false}
@@ -169,6 +170,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     backgroundColor: home.sheet,
+    boxShadow: home.sheetShadow,
   },
   handle: {
     alignSelf: 'center',

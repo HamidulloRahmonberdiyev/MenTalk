@@ -8,6 +8,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
+import { usePalette } from '@/theme/appearance';
 import { enter } from '@/theme/motion';
 
 import type { Exercise } from './exercises';
@@ -25,7 +26,8 @@ export function FeedbackBar({ exercise, answer, onContinue }: FeedbackBarProps) 
   const t = useT();
   const insets = useSafeAreaInsets();
   const good = answer.correct;
-  const tone = good ? { bg: '#E3F8EE', fg: '#0F7A4B', accent: colors.success } : { bg: '#FDE8E8', fg: '#B42318', accent: colors.danger };
+  const home = usePalette();
+  const tone = good ? { bg: home.successFill, fg: home.successInk, accent: colors.success } : { bg: home.dangerFill, fg: home.dangerInk, accent: colors.danger };
 
   return (
     <Animated.View

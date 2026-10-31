@@ -26,6 +26,7 @@ import { DAILY, GENDERS, GOALS, LEVELS, STUDY_OPTIONS } from './options';
 import { ProgressSegments } from './ProgressSegments';
 import { Reveal } from './Reveal';
 import { StepHero } from './StepHero';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'level' | 'goals' | 'daily';
 
@@ -41,6 +42,8 @@ const STEPS: readonly { id: StepId; emoji: string }[] = [
 ];
 
 export function OnboardingScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
   const initialName = useUserStore((state) => state.name);
@@ -128,7 +131,7 @@ export function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'web' ? undefined : 'padding'} style={styles.root}>
-      <LinearGradient colors={[colors.primarySoft, colors.background]} style={styles.backdrop} pointerEvents="none" />
+      <LinearGradient colors={[home.primarySoft, home.background]} style={styles.backdrop} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
         <PressableScale
@@ -138,7 +141,7 @@ export function OnboardingScreen() {
           onPress={goBack}
           style={styles.back}
         >
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={home.text} />
         </PressableScale>
         <ProgressSegments count={STEPS.length} step={step} />
       </View>
@@ -152,7 +155,7 @@ export function OnboardingScreen() {
               </AppText>
             </Reveal>
             <Reveal index={1} direction={direction}>
-              <AppText variant="body" color={colors.textSecondary} style={styles.center}>
+              <AppText variant="body" color={home.textSecondary} style={styles.center}>
                 {t('onb.country.subtitle')}
               </AppText>
             </Reveal>
@@ -177,7 +180,7 @@ export function OnboardingScreen() {
               </AppText>
             </Reveal>
             <Reveal index={1} direction={direction}>
-              <AppText variant="body" color={colors.textSecondary} style={styles.center}>
+              <AppText variant="body" color={home.textSecondary} style={styles.center}>
                 {t(`onb.${current.id}.subtitle`)}
               </AppText>
             </Reveal>
@@ -205,7 +208,7 @@ export function OnboardingScreen() {
                   onChangeText={setName}
                   onSubmitEditing={goNext}
                   placeholder={t('onb.name.placeholder')}
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor={home.textMuted}
                   selectionColor={colors.primary}
                   autoFocus
                   autoCapitalize="words"
@@ -297,8 +300,8 @@ export function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+const createStyles = (home: Palette) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: home.background },
   backdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
   top: {
     flexDirection: 'row',
@@ -312,7 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
   },
   scroll: { flexGrow: 1, gap: spacing.xxl, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
   step: { gap: spacing.xxl },
@@ -329,8 +332,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 2,
     borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    color: colors.text,
+    backgroundColor: home.panel,
+    color: home.text,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   cell: { width: '47.5%', flexGrow: 1, flexDirection: 'row' },

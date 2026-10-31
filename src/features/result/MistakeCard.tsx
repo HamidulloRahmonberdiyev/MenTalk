@@ -8,8 +8,11 @@ import { colors, spacing } from '@/theme';
 import type { Mistake } from '@/types';
 
 import { HighlightedText } from './HighlightedText';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 export function MistakeCard({ mistake }: { mistake: Mistake }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   return (
     <Card style={styles.card}>
@@ -21,14 +24,14 @@ export function MistakeCard({ mistake }: { mistake: Mistake }) {
         <Ionicons name="checkmark-circle" size={22} color={colors.success} />
         <HighlightedText text={mistake.correct} mark={mistake.correctMark} markColor={colors.primary} />
       </View>
-      <AppText variant="caption" color={colors.textMuted} style={styles.note}>
+      <AppText variant="caption" color={home.textMuted} style={styles.note}>
         {mistake.note ?? (mistake.noteKey ? t(mistake.noteKey) : '')}
       </AppText>
     </Card>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: {
     gap: spacing.sm,
   },

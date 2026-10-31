@@ -1,4 +1,4 @@
-import { router, useIsFocused } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -23,7 +23,6 @@ export function ResourcesScreen() {
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
-  const focused = useIsFocused();
   const cards = useStudyCards();
   const addWords = useVocabularyStore((state) => state.addWords);
   const language = useSettingsStore((state) => state.language);
@@ -96,7 +95,7 @@ export function ResourcesScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style={focused ? home.statusBar : 'dark'} />
+      <StatusBar style={home.statusBar} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <AppText variant="title" color={home.text} accessibilityRole="header">
           {t('res.title')}

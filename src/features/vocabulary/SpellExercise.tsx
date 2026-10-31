@@ -12,6 +12,7 @@ import { colors, radii, spacing } from '@/theme';
 import type { Exercise } from './exercises';
 import { SpeakerButton } from './SpeakerButton';
 import type { Answer } from './usePracticeSession';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface SpellExerciseProps {
   exercise: Exercise;
@@ -21,6 +22,8 @@ interface SpellExerciseProps {
 
 /** Build the word from scrambled letter tiles: recall without a keyboard. */
 export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const [picked, setPicked] = useState<number[]>([]);
   const locked = answer !== null;
@@ -42,7 +45,7 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="captionStrong" color={colors.textSecondary} style={styles.question}>
+      <AppText variant="captionStrong" color={home.textSecondary} style={styles.question}>
         {t('practice.spell')}
       </AppText>
 
@@ -62,7 +65,7 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
               accessibilityRole="button"
               disabled={tile === undefined || locked}
               onPress={() => remove(position)}
-              style={[styles.slot, tile !== undefined && { borderColor: slotColor, backgroundColor: colors.surface }]}
+              style={[styles.slot, tile !== undefined && { borderColor: slotColor, backgroundColor: home.panel }]}
             >
               {tile !== undefined ? (
                 <Animated.View entering={ZoomIn.duration(140)}>
@@ -86,7 +89,7 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
             onPress={() => pick(tile)}
             style={[styles.tile, picked.includes(tile) && styles.tileUsed]}
           >
-            <AppText variant="heading" color={picked.includes(tile) ? 'transparent' : colors.text}>
+            <AppText variant="heading" color={picked.includes(tile) ? 'transparent' : home.text}>
               {letter}
             </AppText>
           </PressableScale>
@@ -100,7 +103,7 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
 
 const TILE = 48;
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { flex: 1, gap: spacing.xl },
   question: { textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
   prompt: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, minHeight: 120 },
@@ -113,8 +116,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radii.sm,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.primaryTint,
+    borderColor: home.rim,
+    backgroundColor: home.primaryTint,
   },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, minHeight: TILE },
   tile: {
@@ -123,8 +126,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     boxShadow: '0 3px 0 rgba(20, 70, 100, 0.16)',
   },
-  tileUsed: { backgroundColor: colors.border, boxShadow: 'none' },
+  tileUsed: { backgroundColor: home.rim, boxShadow: 'none' },
 });

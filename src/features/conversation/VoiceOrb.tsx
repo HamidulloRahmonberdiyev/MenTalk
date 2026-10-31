@@ -15,6 +15,7 @@ import Animated, {
 import { PressableScale } from '@/components/ui/PressableScale';
 import { colors, radii, shadows } from '@/theme';
 import type { IconName, VoiceState } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 const CORE = 88;
 const STAGE = 148;
@@ -36,6 +37,8 @@ interface VoiceOrbProps {
 
 /** Mic button: a still core with two soft halo rings that breathe (idle) or ripple outwards (listening). */
 export const VoiceOrb = memo(function VoiceOrb({ state, onPress, accessibilityLabel, level }: VoiceOrbProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const phase = useSharedValue(0);
   const listening = state === 'listening';
 
@@ -76,7 +79,7 @@ export const VoiceOrb = memo(function VoiceOrb({ state, onPress, accessibilityLa
         style={styles.core}
       >
         <LinearGradient
-          colors={[colors.primaryLight, colors.primaryDark]}
+          colors={[colors.primaryLight, home.accent]}
           start={{ x: 0.2, y: 0 }}
           end={{ x: 0.8, y: 1 }}
           style={styles.fill}
@@ -88,7 +91,7 @@ export const VoiceOrb = memo(function VoiceOrb({ state, onPress, accessibilityLa
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
   outer: {
     position: 'absolute',

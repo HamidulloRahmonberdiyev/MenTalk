@@ -34,7 +34,7 @@ export function SettingsRow({ icon, tint, label, value, destructive = false, onP
         haptics.light();
         onPress();
       }}
-      edgeColor={destructive ? home.dangerEdge : home.rim}
+      edgeColor={destructive ? home.dangerEdge : home.rimBottom}
       depth={4}
       radius={radii.lg}
       faceStyle={[styles.row, destructive && styles.destructive]}

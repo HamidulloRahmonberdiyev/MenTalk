@@ -7,6 +7,7 @@ import type { IconName } from '@/types';
 import { AppText } from './AppText';
 import { BottomSheet } from './BottomSheet';
 import { Button } from './Button';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ConfirmSheetProps {
   visible: boolean;
@@ -45,18 +46,20 @@ export function ConfirmSheet({
   onDismiss = onCancel,
   onClosed,
 }: ConfirmSheetProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const tint = destructive ? colors.danger : colors.primary;
 
   return (
     <BottomSheet visible={visible} onClose={loading ? undefined : onDismiss} onClosed={onClosed} closeLabel={cancelLabel}>
-      <View style={[styles.badge, { backgroundColor: destructive ? colors.dangerSoft : colors.primarySoft }]}>
+      <View style={[styles.badge, { backgroundColor: destructive ? home.dangerFill : home.primarySoft }]}>
         <Ionicons name={icon} size={32} color={tint} />
       </View>
       <View style={styles.texts}>
         <AppText variant="title" style={styles.center} accessibilityRole="header">
           {title}
         </AppText>
-        <AppText color={colors.textSecondary} style={styles.center}>
+        <AppText color={home.textSecondary} style={styles.center}>
           {message}
         </AppText>
       </View>
@@ -68,7 +71,7 @@ export function ConfirmSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   badge: { alignSelf: 'center', width: 72, height: 72, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   texts: { gap: spacing.sm },
   center: { textAlign: 'center' },

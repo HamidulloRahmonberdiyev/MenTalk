@@ -9,6 +9,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import type { NoticeCode } from '@/services/conversation';
 import { colors, radii, shadows, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 const VISIBLE_MS = 4500;
 /** Clears the conversation header. */
@@ -21,6 +22,8 @@ interface NoticeBannerProps {
 
 /** Short, self-dismissing message for a turn that failed while the conversation carries on. */
 export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
 
@@ -36,7 +39,7 @@ export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
     <Animated.View entering={FadeInUp.duration(220)} exiting={FadeOutUp.duration(160)} style={[styles.wrap, { top: insets.top + HEADER_HEIGHT }]}>
       <PressableScale accessibilityRole="alert" onPress={onDismiss} style={styles.banner}>
         {notice.code === 'slow' ? (
-          <Ionicons name="time-outline" size={20} color={colors.textMuted} />
+          <Ionicons name="time-outline" size={20} color={home.textMuted} />
         ) : (
           <Ionicons name="alert-circle" size={20} color={colors.danger} />
         )}
@@ -48,7 +51,7 @@ export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { position: 'absolute', left: spacing.xl, right: spacing.xl, zIndex: 30, elevation: 30 },
   banner: {
     flexDirection: 'row',
@@ -56,7 +59,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     ...shadows.raised,
   },
   text: { flex: 1 },

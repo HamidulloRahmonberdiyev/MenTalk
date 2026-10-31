@@ -26,6 +26,7 @@ import { SpellExercise } from './SpellExercise';
 import { starterWords } from './starterWords';
 import { usePracticeSession } from './usePracticeSession';
 import { useStudyCards, useVocabularyStore } from './vocabularyStore';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 /**
  * The word game: ten short exercises, instant feedback, combo points and a daily streak. `?mode=`
@@ -42,6 +43,7 @@ export function PracticeScreen() {
 }
 
 function EmptyRound() {
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const language = useSettingsStore((state) => state.language);
   const studyLanguage = useSettingsStore((state) => state.studyLanguage);
@@ -63,6 +65,8 @@ function EmptyRound() {
 }
 
 function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const session = usePracticeSession(mode);
@@ -100,7 +104,7 @@ function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
     <Screen>
       <View style={styles.top}>
         <PressableScale accessibilityRole="button" accessibilityLabel={t('practice.close')} hitSlop={10} onPress={leave} style={styles.close}>
-          <Ionicons name="close" size={26} color={colors.textSecondary} />
+          <Ionicons name="close" size={26} color={home.textSecondary} />
         </PressableScale>
         <View style={styles.progress}>
           <ProgressBar value={session.progress} color={colors.success} />
@@ -119,7 +123,7 @@ function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
       {game ? (
         <View style={styles.mode}>
           <IconTile icon={game.icon} tint={game.tint} size={28} />
-          <AppText variant="captionStrong" color={colors.textSecondary}>
+          <AppText variant="captionStrong" color={home.textSecondary}>
             {t(game.title)}
           </AppText>
         </View>
@@ -142,13 +146,13 @@ function Round({ mode, onAgain }: { mode: GameMode; onAgain: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   close: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progress: { flex: 1 },
   mode: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingBottom: spacing.sm },
   comboSlot: { minWidth: 84, alignItems: 'flex-end' },
-  combo: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, backgroundColor: '#FEF3C7' },
+  combo: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radii.pill, backgroundColor: home.warningFill },
   stage: { flex: 1, paddingBottom: spacing.lg },
   feedback: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   stageAnswered: { paddingBottom: 190 },

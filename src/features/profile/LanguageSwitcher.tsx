@@ -7,8 +7,11 @@ import { LANGUAGES } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
 import { colors, radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 export function LanguageSwitcher({ onSelect }: { onSelect?: () => void }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
@@ -35,7 +38,7 @@ export function LanguageSwitcher({ onSelect }: { onSelect?: () => void }) {
             <Ionicons
               name={selected ? 'checkmark-circle' : 'ellipse-outline'}
               size={24}
-              color={selected ? colors.primary : colors.border}
+              color={selected ? colors.primary : home.rim}
             />
           </PressableScale>
         );
@@ -44,7 +47,7 @@ export function LanguageSwitcher({ onSelect }: { onSelect?: () => void }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   list: { gap: spacing.sm },
   row: {
     flexDirection: 'row',
@@ -54,11 +57,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    backgroundColor: colors.background,
+    backgroundColor: home.background,
   },
   selected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: home.primaryTint,
   },
   flag: { fontSize: 24 },
   label: { flex: 1 },

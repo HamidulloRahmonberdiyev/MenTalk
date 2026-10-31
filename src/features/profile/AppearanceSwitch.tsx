@@ -52,6 +52,7 @@ const createStyles = (home: Palette) =>
       borderWidth: 2,
       borderBottomWidth: 6,
       borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
       backgroundColor: home.panel,
     },
     head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

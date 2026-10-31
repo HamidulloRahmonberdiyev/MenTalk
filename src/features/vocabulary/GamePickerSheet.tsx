@@ -14,6 +14,7 @@ import type { IconName } from '@/types';
 
 import { playableCards, type GameMode } from './exercises';
 import { countDue, useStudyCards, useVocabularyStore } from './vocabularyStore';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 /** A game needs this many playable words: one answer and at least two wrong options. */
 const MIN_WORDS = 3;
@@ -49,6 +50,8 @@ interface GamePickerSheetProps {
  * after the sheet has slid away, so the two motions never overlap.
  */
 export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const cards = useStudyCards();
   const lastMode = useVocabularyStore((state) => state.lastMode);
@@ -77,7 +80,7 @@ export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
         <AppText variant="title" accessibilityRole="header">
           {t('game.pick')}
         </AppText>
-        <AppText color={colors.textSecondary}>{due > 0 ? t('words.due', { n: due }) : t('words.bonus')}</AppText>
+        <AppText color={home.textSecondary}>{due > 0 ? t('words.due', { n: due }) : t('words.bonus')}</AppText>
       </View>
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {GAMES.map((game) => {
@@ -98,7 +101,7 @@ export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
                 icon={game.icon}
                 tint={game.tint}
                 size={48}
-                gradient={featured ? [colors.primaryLight, colors.primaryDark] : undefined}
+                gradient={featured ? [colors.primaryLight, home.accent] : undefined}
               />
               <View style={styles.texts}>
                 <View style={styles.titleRow}>
@@ -108,14 +111,14 @@ export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
                   {ready && game.mode === lastMode ? <Badge label={t('game.last')} tint={game.tint} /> : null}
                   {ready && featured && lastMode !== 'mixed' ? <Badge label={t('game.recommended')} tint={game.tint} /> : null}
                 </View>
-                <AppText variant="caption" color={colors.textSecondary} numberOfLines={2}>
+                <AppText variant="caption" color={home.textSecondary} numberOfLines={2}>
                   {ready ? t(game.text) : t(game.locked)}
                 </AppText>
               </View>
               {ready ? (
-                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={20} color={home.textMuted} />
               ) : (
-                <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+                <Ionicons name="lock-closed" size={18} color={home.textMuted} />
               )}
             </PressableScale>
           );
@@ -126,6 +129,7 @@ export function GamePickerSheet({ visible, onClose }: GamePickerSheetProps) {
 }
 
 function Badge({ label, tint }: { label: string; tint: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.badge, { backgroundColor: `${tint}1F` }]}>
       <AppText variant="caption" color={tint} style={styles.badgeText}>
@@ -135,7 +139,7 @@ function Badge({ label, tint }: { label: string; tint: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   sheet: { maxHeight: '88%' },
   header: { gap: spacing.xs },
   list: { gap: spacing.sm },
@@ -146,10 +150,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: home.rim,
+    backgroundColor: home.panel,
   },
-  rowFeatured: { borderColor: colors.primarySoft, backgroundColor: colors.primaryTint },
+  rowFeatured: { borderColor: home.primarySoft, backgroundColor: home.primaryTint },
   rowOff: { opacity: 0.55 },
   texts: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

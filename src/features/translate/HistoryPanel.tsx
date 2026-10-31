@@ -86,7 +86,7 @@ export function HistoryPanel({ onPick }: HistoryPanelProps) {
               accessibilityRole="button"
               accessibilityLabel={`${item.sourceText} — ${item.translation}`}
               onPress={() => onPick(item)}
-              edgeColor={home.rim}
+              edgeColor={home.rimBottom}
               depth={4}
               radius={radii.lg}
               faceStyle={styles.row}
@@ -149,6 +149,7 @@ const createStyles = (home: Palette) =>
       borderWidth: 2,
       borderBottomWidth: 5,
       borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
       backgroundColor: home.panel,
     },
     emptyText: { textAlign: 'center', maxWidth: 260 },

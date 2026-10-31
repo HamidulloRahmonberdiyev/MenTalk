@@ -110,7 +110,7 @@ export function EditProfileScreen() {
             haptics.light();
             leave();
           }}
-          edgeColor={home.rim}
+          edgeColor={home.rimBottom}
           depth={4}
           radius={radii.md}
           faceStyle={styles.back}
@@ -156,7 +156,7 @@ export function EditProfileScreen() {
                   haptics.light();
                   setPickingCountry(true);
                 }}
-                edgeColor={home.rim}
+                edgeColor={home.rimBottom}
                 depth={4}
                 radius={radii.md}
                 faceStyle={styles.select}
@@ -327,6 +327,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderWidth: 2,
     borderBottomWidth: 6,
     borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
     backgroundColor: home.panel,
   },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -342,6 +343,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderWidth: 2,
     borderBottomWidth: 4,
     borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
     backgroundColor: home.track,
     color: home.text,
   },

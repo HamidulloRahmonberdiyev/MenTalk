@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { router, useIsFocused, type Href } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -37,7 +37,6 @@ export function ProfileScreen() {
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
-  const focused = useIsFocused();
   const { refreshControl, version } = useRefreshControl();
   const history = useUserStore((state) => state.history);
   const dailyGoalMinutes = useUserStore((state) => state.dailyGoalMinutes);
@@ -70,7 +69,7 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style={focused ? home.statusBar : 'dark'} />
+      <StatusBar style={home.statusBar} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <AppText variant="title" color={home.text} accessibilityRole="header" style={styles.flex}>
           {t('profile.title')}

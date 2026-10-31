@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 import { colors } from '@/theme';
 
 import { AppText } from './AppText';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface AvatarProps {
   name: string;
@@ -15,6 +16,8 @@ interface AvatarProps {
 
 /** Profile photo, or the name's initial on a gradient when there is none or it fails to load. */
 export function Avatar({ name, uri, size }: AvatarProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const [failedUri, setFailedUri] = useState<string | null>(null);
   const box = { width: size, height: size, borderRadius: size / 2 };
 
@@ -33,7 +36,7 @@ export function Avatar({ name, uri, size }: AvatarProps) {
   }
 
   return (
-    <LinearGradient colors={[colors.primaryLight, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[box, styles.fallback]}>
+    <LinearGradient colors={[colors.primaryLight, home.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[box, styles.fallback]}>
       <AppText color={colors.onPrimary} style={{ fontSize: size * 0.42, lineHeight: size * 0.5, fontWeight: '800' }}>
         {name.trim().charAt(0).toUpperCase()}
       </AppText>
@@ -41,6 +44,6 @@ export function Avatar({ name, uri, size }: AvatarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   fallback: { alignItems: 'center', justifyContent: 'center' },
 });

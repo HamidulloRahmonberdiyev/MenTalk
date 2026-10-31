@@ -9,6 +9,7 @@ import { NativeSoboFace } from './loadSoboFace';
 import { FACE_ASPECT, type AIFaceProps, type FaceVariant } from './types';
 import { useFaceMotion, type FaceMotion } from './useFaceMotion';
 
+
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 

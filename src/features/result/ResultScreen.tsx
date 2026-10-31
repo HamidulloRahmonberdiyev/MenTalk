@@ -15,8 +15,11 @@ import { MetricRow } from './MetricRow';
 import { MistakeCard } from './MistakeCard';
 import { getVerdict } from './resultCopy';
 import { TrophyHero } from './TrophyHero';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 export function ResultScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const result = useResultStore((state) => state.result);
 
@@ -41,7 +44,7 @@ export function ResultScreen() {
           <AppText variant="title" accessibilityRole="header">
             {t(verdict.title)}
           </AppText>
-          <AppText color={colors.textSecondary} style={styles.center}>
+          <AppText color={home.textSecondary} style={styles.center}>
             {t(verdict.subtitle)}
           </AppText>
           <AppText variant="captionStrong" color={colors.primary}>
@@ -77,7 +80,7 @@ export function ResultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   content: {
     paddingVertical: spacing.lg,
     gap: spacing.xl,

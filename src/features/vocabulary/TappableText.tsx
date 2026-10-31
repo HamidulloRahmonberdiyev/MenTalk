@@ -4,9 +4,9 @@ import { Text, type StyleProp, type TextStyle } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { useStudyLanguage } from '@/store/settingsStore';
 import type { TypographyVariant } from '@/theme';
-import { colors } from '@/theme';
 
 import { normalizeWord, tokenize } from './words';
+import { usePalette } from '@/theme/appearance';
 
 interface TappableTextProps {
   text: string;
@@ -19,6 +19,7 @@ interface TappableTextProps {
 
 /** Text in the studied language in which every word can be tapped. Punctuation and emoji stay plain. */
 export function TappableText({ text, savedWords, onWordPress, variant, style }: TappableTextProps) {
+  const home = usePalette();
   const { wordPattern } = useStudyLanguage();
   const tokens = useMemo(() => tokenize(text, wordPattern), [text, wordPattern]);
 
@@ -30,7 +31,7 @@ export function TappableText({ text, savedWords, onWordPress, variant, style }: 
             key={index}
             accessibilityRole="button"
             onPress={() => onWordPress(token.text)}
-            style={savedWords.has(normalizeWord(token.text)) ? { color: colors.primaryDark } : undefined}
+            style={savedWords.has(normalizeWord(token.text)) ? { color: home.accent } : undefined}
           >
             {token.text}
           </Text>

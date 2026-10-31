@@ -6,6 +6,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 import type { IconName } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ActionButtonProps {
   icon: IconName;
@@ -18,6 +19,8 @@ interface ActionButtonProps {
 
 /** Small secondary action under the mic (keyboard, hint). */
 export function ActionButton({ icon, label, active = false, accessibilityLabel, onPress }: ActionButtonProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <PressableScale
       accessibilityRole="button"
@@ -32,14 +35,14 @@ export function ActionButton({ icon, label, active = false, accessibilityLabel, 
       <View style={[styles.circle, active && styles.circleActive]}>
         <Ionicons name={icon} size={24} color={active ? colors.onPrimary : colors.primary} />
       </View>
-      <AppText variant="caption" color={colors.textSecondary}>
+      <AppText variant="caption" color={home.textSecondary}>
         {label}
       </AppText>
     </PressableScale>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: {
     alignItems: 'center',
     gap: spacing.xs,
@@ -51,7 +54,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     ...shadows.card,
   },
   circleActive: {

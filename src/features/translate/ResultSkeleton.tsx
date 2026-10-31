@@ -34,6 +34,7 @@ const createStyles = (home: Palette) =>
       borderWidth: 2,
       borderBottomWidth: 6,
       borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
       backgroundColor: home.panel,
     },
     line: { height: 18, borderRadius: radii.sm, backgroundColor: home.track },

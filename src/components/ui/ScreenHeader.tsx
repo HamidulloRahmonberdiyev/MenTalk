@@ -4,10 +4,11 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
-import { colors, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
 
 import { AppText } from './AppText';
 import { PressableScale } from './PressableScale';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface ScreenHeaderProps {
   title: string;
@@ -20,8 +21,10 @@ interface ScreenHeaderProps {
 }
 
 export function ScreenHeader({ title, onBack, right, inverted = false, style }: ScreenHeaderProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
-  const foreground = inverted ? '#FFFFFF' : colors.text;
+  const foreground = inverted ? '#FFFFFF' : home.text;
 
   return (
     <View style={[styles.row, style]}>
@@ -45,7 +48,7 @@ export function ScreenHeader({ title, onBack, right, inverted = false, style }: 
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

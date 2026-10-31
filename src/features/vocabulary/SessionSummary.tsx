@@ -11,6 +11,7 @@ import { colors, spacing } from '@/theme';
 import { enter } from '@/theme/motion';
 
 import type { RoundSummary } from './usePracticeSession';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface SessionSummaryProps {
   summary: RoundSummary;
@@ -20,6 +21,7 @@ interface SessionSummaryProps {
 
 /** End of a round: a celebration, the points earned and the streak, then one tap to play again. */
 export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps) {
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const accuracy = summary.total === 0 ? 0 : Math.round((summary.correct / summary.total) * 100);
   const trophy = accuracy === 100 ? '🏆' : accuracy >= 60 ? '🎉' : '💪';
@@ -63,19 +65,21 @@ export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps
 }
 
 function Stat({ value, label, color }: { value: string; label: string; color: string }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.stat}>
       <AppText variant="heading" color={color}>
         {value}
       </AppText>
-      <AppText variant="caption" color={colors.textSecondary} style={styles.center} numberOfLines={2}>
+      <AppText variant="caption" color={home.textSecondary} style={styles.center} numberOfLines={2}>
         {label}
       </AppText>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'space-between', gap: spacing.xl },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg },
   heroText: { gap: spacing.sm },

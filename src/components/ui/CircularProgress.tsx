@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { colors } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface CircularProgressProps {
   /** 0..1 */
@@ -14,7 +15,10 @@ interface CircularProgressProps {
   children?: ReactNode;
 }
 
-export function CircularProgress({ value, size = 84, strokeWidth = 8, color = colors.primary, trackColor = colors.border, children }: CircularProgressProps) {
+export function CircularProgress({ value, size = 84, strokeWidth = 8, color = colors.primary, trackColor: track, children }: CircularProgressProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
+  const trackColor = track ?? home.rim;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(Math.max(value, 0), 1);
@@ -45,7 +49,7 @@ export function CircularProgress({ value, size = 84, strokeWidth = 8, color = co
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   svg: { position: 'absolute' },
   center: {
     ...StyleSheet.absoluteFill,

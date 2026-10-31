@@ -14,6 +14,7 @@ import { colors, radii, spacing } from '@/theme';
 
 import { useWordLookup, type WordRequest } from './useWordLookup';
 import { findCard, useStudyCards, useVocabularyStore } from './vocabularyStore';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface WordSheetProps {
   /** The tapped word, or null while the sheet is closed. */
@@ -23,6 +24,8 @@ interface WordSheetProps {
 
 /** Bottom sheet that translates a tapped word and lets the learner save it for the word game. */
 export function WordSheet({ request, onClose }: WordSheetProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   // The last word stays on the sheet while it slides away.
   const [shown, setShown] = useState(request);
@@ -65,7 +68,7 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
           {lookup.status === 'loading' ? (
             <View style={styles.row}>
               <ActivityIndicator color={colors.primary} />
-              <AppText color={colors.textSecondary}>{t('word.loading')}</AppText>
+              <AppText color={home.textSecondary}>{t('word.loading')}</AppText>
             </View>
           ) : null}
 
@@ -78,11 +81,11 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
 
           {result ? (
             <View style={styles.gap}>
-              <AppText variant="heading" color={colors.primaryDark}>
+              <AppText variant="heading" color={home.accent}>
                 {result.translation}
               </AppText>
               {result.example ? (
-                <AppText color={colors.textSecondary} style={styles.example}>
+                <AppText color={home.textSecondary} style={styles.example}>
                   «{result.example}»
                 </AppText>
               ) : null}
@@ -102,7 +105,7 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   word: { flex: 1 },
   speaker: {
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   gap: { gap: spacing.md },

@@ -28,7 +28,7 @@ export function Chip({ emoji, label, selected, onPress, multi = false }: ChipPro
         haptics.selection();
         onPress();
       }}
-      edgeColor={selected ? '#1A84BF' : home.rim}
+      edgeColor={selected ? '#1A84BF' : home.rimBottom}
       depth={4}
       radius={radii.md}
       faceStyle={[styles.chip, selected && styles.selected]}

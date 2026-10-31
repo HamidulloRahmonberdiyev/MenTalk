@@ -8,6 +8,7 @@ import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
 import { useStudyLanguage } from '@/store/settingsStore';
 import { colors, radii } from '@/theme';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface SpeakerButtonProps {
   /** The text in the studied language to read aloud. */
@@ -19,6 +20,7 @@ interface SpeakerButtonProps {
 
 /** Round speaker button that pronounces a word of the studied language. */
 export function SpeakerButton({ text, size = 56, autoPlay = false }: SpeakerButtonProps) {
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const { id: language } = useStudyLanguage();
 
@@ -43,11 +45,11 @@ export function SpeakerButton({ text, size = 56, autoPlay = false }: SpeakerButt
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   button: {
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: home.primarySoft,
   },
 });

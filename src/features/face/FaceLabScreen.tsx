@@ -17,6 +17,7 @@ import { TutorAvatar } from './avatar3d/TutorAvatar';
 import { useLipSync } from './lipsync/useLipSync';
 import type { FaceEmotion, FaceState } from './types';
 import { useMockAudioLevel } from './useMockAudioLevel';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 const STATES: readonly FaceState[] = ['idle', 'listening', 'thinking', 'speaking', 'happy', 'encouraging', 'wink', 'surprised'];
 const EMOTIONS: readonly FaceEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
@@ -29,6 +30,8 @@ const LINES = [
 
 /** Dev playground: drive the face with state and emotion, and hear lines spoken with lip-sync. */
 export function FaceLabScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const [state, setState] = useState<FaceState>('idle');
   const [emotion, setEmotion] = useState<FaceEmotion>('neutral');
   const [line, setLine] = useState<AiMessage | null>(null);
@@ -51,7 +54,7 @@ export function FaceLabScreen() {
           {(['svg', 'rive'] as const).map((variant) => (
             <View key={variant} style={styles.compareCell}>
               <AIFace key={`${variant}:${helloKey}`} variant={variant} state={state} emotion={emotion} audioLevel={mockLevel} size={150} />
-              <AppText variant="captionStrong" color={colors.textSecondary}>
+              <AppText variant="captionStrong" color={home.textSecondary}>
                 {variant}
               </AppText>
             </View>
@@ -92,9 +95,11 @@ interface ChipGroupProps<T extends string> {
 }
 
 function ChipGroup<T extends string>({ title, items, value, onChange }: ChipGroupProps<T>) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.group}>
-      <AppText variant="captionStrong" color={colors.textSecondary}>
+      <AppText variant="captionStrong" color={home.textSecondary}>
         {title}
       </AppText>
       <View style={styles.chips}>
@@ -111,7 +116,7 @@ function ChipGroup<T extends string>({ title, items, value, onChange }: ChipGrou
               }}
               style={[styles.chip, selected && styles.chipOn]}
             >
-              <AppText variant="captionStrong" color={selected ? colors.onPrimary : colors.text}>
+              <AppText variant="captionStrong" color={selected ? colors.onPrimary : home.text}>
                 {item}
               </AppText>
             </PressableScale>
@@ -122,16 +127,16 @@ function ChipGroup<T extends string>({ title, items, value, onChange }: ChipGrou
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   content: { gap: spacing.xl, paddingVertical: spacing.lg },
   stage: {
     height: 300,
     borderRadius: radii.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: home.rim,
   },
   compare: {
     flexDirection: 'row',
@@ -139,9 +144,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingVertical: spacing.lg,
     borderRadius: radii.xl,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: home.rim,
   },
   compareCell: { alignItems: 'center', gap: spacing.sm },
   group: { gap: spacing.sm },
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 2,
     borderRadius: radii.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: home.panel,
   },
   chipOn: { backgroundColor: colors.primary },
 });

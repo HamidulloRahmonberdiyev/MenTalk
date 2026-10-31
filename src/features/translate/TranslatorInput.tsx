@@ -135,6 +135,7 @@ const createStyles = (home: Palette) =>
       borderWidth: 2,
       borderBottomWidth: 6,
       borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
       backgroundColor: home.panel,
     },
     cardListening: { borderColor: colors.primary },
