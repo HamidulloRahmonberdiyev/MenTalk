@@ -6,11 +6,17 @@ import { isStudyLanguage, type StudyLanguage } from '@/services/learning';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
-import type { HistoryEntry, LearningGoal, UserProfile } from '@/types';
+import type { HistoryEntry, LearnerExperience, LearningFocus, LearningGoal, UserProfile } from '@/types';
 
 import { syncVocabulary } from './vocabularySync';
 
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
+const FOCUS: readonly LearningFocus[] = ['speaking', 'listening', 'vocabulary', 'grammar', 'pronunciation', 'confidence'];
+const EXPERIENCES: readonly LearnerExperience[] = ['none', 'school', 'self_taught', 'courses', 'immersion'];
+
+/** Keeps only values this build knows, so a newer server cannot put unknown options on screen. */
+const known = <T extends string>(allowed: readonly T[], values: readonly string[] = []): T[] =>
+  values.filter((value): value is T => allowed.includes(value as T));
 
 const toHistory = (item: ApiHistoryItem): HistoryEntry[] =>
   item.state === 'finished' && isScenarioId(item.scenario_id)
@@ -29,7 +35,11 @@ function applyUser(user: ApiUser): void {
     country: user.country,
     birthDate: user.birth_date,
     level: user.level,
-    goals: user.goals.filter((goal): goal is LearningGoal => GOALS.includes(goal as LearningGoal)),
+    levelSource: user.level_source ?? null,
+    placementScore: user.placement_score ?? null,
+    experience: known(EXPERIENCES, user.experience ? [user.experience] : [])[0] ?? null,
+    goals: known(GOALS, user.goals),
+    focus: known(FOCUS, user.focus),
     dailyGoalMinutes: user.daily_goal_minutes,
     onboarded: user.level !== null,
   });
@@ -82,7 +92,12 @@ export async function pushOnboarding(data: OnboardingData): Promise<void> {
       country: data.country,
       birth_date: data.birthDate,
       level: data.level,
+      level_source: data.levelSource,
+      // The server only accepts a score alongside a placement result.
+      ...(data.levelSource === 'placement' ? { placement_score: data.placementScore } : {}),
+      experience: data.experience,
       goals: data.goals,
+      focus: data.focus,
       daily_goal_minutes: data.dailyGoalMinutes,
       ui_language: useSettingsStore.getState().language,
       target_language: data.studyLanguage,

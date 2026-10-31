@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import { endpoints } from '@/services/api/endpoints';
 import { clearToken, getToken, setToken } from '@/services/api/tokenStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { hydrateFromServer } from '@/services/session/profileSync';
 
 import type { AuthService, AuthUser } from './AuthService';
@@ -12,7 +13,11 @@ export class ApiAuthService implements AuthService {
   constructor(private readonly idTokens: IdTokenProvider) {}
 
   async signInWithGoogle(): Promise<AuthUser> {
-    const { token, user } = await endpoints.signInWithGoogle(await this.idTokens.getIdToken(), `${Platform.OS} ${Platform.Version}`);
+    const { token, user } = await endpoints.signInWithGoogle(
+      await this.idTokens.getIdToken(),
+      `${Platform.OS} ${Platform.Version}`,
+      useSettingsStore.getState().language,
+    );
     await setToken(token);
     await hydrateFromServer(user);
     return { name: user.name, email: user.email };

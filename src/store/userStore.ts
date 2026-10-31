@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { INITIAL_USER } from '@/mocks/user';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { StudyLanguage } from '@/services/learning';
-import type { CountryCode, Gender, LearningGoal, LearnerLevel, ScenarioId, UserProfile } from '@/types';
+import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, ScenarioId, UserProfile } from '@/types';
 
 export interface OnboardingData {
   studyLanguage: StudyLanguage;
@@ -12,7 +12,11 @@ export interface OnboardingData {
   country: CountryCode;
   birthDate: string;
   level: LearnerLevel;
+  levelSource: LevelSource;
+  placementScore: number | null;
+  experience: LearnerExperience;
   goals: LearningGoal[];
+  focus: LearningFocus[];
   dailyGoalMinutes: number;
 }
 

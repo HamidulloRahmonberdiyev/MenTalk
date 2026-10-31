@@ -1,4 +1,5 @@
 import type { StudyLanguage } from '@/services/learning';
+import type { LearnerExperience, LevelSource } from '@/types';
 
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
 
@@ -12,7 +13,12 @@ export interface ApiUser {
   country: string | null;
   birth_date: string | null;
   level: 'beginner' | 'elementary' | 'intermediate' | 'advanced' | null;
+  /** Missing on servers that predate the placement test. */
+  level_source?: LevelSource | null;
+  placement_score?: number | null;
+  experience?: LearnerExperience | null;
   goals: string[];
+  focus?: string[];
   ui_language: 'uz' | 'ru' | 'en' | null;
   /** The language being learned; null on servers that predate English. */
   target_language: StudyLanguage | null;
@@ -23,7 +29,23 @@ export interface ApiUser {
 }
 
 export type ApiProfilePatch = Partial<
-  Pick<ApiUser, 'name' | 'gender' | 'country' | 'birth_date' | 'level' | 'goals' | 'ui_language' | 'target_language' | 'timezone' | 'daily_goal_minutes'>
+  Pick<
+    ApiUser,
+    | 'name'
+    | 'gender'
+    | 'country'
+    | 'birth_date'
+    | 'level'
+    | 'level_source'
+    | 'placement_score'
+    | 'experience'
+    | 'goals'
+    | 'focus'
+    | 'ui_language'
+    | 'target_language'
+    | 'timezone'
+    | 'daily_goal_minutes'
+  >
 >;
 
 export interface ApiStats {
@@ -100,8 +122,9 @@ export interface ApiCard {
 export type TurnPayload = { text: string } | { audio: string; mime: string };
 
 export const endpoints = {
-  signInWithGoogle: (idToken: string, device: string) =>
-    api<{ token: string; user: ApiUser }>('POST', '/auth/google', { body: { id_token: idToken, device } }),
+  /** `uiLanguage` becomes the language of a newly created profile; an existing one keeps its own. */
+  signInWithGoogle: (idToken: string, device: string, uiLanguage: 'uz' | 'ru' | 'en') =>
+    api<{ token: string; user: ApiUser }>('POST', '/auth/google', { body: { id_token: idToken, device, ui_language: uiLanguage } }),
   signOut: () => api<void>('DELETE', '/auth/session'),
 
   me: () => api<ApiUser>('GET', '/me'),

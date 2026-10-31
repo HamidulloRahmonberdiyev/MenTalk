@@ -73,6 +73,12 @@ export interface HistoryEntry {
 export type Gender = 'male' | 'female' | 'unspecified';
 export type LearnerLevel = 'beginner' | 'elementary' | 'intermediate' | 'advanced';
 export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family' | 'fun';
+/** How the learner studied the language before. */
+export type LearnerExperience = 'none' | 'school' | 'self_taught' | 'courses' | 'immersion';
+/** A skill the learner finds hard and wants the tutor to work on. */
+export type LearningFocus = 'speaking' | 'listening' | 'vocabulary' | 'grammar' | 'pronunciation' | 'confidence';
+/** 'placement': measured by the onboarding test; 'self': picked by hand. */
+export type LevelSource = 'placement' | 'self';
 
 /** Everything the tutor should know about the person it is talking to. */
 /** Where the learner is from: an ISO 3166-1 alpha-2 code (legacy profiles may hold 'OTHER'). */
@@ -104,7 +110,12 @@ export interface UserProfile {
   /** ISO date (YYYY-MM-DD). */
   birthDate: string | null;
   level: LearnerLevel | null;
+  levelSource: LevelSource | null;
+  /** Share of placement questions answered right, 0–100; null when the level was picked by hand. */
+  placementScore: number | null;
+  experience: LearnerExperience | null;
   goals: LearningGoal[];
+  focus: LearningFocus[];
   dailyGoalMinutes: number;
   minutesToday: number;
   lastScenarioId: ScenarioId | null;

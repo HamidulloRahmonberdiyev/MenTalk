@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { Language } from '@/i18n';
+import { deviceLanguage } from '@/i18n/deviceLanguage';
 import { DEFAULT_STUDY_LANGUAGE, studyLanguagePack, type StudyLanguage, type StudyLanguagePack } from '@/services/learning';
 
 interface SettingsState {
@@ -22,7 +23,8 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      language: 'ru',
+      // Only the first launch: afterwards the stored choice wins.
+      language: deviceLanguage(),
       setLanguage: (language) => set({ language }),
       studyLanguage: DEFAULT_STUDY_LANGUAGE,
       setStudyLanguage: (studyLanguage) => set({ studyLanguage }),
