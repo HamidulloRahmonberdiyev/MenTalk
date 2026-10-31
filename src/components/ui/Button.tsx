@@ -1,15 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { haptics } from '@/services/haptics';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
 
 import { AppText } from './AppText';
-import { PressableScale } from './PressableScale';
+import { Pressable3D } from './Pressable3D';
 
 type ButtonVariant = 'primary' | 'soft' | 'danger';
+
+const LOOKS: Record<ButtonVariant, { face: string; edge: string }> = {
+  primary: { face: colors.primary, edge: '#1A84BF' },
+  soft: { face: colors.primarySoft, edge: '#B5DDF2' },
+  danger: { face: colors.danger, edge: '#B91C1C' },
+};
 
 interface ButtonProps {
   title: string;
@@ -32,7 +37,6 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
-  const isPrimary = variant === 'primary';
   const foreground = variant === 'soft' ? colors.primary : colors.onPrimary;
   const inactive = disabled || loading;
 
@@ -52,8 +56,11 @@ export function Button({
     </View>
   );
 
+  const look = LOOKS[variant];
+  const radius = StyleSheet.flatten(style)?.borderRadius ?? radii.md;
+
   return (
-    <PressableScale
+    <Pressable3D
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityState={{ disabled: inactive }}
@@ -62,21 +69,14 @@ export function Button({
         haptics.light();
         onPress();
       }}
-      style={[styles.base, isPrimary ? shadows.primary : variant === 'danger' ? styles.danger : styles.soft, inactive && styles.inactive, style]}
+      edgeColor={look.edge}
+      depth={4}
+      radius={typeof radius === 'number' ? radius : radii.md}
+      style={[styles.base, inactive && styles.inactive, style]}
+      faceStyle={[styles.fill, { backgroundColor: look.face }]}
     >
-      {isPrimary ? (
-        <LinearGradient
-          colors={[colors.primaryLight, colors.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fill}
-        >
-          {content}
-        </LinearGradient>
-      ) : (
-        <View style={styles.fill}>{content}</View>
-      )}
-    </PressableScale>
+      {content}
+    </Pressable3D>
   );
 }
 
@@ -84,19 +84,10 @@ const styles = StyleSheet.create({
   base: {
     height: 58,
     borderRadius: radii.md,
-    overflow: 'visible',
   },
   fill: {
-    flex: 1,
-    borderRadius: radii.md,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-  },
-  soft: {
-    backgroundColor: colors.primarySoft,
-  },
-  danger: {
-    backgroundColor: colors.danger,
   },
   inactive: {
     opacity: 0.55,

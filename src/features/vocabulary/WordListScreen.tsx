@@ -1,11 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { Button } from '@/components/ui/Button';
-import { TabScreen } from '@/components/ui/TabScreen';
+import { Screen } from '@/components/ui/Screen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useT } from '@/i18n';
 import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
@@ -20,7 +22,7 @@ import { WordRow } from './WordRow';
 
 const ORDER: Mastery[] = ['new', 'learning', 'known', 'mastered'];
 
-export function WordsScreen() {
+export function WordListScreen() {
   const t = useT();
   const cards = useStudyCards();
   const xp = useVocabularyStore((state) => state.xp);
@@ -44,88 +46,89 @@ export function WordsScreen() {
   };
 
   return (
-    <TabScreen>
-      <AppText variant="title" accessibilityRole="header">
-        {t('words.title')}
-      </AppText>
-
-      <LinearGradient colors={[colors.primaryLight, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroTexts}>
-            <AppText variant="heading" color={colors.onPrimary}>
-              {t('words.round')}
-            </AppText>
-            <AppText color="rgba(255,255,255,0.9)">
-              {cards.length === 0 ? t('words.empty.title') : due > 0 ? t('words.due', { n: due }) : t('words.bonus')}
-            </AppText>
+    <Screen padded={false}>
+      <ScreenHeader title={t('words.title')} onBack={() => router.back()} style={styles.header} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={[colors.primaryLight, colors.primaryDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <View style={styles.heroTop}>
+            <View style={styles.heroTexts}>
+              <AppText variant="heading" color={colors.onPrimary}>
+                {t('words.round')}
+              </AppText>
+              <AppText color="rgba(255,255,255,0.9)">
+                {cards.length === 0 ? t('words.empty.title') : due > 0 ? t('words.due', { n: due }) : t('words.bonus')}
+              </AppText>
+            </View>
+            <AppText style={styles.heroEmoji}>🎮</AppText>
           </View>
-          <AppText style={styles.heroEmoji}>🎮</AppText>
-        </View>
-        <View style={styles.chips}>
-          <Chip label={`🔥 ${t('words.streak', { n: streak })}`} />
-          <Chip label={`⚡ ${t('words.xp', { n: xp })}`} />
-        </View>
-        <PressableScale
-          accessibilityRole="button"
-          accessibilityLabel={t('words.play')}
-          disabled={cards.length === 0}
-          onPress={play}
-          style={[styles.play, cards.length === 0 && styles.playOff]}
-        >
-          <AppText variant="button" color={colors.primaryDark}>
-            {t('words.play')}
-          </AppText>
-        </PressableScale>
-      </LinearGradient>
+          <View style={styles.chips}>
+            <Chip label={`🔥 ${t('words.streak', { n: streak })}`} />
+            <Chip label={`⚡ ${t('words.xp', { n: xp })}`} />
+          </View>
+          <Pressable3D
+            accessibilityRole="button"
+            accessibilityLabel={t('words.play')}
+            disabled={cards.length === 0}
+            onPress={play}
+            edgeColor="#BFE0F3"
+            style={[styles.play, cards.length === 0 && styles.playOff]}
+            faceStyle={styles.playFace}
+          >
+            <AppText variant="button" color={colors.primaryDark}>
+              {t('words.play')}
+            </AppText>
+          </Pressable3D>
+        </LinearGradient>
 
-      {cards.length === 0 ? (
-        <View style={styles.empty}>
-          <AppText style={styles.emptyIcon}>📖</AppText>
-          <AppText variant="heading" style={styles.center}>
-            {t('words.empty.title')}
-          </AppText>
-          <AppText color={colors.textSecondary} style={styles.center}>
-            {t('words.empty.text')}
-          </AppText>
-          <Button
-            title={t('words.starter')}
-            icon="sparkles"
-            onPress={() => {
-              addWords(starterWords(studyLanguage, language));
-              haptics.success();
-            }}
-            style={styles.starter}
-          />
-        </View>
-      ) : (
-        <>
-          <View style={styles.summary}>
-            <AppText variant="heading">{t('words.count', { n: cards.length })}</AppText>
-            <View style={styles.bar}>
-              {ORDER.filter((key) => counts[key] > 0).map((key) => (
-                <View key={key} style={{ flex: counts[key], backgroundColor: MASTERY_STYLE[key].color }} />
+        {cards.length === 0 ? (
+          <View style={styles.empty}>
+            <AppText style={styles.emptyIcon}>📖</AppText>
+            <AppText variant="heading" style={styles.center}>
+              {t('words.empty.title')}
+            </AppText>
+            <AppText color={colors.textSecondary} style={styles.center}>
+              {t('words.empty.text')}
+            </AppText>
+            <Button
+              title={t('words.starter')}
+              icon="sparkles"
+              onPress={() => {
+                addWords(starterWords(studyLanguage, language));
+                haptics.success();
+              }}
+              style={styles.starter}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.summary}>
+              <AppText variant="heading">{t('words.count', { n: cards.length })}</AppText>
+              <View style={styles.bar}>
+                {ORDER.filter((key) => counts[key] > 0).map((key) => (
+                  <View key={key} style={{ flex: counts[key], backgroundColor: MASTERY_STYLE[key].color }} />
+                ))}
+              </View>
+              <View style={styles.legend}>
+                {ORDER.map((key) => (
+                  <View key={key} style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: MASTERY_STYLE[key].color }]} />
+                    <AppText variant="caption" color={colors.textSecondary}>
+                      {t(MASTERY_STYLE[key].label)} {counts[key]}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
+            </View>
+            <View style={styles.list}>
+              {cards.map((card) => (
+                <WordRow key={card.id} card={card} onRemove={removeWord} />
               ))}
             </View>
-            <View style={styles.legend}>
-              {ORDER.map((key) => (
-                <View key={key} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: MASTERY_STYLE[key].color }]} />
-                  <AppText variant="caption" color={colors.textSecondary}>
-                    {t(MASTERY_STYLE[key].label)} {counts[key]}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-          </View>
-          <View style={styles.list}>
-            {cards.map((card) => (
-              <WordRow key={card.id} card={card} onRemove={removeWord} />
-            ))}
-          </View>
-        </>
-      )}
+          </>
+        )}
+      </ScrollView>
       <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
-    </TabScreen>
+    </Screen>
   );
 }
 
@@ -140,13 +143,16 @@ function Chip({ label }: { label: string }) {
 }
 
 const styles = StyleSheet.create({
+  header: { paddingHorizontal: spacing.lg },
+  content: { gap: spacing.xl, padding: spacing.xl },
   hero: { gap: spacing.lg, padding: spacing.xl, borderRadius: radii.xl, ...shadows.primary },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   heroTexts: { flex: 1, gap: spacing.xs },
   heroEmoji: { fontSize: 44, lineHeight: 52 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.22)' },
-  play: { height: 54, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  play: { height: 58 },
+  playFace: { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   playOff: { opacity: 0.55 },
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
   emptyIcon: { fontSize: 64, lineHeight: 76 },

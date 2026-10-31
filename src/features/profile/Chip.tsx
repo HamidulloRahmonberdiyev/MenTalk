@@ -1,9 +1,11 @@
 import { StyleSheet } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
+
+import { home } from '../home/homeTheme';
 
 interface ChipProps {
   emoji: string;
@@ -14,9 +16,10 @@ interface ChipProps {
   multi?: boolean;
 }
 
+/** A chunky dark option that presses down; the chosen one turns blue, as in Duolingo's pickers. */
 export function Chip({ emoji, label, selected, onPress, multi = false }: ChipProps) {
   return (
-    <PressableScale
+    <Pressable3D
       accessibilityRole={multi ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected }}
       accessibilityLabel={label}
@@ -24,13 +27,16 @@ export function Chip({ emoji, label, selected, onPress, multi = false }: ChipPro
         haptics.selection();
         onPress();
       }}
-      style={[styles.chip, selected && styles.selected]}
+      edgeColor={selected ? '#1A84BF' : home.rim}
+      depth={4}
+      radius={radii.md}
+      faceStyle={[styles.chip, selected && styles.selected]}
     >
       <AppText style={styles.emoji}>{emoji}</AppText>
-      <AppText variant="captionStrong" color={selected ? colors.primaryDark : colors.text} numberOfLines={1}>
+      <AppText variant="bodyStrong" color={selected ? colors.primaryLight : home.text} numberOfLines={1}>
         {label}
       </AppText>
-    </PressableScale>
+    </Pressable3D>
   );
 }
 
@@ -38,14 +44,13 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    height: 42,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    gap: spacing.sm,
+    height: 48,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 2,
+    borderColor: home.rim,
+    backgroundColor: home.track,
   },
-  selected: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  emoji: { fontSize: 18, lineHeight: 22 },
+  selected: { borderColor: colors.primary, backgroundColor: '#17344A' },
+  emoji: { fontSize: 20, lineHeight: 24 },
 });

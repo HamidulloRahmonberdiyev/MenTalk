@@ -1,66 +1,183 @@
-import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { router, useIsFocused } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Fragment, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { AppText } from '@/components/ui/AppText';
-import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
-import { TabScreen } from '@/components/ui/TabScreen';
+import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { SCENARIOS, SCENARIO_MAP } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
-import { colors, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 
-import { WordsPromoCard } from '../vocabulary/WordsPromoCard';
 import { openConversation } from '../scenarios/navigation';
-import { ScenarioRow } from '../scenarios/ScenarioRow';
-import { ContinueCard } from './ContinueCard';
-import { DailyGoalCard } from './DailyGoalCard';
+import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
+import { MAX_STAGE } from '../vocabulary/srs';
+import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
+import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
-import { Section } from './Section';
+import { home } from './homeTheme';
+import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
+import { SkillBars, type SkillBar } from './SkillBars';
+import { TopicCarousel } from './TopicCarousel';
 
-const PREVIEW_COUNT = 4;
+/** Average of the latest conversation scores (out of 10). */
+const RECENT_SCORES = 10;
+/** A week of daily rounds fills the streak bar. */
+const STREAK_TARGET = 7;
 
 export function HomeScreen() {
   const t = useT();
+  const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
+  const { refreshControl, version } = useRefreshControl();
+  const [picking, setPicking] = useState(false);
+
   const name = useUserStore((state) => state.name);
   const goalMinutes = useUserStore((state) => state.dailyGoalMinutes);
   const minutesToday = useUserStore((state) => state.minutesToday);
+  const history = useUserStore((state) => state.history);
   const lastScenarioId = useUserStore((state) => state.lastScenarioId);
-  const lastScenario = lastScenarioId ? SCENARIO_MAP[lastScenarioId] : null;
+  const cards = useStudyCards();
+  const streak = useVocabularyStore(visibleStreak);
+
+  const due = countDue(cards);
+  const recent = history.slice(0, RECENT_SCORES);
+  const average = recent.length ? recent.reduce((sum, entry) => sum + entry.score, 0) / recent.length : 0;
+  const topicsTried = new Set(history.map((entry) => entry.scenarioId)).size;
+  const learned = cards.length ? cards.reduce((sum, card) => sum + card.stage, 0) / (cards.length * MAX_STAGE) : 0;
+  const minutes = Math.floor(minutesToday);
+
+  const bars: SkillBar[] = [
+    { key: 'goal', label: t('home.stats.goal'), value: `${minutes}/${goalMinutes}`, progress: minutesToday / goalMinutes },
+    { key: 'score', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
+    { key: 'words', label: t('home.stats.words'), value: String(cards.length), progress: learned },
+    { key: 'streak', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
+    { key: 'topics', label: t('home.stats.topics'), value: `${topicsTried}/${SCENARIOS.length}`, progress: topicsTried / SCENARIOS.length },
+  ];
+
+  const shortcuts = useMemo<Shortcut[]>(
+    () => [
+      { key: 'topics', label: t('home.menu.topics'), icon: 'grid', onPress: () => router.push('/scenarios') },
+      { key: 'history', label: t('home.menu.history'), icon: 'chatbubbles', onPress: () => router.navigate('/conversations') },
+      { key: 'words', label: t('home.menu.words'), icon: 'book', onPress: () => router.navigate('/words') },
+      { key: 'game', label: t('home.menu.game'), icon: 'game-controller', onPress: () => setPicking(true) },
+      { key: 'translate', label: t('home.menu.translate'), icon: 'language', onPress: () => router.navigate('/translate') },
+      {
+        key: 'continue',
+        label: t('home.menu.continue'),
+        icon: 'play-circle',
+        onPress: () => openConversation(lastScenarioId ?? SCENARIOS[0].id),
+      },
+      {
+        key: 'random',
+        label: t('home.menu.random'),
+        icon: 'shuffle',
+        onPress: () => openConversation(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id),
+      },
+      { key: 'profile', label: t('home.menu.profile'), icon: 'person-circle', onPress: () => router.navigate('/profile') },
+    ],
+    [t, lastScenarioId],
+  );
 
   return (
-    <TabScreen>
-      <HomeHeader name={name} />
-      <DailyGoalCard minutesDone={minutesToday} goalMinutes={goalMinutes} />
-      <Button title={t('home.start')} icon="mic" onPress={() => router.push('/scenarios')} />
-      <WordsPromoCard />
-
-      {lastScenario ? (
-        <Section title={t('home.continue')}>
-          <ContinueCard scenario={lastScenario} onPress={() => openConversation(lastScenario.id)} />
-        </Section>
-      ) : null}
-
-      <Section
-        title={t('home.chooseTopic')}
-        action={
-          <PressableScale hitSlop={10} onPress={() => router.push('/scenarios')} accessibilityRole="button">
-            <AppText variant="bodyStrong" color={colors.primary}>
-              {t('home.all')}
-            </AppText>
-          </PressableScale>
-        }
+    <View style={styles.root}>
+      {/* Only this tab is dark, so the status bar flips back once another screen takes over. */}
+      <StatusBar style={focused ? 'light' : 'dark'} />
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
-        <View style={styles.list}>
-          {SCENARIOS.slice(0, PREVIEW_COUNT).map((scenario) => (
-            <ScenarioRow key={scenario.id} scenario={scenario} onPress={(item) => openConversation(item.id)} />
-          ))}
-        </View>
-      </Section>
-    </TabScreen>
+        <Fragment key={version}>
+          <View style={styles.top}>
+            <HomeHeader name={name} />
+            <SkillBars bars={bars} />
+          </View>
+
+          <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
+            <View style={styles.handle} />
+            <ShortcutGrid items={shortcuts} />
+
+            <FeatureCard
+              title={t('home.talk.title')}
+              icon="mic"
+              gradient={['#6FA8E8', '#2F6DBF']}
+              edge="#24508F"
+              stats={[
+                { label: t('home.talk.sessions'), value: history.length },
+                { label: t('home.talk.average'), value: recent.length ? average.toFixed(1) : 0 },
+                { label: t('home.talk.today'), value: minutes },
+              ]}
+              onPress={() => router.push('/scenarios')}
+            />
+            <FeatureCard
+              title={t('home.vocab.title')}
+              icon="library"
+              gradient={['#3FC1FF', '#1B8FE6']}
+              edge="#156DB0"
+              stats={[
+                { label: t('home.vocab.total'), value: cards.length },
+                { label: t('home.vocab.due'), value: due },
+                { label: t('home.vocab.streak'), value: streak },
+              ]}
+              onPress={() => router.navigate('/words')}
+            />
+
+            <View style={styles.sectionHeader}>
+              <AppText variant="heading" color={home.text} accessibilityRole="header">
+                {t('home.chooseTopic')}
+              </AppText>
+              <PressableScale hitSlop={10} onPress={() => router.push('/scenarios')} accessibilityRole="button">
+                <AppText variant="bodyStrong" color={colors.primaryLight}>
+                  {t('home.all')}
+                </AppText>
+              </PressableScale>
+            </View>
+            <TopicCarousel
+              scenarios={lastScenarioId ? [SCENARIO_MAP[lastScenarioId], ...SCENARIOS.filter((s) => s.id !== lastScenarioId)] : SCENARIOS}
+              onPress={(scenario) => openConversation(scenario.id)}
+            />
+          </View>
+        </Fragment>
+      </ScrollView>
+      <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: spacing.md },
+  root: { flex: 1, backgroundColor: home.background },
+  content: { flexGrow: 1 },
+  top: {
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  sheet: {
+    flexGrow: 1,
+    gap: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    backgroundColor: home.sheet,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 48,
+    height: 5,
+    marginBottom: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
 });

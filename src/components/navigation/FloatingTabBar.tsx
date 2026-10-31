@@ -9,23 +9,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
-import { colors, radii, spacing } from '@/theme';
+import { colors, radii, shadows, spacing } from '@/theme';
 import type { IconName } from '@/types';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
-export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_HEIGHT = 76;
 export const TAB_BAR_SPACE = TAB_BAR_HEIGHT + spacing.xxl;
 
-const INNER_PADDING = 6;
+const INNER_PADDING = 8;
+const BUBBLE = TAB_BAR_HEIGHT - INNER_PADDING * 2;
 const SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
+const INACTIVE = '#8E95A3';
 
-interface TabIcons {
-  idle: IconName;
-  active: IconName;
-}
-
-export type TabIconMap = Record<string, TabIcons>;
+export type TabIconMap = Record<string, IconName>;
 
 /** The floating bar would sit on top of the keyboard, so it steps aside while typing. */
 function useKeyboardVisible(): boolean {
@@ -67,17 +64,19 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
       <View style={styles.shadow}>
         <View style={styles.bar} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
           {Platform.OS !== 'web' ? (
-            <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
           ) : null}
           <View style={[StyleSheet.absoluteFill, styles.glass]} />
 
-          {slot > 0 ? <Animated.View style={[styles.indicator, { width: slot }, indicatorStyle]} /> : null}
+          {slot > 0 ? (
+            <Animated.View style={[styles.indicator, { width: slot }, indicatorStyle]}>
+              <View style={styles.bubble} />
+            </Animated.View>
+          ) : null}
 
           {state.routes.map((route, index) => {
             const focused = state.index === index;
             const { options } = descriptors[route.key];
-            const tabIcons = icons[route.name];
-            const tint = focused ? colors.primary : colors.textMuted;
 
             const onPress = () => {
               const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -97,10 +96,13 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
                 onPress={onPress}
                 style={styles.tab}
               >
-                <Ionicons name={focused ? tabIcons.active : tabIcons.idle} size={24} color={tint} />
-                <AppText variant="captionStrong" color={tint} style={styles.label} numberOfLines={1}>
-                  {options.title}
-                </AppText>
+                {/* The active tab is just its icon inside the blue bubble, as in Englify. */}
+                <Ionicons name={icons[route.name]} size={focused ? 28 : 24} color={focused ? colors.onPrimary : INACTIVE} />
+                {focused ? null : (
+                  <AppText variant="captionStrong" color={INACTIVE} style={styles.label} numberOfLines={1}>
+                    {options.title}
+                  </AppText>
+                )}
               </PressableScale>
             );
           })}
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
   },
   shadow: {
     borderRadius: radii.pill,
-    boxShadow: '0 14px 34px rgba(23, 64, 128, 0.22)',
+    boxShadow: '0 14px 34px rgba(0, 0, 0, 0.35)',
   },
   bar: {
     flexDirection: 'row',
@@ -127,20 +129,25 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.85)',
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   glass: {
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    backgroundColor: 'rgba(24, 25, 30, 0.92)',
   },
   indicator: {
     position: 'absolute',
     top: INNER_PADDING,
     bottom: INNER_PADDING,
     left: INNER_PADDING,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bubble: {
+    width: BUBBLE,
+    height: BUBBLE,
     borderRadius: radii.pill,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: 'rgba(42, 171, 238, 0.12)',
+    backgroundColor: colors.primary,
+    ...shadows.primary,
   },
   tab: {
     flex: 1,

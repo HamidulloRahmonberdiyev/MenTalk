@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
 import { colors, radii, spacing, typography } from '@/theme';
 
+import { home } from '../home/homeTheme';
 import type { ParsedBirth } from './birthDate';
 
 export interface BirthParts {
@@ -20,9 +21,11 @@ interface BirthDateFieldProps {
   parsed: ParsedBirth | null;
   /** Off on forms where this is not the first field. */
   autoFocus?: boolean;
+  /** Dark boxes for the dark profile screens. */
+  dark?: boolean;
 }
 
-export function BirthDateField({ value, onChange, parsed, autoFocus = true }: BirthDateFieldProps) {
+export function BirthDateField({ value, onChange, parsed, autoFocus = true, dark = false }: BirthDateFieldProps) {
   const t = useT();
   const monthRef = useRef<TextInput>(null);
   const yearRef = useRef<TextInput>(null);
@@ -54,6 +57,7 @@ export function BirthDateField({ value, onChange, parsed, autoFocus = true }: Bi
           onChangeText={onDay}
           autoFocus={autoFocus}
           flex={1}
+          dark={dark}
         />
         <Box
           ref={monthRef}
@@ -62,6 +66,7 @@ export function BirthDateField({ value, onChange, parsed, autoFocus = true }: Bi
           maxLength={2}
           onChangeText={onMonth}
           flex={1}
+          dark={dark}
         />
         <Box
           ref={yearRef}
@@ -70,6 +75,7 @@ export function BirthDateField({ value, onChange, parsed, autoFocus = true }: Bi
           maxLength={4}
           onChangeText={onYear}
           flex={1.7}
+          dark={dark}
         />
       </View>
 
@@ -98,9 +104,10 @@ interface BoxProps {
   onChangeText: (text: string) => void;
   flex: number;
   autoFocus?: boolean;
+  dark: boolean;
 }
 
-function Box({ ref, flex, ...rest }: BoxProps) {
+function Box({ ref, flex, dark, ...rest }: BoxProps) {
   return (
     <TextInput
       ref={ref}
@@ -109,7 +116,7 @@ function Box({ ref, flex, ...rest }: BoxProps) {
       placeholderTextColor={colors.textMuted}
       selectionColor={colors.primary}
       accessibilityLabel={rest.placeholder}
-      style={[styles.box, { flex }]}
+      style={[styles.box, dark && styles.boxDark, { flex }]}
     />
   );
 }
@@ -127,6 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
   },
+  boxDark: { height: 64, borderBottomWidth: 4, borderColor: home.rim, backgroundColor: home.track, color: home.text },
   pill: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill },
   pillOk: { backgroundColor: colors.primarySoft },
   pillError: { backgroundColor: '#FDECEC' },

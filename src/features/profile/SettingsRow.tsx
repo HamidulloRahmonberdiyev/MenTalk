@@ -1,15 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Children, isValidElement, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { IconTile } from '@/components/ui/IconTile';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { haptics } from '@/services/haptics';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
 
-const ICON = 38;
+import { home } from '../home/homeTheme';
+
+const ICON = 40;
 
 interface SettingsRowProps {
   icon: IconName;
@@ -21,50 +22,55 @@ interface SettingsRowProps {
   onPress: () => void;
 }
 
+/** A chunky dark button: solid icon tile, label, and a face that presses down onto its edge. */
 export function SettingsRow({ icon, tint, label, value, destructive = false, onPress }: SettingsRowProps) {
   return (
-    <PressableScale
+    <Pressable3D
       accessibilityRole="button"
       accessibilityLabel={value ? `${label}: ${value}` : label}
-      scaleTo={0.98}
       onPress={() => {
         haptics.light();
         onPress();
       }}
-      style={styles.row}
+      edgeColor={destructive ? '#8E1F1F' : home.rim}
+      depth={4}
+      radius={radii.lg}
+      faceStyle={[styles.row, destructive && styles.destructive]}
     >
-      <IconTile icon={icon} tint={tint} size={ICON} />
-      <AppText variant="bodyStrong" color={destructive ? colors.danger : colors.text} style={styles.label} numberOfLines={1}>
+      <View style={[styles.icon, { backgroundColor: tint }]}>
+        <Ionicons name={icon} size={22} color="#FFFFFF" />
+      </View>
+      <AppText variant="bodyStrong" color={destructive ? colors.danger : home.text} style={styles.label} numberOfLines={1}>
         {label}
       </AppText>
       {value ? (
-        <AppText variant="caption" color={colors.textSecondary} numberOfLines={1}>
+        <AppText variant="captionStrong" color={home.textMuted} numberOfLines={1}>
           {value}
         </AppText>
       ) : null}
-      {destructive ? null : <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />}
-    </PressableScale>
+      {destructive ? null : <Ionicons name="chevron-forward" size={20} color={home.textMuted} />}
+    </Pressable3D>
   );
 }
 
-/** Rounded card that stacks rows with hairlines between them, like a native settings group. */
+/** Stacks rows with a little air between them, each its own button. */
 export function SettingsGroup({ children }: { children: ReactNode }) {
-  return (
-    <View style={styles.group}>
-      {Children.toArray(children).map((row, index) => (
-        <View key={isValidElement(row) ? row.key : index}>
-          {index > 0 ? <View style={styles.divider} /> : null}
-          {row}
-        </View>
-      ))}
-    </View>
-  );
+  return <View style={styles.group}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderWidth: 2,
+    borderColor: home.rim,
+    backgroundColor: home.panel,
+  },
+  destructive: { borderColor: '#5A2A2E', backgroundColor: '#3A2328' },
+  icon: { width: ICON, height: ICON, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
   label: { flex: 1 },
-  group: { borderRadius: radii.lg, backgroundColor: colors.surface, overflow: 'hidden', ...shadows.card },
-  // Starts under the label, past the icon, as native grouped lists do.
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg + ICON + spacing.md, backgroundColor: colors.border },
+  group: { gap: spacing.md },
 });

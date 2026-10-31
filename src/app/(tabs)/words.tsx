@@ -1,3 +1,3 @@
-import { WordsScreen } from '@/features/vocabulary/WordsScreen';
+import { ResourcesScreen } from '@/features/resources/ResourcesScreen';
 
-export default WordsScreen;
+export default ResourcesScreen;

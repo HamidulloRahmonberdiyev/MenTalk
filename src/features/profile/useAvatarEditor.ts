@@ -38,6 +38,7 @@ export function useAvatarEditor() {
       await saveAvatar(uri);
       haptics.success();
     } catch (cause) {
+      if (__DEV__) console.warn('Avatar update failed', cause);
       haptics.error();
       setError(cause instanceof CameraPermissionDenied ? 'denied' : 'failed');
     } finally {
