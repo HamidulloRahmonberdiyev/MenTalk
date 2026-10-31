@@ -8,7 +8,7 @@ import { isStudyLanguage, type StudyLanguage } from '@/services/learning';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
-import type { HistoryEntry, LearnerExperience, LearningFocus, LearningGoal, UserProfile } from '@/types';
+import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
 import { syncVocabulary } from './vocabularySync';
 
@@ -28,6 +28,11 @@ const toHistory = (item: ApiHistoryItem): HistoryEntry[] =>
 function applyUser(user: ApiUser): void {
   const settings = useSettingsStore.getState();
   if (isStudyLanguage(user.target_language) && user.target_language !== settings.studyLanguage) settings.setStudyLanguage(user.target_language);
+  // Servers that predate tutor preferences leave these out; the device's own choice stays then.
+  const [character] = known(TUTOR_CHARACTERS, user.tutor_character ? [user.tutor_character] : []);
+  if (character) settings.setTutorCharacter(character);
+  const [tone] = known(TUTOR_TONES, user.tutor_tone ? [user.tutor_tone] : []);
+  if (tone) settings.setTutorTone(tone);
   useUserStore.getState().hydrate({
     name: user.name,
     email: user.email,
@@ -156,4 +161,10 @@ export async function saveAvatar(uri: string | null): Promise<void> {
 export async function pushLanguage(language: 'uz' | 'ru' | 'en'): Promise<void> {
   if (!(await signedIn())) return;
   await endpoints.updateMe({ ui_language: language }).catch(() => undefined);
+}
+
+/** Saves the tutor's look or tone, so another device starts with the same choice. Quiet on failure. */
+export async function pushTutorPrefs(prefs: { character?: TutorCharacter; tone?: TutorTone }): Promise<void> {
+  if (!(await signedIn())) return;
+  await endpoints.updateMe({ tutor_character: prefs.character, tutor_tone: prefs.tone }).catch(() => undefined);
 }

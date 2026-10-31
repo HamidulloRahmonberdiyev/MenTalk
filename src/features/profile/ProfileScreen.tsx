@@ -28,6 +28,7 @@ import { AppearanceSwitch } from './AppearanceSwitch';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ProfileHero } from './ProfileHero';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
+import { TutorCard } from './TutorCard';
 import { StatsCard } from './StatsCard';
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
@@ -115,6 +116,7 @@ export function ProfileScreen() {
 
           <Animated.View entering={enter.rise(120)} style={styles.section}>
             <SectionTitle>{t('profile.settings')}</SectionTitle>
+            <TutorCard />
             <AppearanceSwitch />
             <SettingsGroup>
               <SettingsRow icon="person" tint={colors.primary} label={t('profile.edit')} onPress={() => router.push('/profile-edit')} />

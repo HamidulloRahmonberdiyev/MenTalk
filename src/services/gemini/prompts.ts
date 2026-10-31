@@ -1,6 +1,6 @@
 import { englishCountryName } from '@/features/onboarding/countries';
 import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
-import type { LearnerProfile, ScenarioId } from '@/types';
+import type { LearnerProfile, ScenarioId, TutorTone } from '@/types';
 
 import type { Schema } from './client';
 
@@ -48,6 +48,17 @@ function levelRule(level: LearnerProfile['level'], pack: StudyLanguagePack): str
   }
 }
 
+/** The learner picks the tutor's mood in the chat; the lesson rules below always win over it. */
+const TONE_RULE: Record<TutorTone, string> = {
+  calm: 'Calm: speak in a calm, gentle, patient and reassuring way.',
+  funny:
+    'Funny: be playful and witty. Add light jokes, cheerful exaggeration or a funny twist to most replies, at a level the learner can understand. Laugh with them, never at them.',
+  angry:
+    "Angry: you are angry and fed up in EVERY reply, like an irritated waiter or a rushed driver, so the learner practises staying calm with difficult people. Sound annoyed from the first word: short, sharp sentences, sighs (\"Ugh.\", \"Again?!\"), complaints and impatient demands. Never sound cheerful: no praise, no jokes, no friendly emojis, no exclamations of delight; even when the learner does well, grumble and move on. Never insult, threaten, swear at or mock the learner, and keep asking questions so the conversation goes on. Drop the act only if the learner seems genuinely distressed.",
+};
+
+export const toneRule = (tone: TutorTone): string => TONE_RULE[tone] ?? TONE_RULE.calm;
+
 const GENDER_RULE = {
   male: 'The learner is male: address them with masculine forms where the language has them.',
   female: 'The learner is female: address them with feminine forms where the language has them.',
@@ -69,6 +80,7 @@ export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfil
     `TOPICS: ${NEXT_TOPICS[scenarioId]}.`,
     `LEARNER: ${learner.name}, ${age}. Reasons for learning ${pack.name}: ${goals}. ${country} ${gender}`,
     `LEVEL: ${levelRule(learner.level, pack)}`,
+    `TONE: ${toneRule(learner.tone)} Keep the same tone in every reply until told otherwise.`,
     'RULES:',
     `- Everything you say to the learner ("reply") is in ${pack.name} only.`,
     '- Keep each reply to one or two short, natural spoken sentences. No lists, no stage directions.',

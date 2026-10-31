@@ -1,8 +1,9 @@
-import { endpoints, type ApiResult, type ApiTurn, type TurnPayload } from '@/services/api/endpoints';
+import { endpoints, type ApiResult, type ApiTurn, type TurnPayload, type TurnStreamEvent } from '@/services/api/endpoints';
 import { ApiError, NetworkError } from '@/services/api/http';
+import { StreamUnsupportedError } from '@/services/api/stream';
 import { readBase64 } from '@/services/gemini/audioFiles';
 import type { StudyLanguage } from '@/services/learning';
-import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
+import type { AiMessage, ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, TutorTone, VoiceState } from '@/types';
 
 import {
   ConnectError,
@@ -22,9 +23,24 @@ const RECORDING_MIME = 'audio/mp4';
 const SPEAKING_MS_PER_CHAR = 55;
 /** A normal turn answers in a few seconds; past this the learner is told the connection is slow. */
 const SLOW_TURN_MS = 12_000;
+/**
+ * Whether this server streams turns. Unknown until the first turn tries; an old server answers the
+ * stream route with 404 once, and every later turn in the app's lifetime goes straight to `/turns`.
+ */
+let streamingSupported: boolean | null = null;
+
+/** A stream that ended without a reply, or reported an error event. */
+class StreamFailed extends Error {
+  constructor(readonly code: NoticeCode) {
+    super(`Turn stream failed: ${code}`);
+    this.name = 'StreamFailed';
+  }
+}
+
 const EMOTIONS: readonly TutorEmotion[] = ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful'];
 
 function noticeFor(error: unknown): NoticeCode {
+  if (error instanceof StreamFailed) return error.code;
   if (error instanceof NetworkError) return 'network';
   if (error instanceof ApiError) {
     if (error.type === 'quota') return 'quota';
@@ -70,11 +86,18 @@ class ApiSession implements ConversationSession {
   private state: VoiceState = 'idle';
   private turn = 0;
   private disposed = false;
+  /** Cancels the request of the turn in flight when a newer turn starts or the screen closes. */
+  private inFlight: AbortController | null = null;
 
   constructor(
     private readonly scenario: Scenario,
     private readonly language: StudyLanguage,
+    private tone: TutorTone,
   ) {}
+
+  setTone(tone: TutorTone): void {
+    this.tone = tone;
+  }
 
   subscribe(listener: ConversationListener): Unsubscribe {
     this.listeners.add(listener);
@@ -87,7 +110,7 @@ class ApiSession implements ConversationSession {
     const id = ++this.turn;
     this.setState('thinking');
     try {
-      const opening = await endpoints.startConversation(this.scenario.id, this.language);
+      const opening = await endpoints.startConversation(this.scenario.id, this.language, this.tone);
       this.conversationId = opening.conversation_id;
       this.publish(id, opening);
     } catch (error) {
@@ -135,6 +158,7 @@ class ApiSession implements ConversationSession {
   dispose(): void {
     this.disposed = true;
     this.turn += 1;
+    this.inFlight?.abort();
     this.clearSpeakingTimer();
     this.clearSlowTimer();
     this.listeners.clear();
@@ -142,13 +166,28 @@ class ApiSession implements ConversationSession {
 
   private async runTurn(payload: () => Promise<TurnPayload>): Promise<void> {
     const id = ++this.turn;
+    this.inFlight?.abort();
+    const controller = new AbortController();
+    this.inFlight = controller;
     this.clearSpeakingTimer();
     this.setState('thinking');
     this.slowTimer = setTimeout(() => {
       if (!this.isStale(id) && this.state === 'thinking') this.emit({ type: 'notice', code: 'slow' });
     }, SLOW_TURN_MS);
     try {
-      const turn = await endpoints.sendTurn(this.requireId(), await payload());
+      const body: TurnPayload = { ...(await payload()), tone: this.tone };
+      if (this.isStale(id)) return;
+      if (streamingSupported !== false) {
+        try {
+          await this.streamTurn(id, body, controller.signal);
+          streamingSupported = true;
+          return;
+        } catch (error) {
+          if (!(error instanceof StreamUnsupportedError)) throw error;
+          streamingSupported = false;
+        }
+      }
+      const turn = await endpoints.sendTurn(this.requireId(), body, controller.signal);
       if (this.isStale(id)) return;
       if (turn.transcript) this.emit({ type: 'learnerMessage', text: turn.transcript });
       this.publish(id, turn);
@@ -158,7 +197,60 @@ class ApiSession implements ConversationSession {
       this.emit({ type: 'notice', code: noticeFor(error) });
     } finally {
       this.clearSlowTimer();
+      if (this.inFlight === controller) this.inFlight = null;
     }
+  }
+
+  /**
+   * The fast path: the reply is shown word by word as the model writes it, and voiced as soon as the
+   * server has recorded it, instead of waiting for text and voice together.
+   */
+  private async streamTurn(id: number, body: TurnPayload, signal: AbortSignal): Promise<void> {
+    const messageId = `${this.scenario.id}-live-${id}`;
+    let message: AiMessage | null = null;
+    let final = false;
+    let voiced = false;
+
+    const show = (next: AiMessage) => {
+      message = next;
+      this.emit({ type: 'aiMessage', message: next });
+    };
+
+    const onEvent = (event: TurnStreamEvent) => {
+      if (this.isStale(id)) return;
+      switch (event.event) {
+        case 'transcript':
+          if (event.data.text) this.emit({ type: 'learnerMessage', text: event.data.text });
+          break;
+        case 'delta':
+          if (final || !event.data.text) break;
+          this.clearSlowTimer();
+          show({ id: messageId, text: (message?.text ?? '') + event.data.text, streaming: true });
+          break;
+        case 'reply':
+          final = true;
+          this.clearSlowTimer();
+          show({ id: messageId, text: event.data.reply, emotion: emotionOf(event.data.emotion), audioPending: true });
+          this.setState('speaking');
+          this.holdSpeaking(id, event.data.reply.length * SPEAKING_MS_PER_CHAR);
+          break;
+        case 'audio':
+          if (!message || !final) break;
+          voiced = true;
+          show({ ...message, audioPending: false, audioUri: event.data.url });
+          if (event.data.ms) this.holdSpeaking(id, event.data.ms);
+          break;
+        case 'error':
+          throw new StreamFailed(noticeFor(new ApiError(event.data.status ?? 500, event.data.type)));
+      }
+    };
+
+    await endpoints.streamTurn(this.requireId(), body, onEvent, signal);
+    if (this.isStale(id)) return;
+    if (!final) throw new StreamFailed('turnFailed');
+    // No recording came (the voice failed on the server): stop waiting, so the device voice reads the line now.
+    const last = message as AiMessage | null;
+    if (!voiced && last) show({ ...last, audioPending: false });
   }
 
   private publish(id: number, turn: ApiTurn): void {
@@ -168,9 +260,15 @@ class ApiSession implements ConversationSession {
       message: { id: `${this.scenario.id}-${turn.id}`, text: turn.reply, emotion: emotionOf(turn.emotion), audioUri: turn.audio_url ?? undefined },
     });
     this.setState('speaking');
+    this.holdSpeaking(id, turn.audio_ms ?? turn.reply.length * SPEAKING_MS_PER_CHAR);
+  }
+
+  /** Stays in `speaking` for about as long as the line takes to say, then hands the floor back. */
+  private holdSpeaking(id: number, durationMs: number): void {
+    this.clearSpeakingTimer();
     this.speakingTimer = setTimeout(() => {
       if (!this.isStale(id) && this.state === 'speaking') this.setState('idle');
-    }, turn.audio_ms ?? turn.reply.length * SPEAKING_MS_PER_CHAR);
+    }, durationMs);
   }
 
   private requireId(): number {
@@ -204,6 +302,6 @@ class ApiSession implements ConversationSession {
 
 export class ApiConversationService implements ConversationService {
   createSession(scenario: Scenario, learner: LearnerProfile): ConversationSession {
-    return new ApiSession(scenario, learner.studyLanguage);
+    return new ApiSession(scenario, learner.studyLanguage, learner.tone);
   }
 }

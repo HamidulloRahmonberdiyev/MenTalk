@@ -12,7 +12,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import type { AudioLevel, FaceEmotion, FaceState } from './types';
+import type { AudioLevel, FaceEmotion, FaceMood, FaceState } from './types';
 
 /** Animation values for the face. All live on the UI thread; React never re-renders for them. */
 export interface FaceMotion {
@@ -90,6 +90,20 @@ const EMOTIONS: Record<FaceEmotion, EmotionOffset> = {
   playful: { smile: 0.4, smileEyes: 0.25, browLift: 0.3, browAsym: 0.5, mouthShift: 0.3 },
 };
 
+interface MoodBias {
+  offset: EmotionOffset;
+  /** Caps that keep the temperament readable whatever the state says (an angry tutor never beams). */
+  maxSmile?: number;
+  maxSmileEyes?: number;
+}
+
+const MOODS: Record<FaceMood, MoodBias> = {
+  calm: { offset: {} },
+  funny: { offset: { smile: 0.35, smileEyes: 0.25, browLift: 0.25, mouthOpen: 0.18 } },
+  // Inner brow ends pulled hard down, lids narrowed, mouth corners down: unmistakably cross.
+  angry: { offset: { smile: -1.25, eyeOpen: -0.14, browLift: -0.55, browTilt: -1.5, browAsym: -0.3 }, maxSmile: -0.6, maxSmileEyes: 0 },
+};
+
 const BLEND = { duration: 520, easing: Easing.out(Easing.cubic) } as const;
 const GAZE = { duration: 650, easing: Easing.inOut(Easing.quad) } as const;
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
@@ -100,7 +114,7 @@ function shapeLevel(level: number): number {
   return Math.pow(Math.min(Math.max(level, 0), 1), 0.7) * 0.95;
 }
 
-export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel?: AudioLevel): FaceMotion {
+export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel?: AudioLevel, mood: FaceMood = 'calm'): FaceMotion {
   const breathe = useSharedValue(0);
   const sway = useSharedValue(0.5);
   const blink = useSharedValue(0);
@@ -135,31 +149,33 @@ export function useFaceMotion(state: FaceState, emotion: FaceEmotion, audioLevel
     hasAudio.value = audioLevel === undefined ? 0 : 1;
   }, [audioLevel, numericLevel, hasAudio]);
 
-  // State + emotion -> target expression.
+  // State + emotion + mood -> target expression.
   useEffect(() => {
     const pose = POSES[state];
     const offset = EMOTIONS[emotion];
+    const bias = MOODS[mood];
+    const sum = (key: keyof EmotionOffset) => (pose[key] ?? 0) + (offset[key] ?? 0) + (bias.offset[key] ?? 0);
     speaking.value = state === 'speaking' ? 1 : 0;
 
-    smile.value = withTiming(pose.smile + (offset.smile ?? 0), BLEND);
-    eyeOpen.value = withTiming(pose.eyeOpen + (offset.eyeOpen ?? 0), BLEND);
-    smileEyes.value = withTiming(Math.min(1, pose.smileEyes + (offset.smileEyes ?? 0)), BLEND);
-    mouthShift.value = withTiming(pose.mouthShift + (offset.mouthShift ?? 0), BLEND);
-    browLift.value = withTiming(pose.browLift + (offset.browLift ?? 0), BLEND);
-    browTilt.value = withTiming(pose.browTilt + (offset.browTilt ?? 0), BLEND);
-    browAsym.value = withTiming(pose.browAsym + (offset.browAsym ?? 0), BLEND);
+    smile.value = withTiming(Math.min(bias.maxSmile ?? Infinity, sum('smile')), BLEND);
+    eyeOpen.value = withTiming(sum('eyeOpen'), BLEND);
+    smileEyes.value = withTiming(Math.max(0, Math.min(bias.maxSmileEyes ?? 1, 1, sum('smileEyes'))), BLEND);
+    mouthShift.value = withTiming(sum('mouthShift'), BLEND);
+    browLift.value = withTiming(sum('browLift'), BLEND);
+    browTilt.value = withTiming(sum('browTilt'), BLEND);
+    browAsym.value = withTiming(Math.max(-0.3, sum('browAsym')), BLEND);
     gazeX.value = withTiming(pose.gazeX, { duration: 600, easing: Easing.out(Easing.cubic) });
     gazeY.value = withTiming(pose.gazeY, { duration: 600, easing: Easing.out(Easing.cubic) });
-    mouthOpen.value = withTiming((pose.mouthOpen ?? 0) + (offset.mouthOpen ?? 0), BLEND);
+    mouthOpen.value = withTiming(Math.max(0, sum('mouthOpen')), BLEND);
 
     if (state === 'happy' || state === 'encouraging' || state === 'surprised') {
       reaction.value = withSequence(withTiming(1, { duration: 180 }), withSpring(0, { damping: 9, stiffness: 120 }));
     }
     // A wink is a held beat that opens again by itself, so it also works as a one-off flourish on a playful line.
-    if (state === 'wink' || emotion === 'playful') {
+    if (mood !== 'angry' && (state === 'wink' || emotion === 'playful')) {
       wink.value = withSequence(withDelay(260, withTiming(1, { duration: 140 })), withDelay(700, withTiming(0, { duration: 220 })));
     }
-  }, [state, emotion, smile, eyeOpen, smileEyes, mouthShift, browLift, browTilt, browAsym, gazeX, gazeY, reaction, speaking, wink, mouthOpen]);
+  }, [state, emotion, mood, smile, eyeOpen, smileEyes, mouthShift, browLift, browTilt, browAsym, gazeX, gazeY, reaction, speaking, wink, mouthOpen]);
 
   // Random blinking and gaze drift: a couple of JS timers that only write shared values.
   useEffect(() => {

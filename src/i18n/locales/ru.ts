@@ -395,4 +395,13 @@ export const ru: Dictionary = {
   'home.vocab.streak': 'Серия:',
   'res.title': 'Ресурсы',
   'res.starter': 'Первые слова',
+  'tutor.title': 'Собеседник',
+  'tutor.subtitle': 'С кем и каким тоном вы говорите',
+  'tutor.character': 'Внешний вид',
+  'tutor.character.bubble': 'Пузырь',
+  'tutor.character.sobo': 'SOBO',
+  'tutor.tone': 'Тон разговора',
+  'tutor.tone.calm': 'Спокойный',
+  'tutor.tone.funny': 'Весёлый',
+  'tutor.tone.angry': 'Сердитый',
 };

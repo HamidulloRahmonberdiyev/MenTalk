@@ -1,4 +1,6 @@
-import { AIFace, CHAT_MASCOT, TutorAvatar, type FaceEmotion, type FaceState, type SpeechFace } from '@/features/face';
+import type { FaceEmotion, FaceState, SpeechFace } from '@/features/face';
+import { TutorFigure } from '@/features/tutor/TutorFigure';
+import { useSettingsStore } from '@/store/settingsStore';
 
 interface FloatingAvatarProps {
   state: FaceState;
@@ -9,10 +11,9 @@ interface FloatingAvatarProps {
   size: number;
 }
 
-/** The assistant's 3D head (or the SOBO mascot, see `CHAT_MASCOT`) floating over the scenario backdrop. */
+/** The tutor the learner picked in the profile, floating over the scenario backdrop. */
 export function FloatingAvatar({ state, emotion, speech, size }: FloatingAvatarProps) {
-  if (CHAT_MASCOT === 'rive') {
-    return <AIFace variant="rive" state={state} emotion={emotion} audioLevel={speech?.jaw} size={size} />;
-  }
-  return <TutorAvatar state={state} emotion={emotion} speech={speech} size={size} />;
+  const character = useSettingsStore((settings) => settings.tutorCharacter);
+  const tone = useSettingsStore((settings) => settings.tutorTone);
+  return <TutorFigure character={character} tone={tone} state={state} emotion={emotion} speech={speech} size={size} />;
 }

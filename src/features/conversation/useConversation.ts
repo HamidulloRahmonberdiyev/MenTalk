@@ -10,7 +10,8 @@ import {
 } from '@/services/conversation';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
-import type { AiMessage, ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
+import { pushTutorPrefs } from '@/services/session/profileSync';
+import type { AiMessage, ConversationResult, LearnerProfile, Scenario, TutorTone, VoiceState } from '@/types';
 
 export type ConnectionStatus = 'connecting' | 'ready' | 'error';
 export type HintState =
@@ -41,6 +42,7 @@ function currentLearner(): LearnerProfile {
   const settings = useSettingsStore.getState();
   return {
     name: user.name,
+    tone: settings.tutorTone,
     gender: user.gender,
     country: user.country,
     age: ageFrom(user.birthDate),
@@ -67,6 +69,7 @@ export function useConversation(scenario: Scenario) {
   const [hint, setHint] = useState<HintState>(HIDDEN_HINT);
   const [finishing, setFinishing] = useState(false);
   const [notice, setNotice] = useState<{ code: NoticeCode; id: number } | null>(null);
+  const tone = useSettingsStore((state) => state.tutorTone);
 
   useEffect(() => {
     const session = conversationService.createSession(scenario, currentLearner());
@@ -128,6 +131,13 @@ export function useConversation(scenario: Scenario) {
 
   const hasAnswered = useCallback(() => answeredRef.current, []);
 
+  /** Changes the tutor's mood from the next reply on, and remembers it for the next chats. */
+  const setTone = useCallback((next: TutorTone) => {
+    useSettingsStore.getState().setTutorTone(next);
+    sessionRef.current?.setTone(next);
+    void pushTutorPrefs({ tone: next });
+  }, []);
+
   const dismissNotice = useCallback(() => setNotice(null), []);
 
   const startListening = useCallback(() => sessionRef.current?.startListening(), []);
@@ -175,6 +185,8 @@ export function useConversation(scenario: Scenario) {
     learnerText,
     hint,
     finishing,
+    tone,
+    setTone,
     hasAnswered,
     notice,
     dismissNotice,

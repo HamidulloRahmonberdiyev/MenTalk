@@ -341,11 +341,12 @@ Barcha xatolar `application/problem+json`: `{ "type": "quota", "status": 429, "t
 | GET            | `/bootstrap`                 | fast | Stsenariylar, darajalar, maqsadlar, feature flag, minimal versiya (ETag, 5 daq kesh) |
 | POST           | `/auth/google`               | fast | `{ id_token, device }` → `{ token, user }`                                           |
 | DELETE         | `/auth/session`              | fast | Chiqish                                                                              |
-| GET/PUT/DELETE | `/me`                        | fast | Profil, tahrirlash, akkauntni o'chirish; `target_language` (`ru`/`en`)               |
+| GET/PUT/DELETE | `/me`                        | fast | Profil, tahrirlash, akkauntni o'chirish; `target_language`, `tutor_character`, `tutor_tone` |
 | GET            | `/history`                   | fast | Suhbatlar tarixi (cursor pagination)                                                 |
 | GET            | `/stats`                     | fast | Kunlik maqsad, seriya, XP                                                            |
-| POST           | `/conversations`             | ai   | `{ scenario_id, target_language? }` → `conversation_id`, ochilish gapi + audio       |
-| POST           | `/conversations/{id}/turns`  | ai   | `{ text }` yoki `{ audio, mime }` → tutor javobi                                     |
+| POST           | `/conversations`             | ai   | `{ scenario_id, target_language?, tone? }` → `conversation_id`, ochilish gapi + audio |
+| POST           | `/conversations/{id}/turns`  | ai   | `{ text }` yoki `{ audio, mime }`, `tone?` → tutor javobi (eski, to'liq javob)       |
+| POST           | `/conversations/{id}/turns/stream` | ai | Xuddi shu, javob SSE oqimi: `transcript`, `delta`, `reply`, `audio`, `done` (7.12) |
 | POST           | `/conversations/{id}/hint`   | ai   | Maslahat jumlasi                                                                     |
 | POST           | `/conversations/{id}/finish` | ai   | Natija (idempotent)                                                                  |
 | POST           | `/translate`                 | ai   | Tarjima (matn natijasi keshlanadi)                                                   |
@@ -2178,6 +2179,551 @@ it('stores the same spelling as two cards in two languages', function () {
 });
 ```
 
+### 7.12 Tezkor tur: SSE oqimi, suhbat ohangi va suhbatdosh
+
+**Muammo.** `POST /turns` javobni faqat hammasi tayyor bo'lganda qaytaradi: audio yuklash → Gemini (transkript + javob + xatolar, bitta JSON) → Gemini TTS (to'liq klip) → faylni saqlash → javob. O'quvchi shu zanjirning **yig'indisini** kutadi: odatda 4–8 soniya, TTS sekinlashsa 10+ soniya. Eng katta ulush — TTS va `mistakes` maydoni: ikkalasi ham javob matnini ko'rsatishga kerak emas.
+
+**Yechim.** Yangi `POST /conversations/{id}/turns/stream` endpointi javobni `text/event-stream` qilib, tayyor bo'lgan zahoti qismlab yuboradi:
+
+| Vaqt (taxminan) | Hodisa       | Ilovada                                                  |
+| --------------- | ------------ | -------------------------------------------------------- |
+| 0.6–1.2 s       | `transcript` | O'quvchi aytgan gap chiqadi                              |
+| 0.8–1.5 s       | `delta`…     | Tutor javobi so'zma-so'z yoziladi (kursor bilan)         |
+| 1.2–2.0 s       | `reply`      | Matn yakuniy; ovoz kutilmoqda                            |
+| +1–3 s          | `audio`      | Tutor ovozi o'ynaydi (2.5 s ichida kelmasa — qurilma ovozi) |
+| oxirida         | `done`       | Tur bazaga yozilgan                                      |
+
+`mistakes` endi javobdan **keyin** generatsiya qilinadi (`propertyOrdering`) va hech kimni kutdirmaydi. Eski `POST /turns` o'zgarmaydi: ilova yangi endpoint 404/405/501 qaytarsa, avtomatik eski yo'lga o'tadi, shuning uchun server va ilovani istalgan tartibda chiqarish mumkin.
+
+#### Shartnoma
+
+So'rov — `POST /turns` bilan bir xil, qo'shimcha `tone`:
+
+```json
+{ "audio": "<base64>", "mime": "audio/mp4", "tone": "funny" }
+```
+
+Javob (`Content-Type: text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`):
+
+```text
+event: transcript
+data: {"text":"Я хочу кофе"}
+
+event: delta
+data: {"text":"Отлично! "}
+
+event: delta
+data: {"text":"Вам с молоком? ☕"}
+
+event: reply
+data: {"id":null,"reply":"Отлично! Вам с молоком? ☕","emotion":"happy"}
+
+event: audio
+data: {"url":"https://cdn.mentalk.app/speech/9f2c….wav","ms":3400}
+
+event: done
+data: {"id":4812}
+```
+
+- Oqim boshlanmasdan oldingi xatolar odatdagidek `problem+json` (`429 quota`, `409 turn_in_progress`, `422`).
+- Oqim boshlangandan keyingi xato: `event: error` + `data: {"type":"turn_failed","status":502}` va oqim yopiladi. Ilova uni `NoticeCode` ga o'giradi.
+- TTS muvaffaqiyatsiz bo'lsa `audio` yuborilmaydi — ilova matnni qurilma ovozi bilan o'qiydi. Bu xato emas.
+- `transcript` faqat ovozli turda keladi.
+
+`tone` ham `POST /conversations` ga (`{ scenario_id, target_language, tone }`) yuboriladi. Har turda kelgan `tone` suhbatga yoziladi: o'quvchi suhbat o'rtasida ohangni almashtirsa, keyingi javobdan kuchga kiradi.
+
+#### Migratsiyalar
+
+```php
+Schema::table('conversations', function (Blueprint $t) {
+    $t->string('tone', 12)->default('calm')->after('target_language');
+});
+
+Schema::table('learner_profiles', function (Blueprint $t) {
+    // Ilova ochilganda boshqa qurilmadagi tanlov tiklanadi.
+    $t->string('tutor_character', 12)->default('bubble');
+    $t->string('tutor_tone', 12)->default('calm');
+});
+```
+
+#### Enumlar
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+enum TutorTone: string
+{
+    case Calm = 'calm';
+    case Funny = 'funny';
+    case Angry = 'angry';
+
+    /** `ai_prompts` dagi kalit: matn admin paneldan o'zgartiriladi. */
+    public function promptKey(): string
+    {
+        return "tone.{$this->value}";
+    }
+}
+
+enum TutorCharacter: string
+{
+    case Bubble = 'bubble';
+    case Sobo = 'sobo';
+}
+```
+
+`Conversation` modelida `'tone' => TutorTone::class`, `LearnerProfile` da `'tutor_character' => TutorCharacter::class, 'tutor_tone' => TutorTone::class` cast'lari.
+
+Seed (`ai_prompts`), matn ilovadagi `src/services/gemini/prompts.ts` → `TONE_RULE` dan:
+
+| Kalit        | Matn (qisqartirilgan)                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `tone.calm`  | Calm: speak in a calm, gentle, patient and reassuring way.                                                       |
+| `tone.funny` | Funny: be playful and witty… Laugh with them, never at them.                                                     |
+| `tone.angry` | Angry: angry and fed up in every reply (short, sharp, sighing, no praise/jokes/cheer)… never insult, threaten, swear or mock… drop the act only if the learner is genuinely distressed. |
+
+`tutor.system` promptiga `TONE: {tone} Keep the same tone in every reply until told otherwise.` qatori qo'shiladi (`LEVEL` dan keyin). `PromptBuilder::system()`:
+
+```php
+'{tone}' => $this->render($conversation->tone->promptKey(), $tutor),
+```
+
+> Ohang qatori system promptning oxiriga yaqin turadi: Gemini'ning implicit kesh'i promptning boshlang'ich qismi bir xil bo'lsa ishlaydi, ohang almashsa ham kesh'ning katta qismi saqlanadi.
+
+#### Javob tartibi: `reply` `mistakes` dan oldin
+
+```php
+final class TurnSchema
+{
+    public static function get(): array
+    {
+        return [
+            'type' => 'OBJECT',
+            'properties' => [
+                'transcript' => ['type' => 'STRING'],
+                'emotion' => ['type' => 'STRING', 'enum' => ['neutral', 'happy', 'encouraging', 'curious', 'empathetic', 'surprised', 'playful']],
+                'reply' => ['type' => 'STRING'],
+                'mistakes' => ['type' => 'ARRAY', 'items' => MistakeSchema::get()],
+            ],
+            // Model maydonlarni shu tartibda yozadi: transkript va javob birinchi keladi, xatolar oxirida.
+            'propertyOrdering' => ['transcript', 'emotion', 'reply', 'mistakes'],
+            'required' => ['transcript', 'emotion', 'reply', 'mistakes'],
+        ];
+    }
+}
+```
+
+#### Gemini oqimi (transport)
+
+```php
+// GeminiTransport ga qo'shiladi.
+
+/**
+ * `streamGenerateContent?alt=sse`: har bir qism kelishi bilan `$onText` chaqiriladi.
+ * Xatolar `generate()` bilan bir xil istisnolarga o'giriladi.
+ */
+public function stream(string $model, array $payload, callable $onText): void
+{
+    $key = $this->keys->acquire();
+    $response = $this->http->post("models/{$model}:streamGenerateContent", [
+        'query' => ['alt' => 'sse'],
+        'json' => $payload,
+        'headers' => ['x-goog-api-key' => $key],
+        'stream' => true,
+        'read_timeout' => 20,
+    ]);
+    $status = $response->getStatusCode();
+
+    match (true) {
+        $status === 200 => null,
+        $status === 429 => $this->rateLimited($key),
+        $status >= 500 => throw new AiOverloaded($status),
+        default => throw new AiRejected($status),
+    };
+
+    $body = $response->getBody();
+    $buffer = '';
+    while (! $body->eof()) {
+        $buffer .= $body->read(1024);
+        while (($end = strpos($buffer, "\n\n")) !== false) {
+            $block = substr($buffer, 0, $end);
+            $buffer = substr($buffer, $end + 2);
+            foreach (explode("\n", $block) as $line) {
+                if (! str_starts_with($line, 'data:')) {
+                    continue;
+                }
+                $chunk = json_decode(trim(substr($line, 5)), true);
+                $text = $chunk['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                if ($text !== '') {
+                    $onText($text);
+                }
+            }
+        }
+    }
+}
+```
+
+`AiClient` kontraktiga `public function stream(AiRequest $request, callable $onText): void;` qo'shiladi; `GeminiClient` uni `generate()` dagi model zaxirasi (`withFallback`) bilan o'raydi. Zaxira faqat **birinchi qism kelmasdan oldin** ishlatiladi: matn yuborila boshlangandan keyin modelni almashtirib bo'lmaydi.
+
+#### JSON ichidan `reply` ni bo'laklab ajratish
+
+Model JSON yozadi, biz esa uning ichidagi `reply` qatorini yozilayotgan paytda o'qishimiz kerak. Butun JSON parser kerak emas: faqat kerakli satr maydonlarini topib, escape'larni to'g'ri ochadigan kichik avtomat.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Ai;
+
+/**
+ * Qisman yozilgan JSON ichidan satr maydonlarini (`transcript`, `reply`) ular yozilayotgan paytda
+ * chiqaradi. `push()` har safar har bir maydonning **yangi** qismini qaytaradi; maydon yopilganda
+ * `closed()` true bo'ladi. Escape ketma-ketligi (`\n`, `\"`, `а`) ikki bo'lakka bo'linib kelsa,
+ * u to'liq kelguncha kutiladi.
+ */
+final class JsonFieldStreamer
+{
+    private string $json = '';
+
+    /** @var array<string, array{start: int|null, pos: int, closed: bool}> */
+    private array $fields = [];
+
+    /** @param list<string> $names */
+    public function __construct(array $names)
+    {
+        foreach ($names as $name) {
+            $this->fields[$name] = ['start' => null, 'pos' => 0, 'closed' => false];
+        }
+    }
+
+    /** @return array<string, string> maydon => yangi matn */
+    public function push(string $chunk): array
+    {
+        $this->json .= $chunk;
+        $out = [];
+
+        foreach ($this->fields as $name => &$field) {
+            if ($field['closed']) {
+                continue;
+            }
+            if ($field['start'] === null) {
+                if (! preg_match('/"'.preg_quote($name, '/').'"\s*:\s*"/', $this->json, $m, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+                $field['start'] = $field['pos'] = $m[0][1] + strlen($m[0][0]);
+            }
+
+            $raw = '';
+            $i = $field['pos'];
+            $length = strlen($this->json);
+            while ($i < $length) {
+                $char = $this->json[$i];
+                if ($char === '"') {
+                    $field['closed'] = true;
+                    $i++;
+                    break;
+                }
+                if ($char === '\\') {
+                    $size = ($this->json[$i + 1] ?? '') === 'u' ? 6 : 2;
+                    if ($i + $size > $length) {
+                        break; // Escape hali to'liq kelmagan.
+                    }
+                    $raw .= substr($this->json, $i, $size);
+                    $i += $size;
+                    continue;
+                }
+                $raw .= $char;
+                $i++;
+            }
+            $field['pos'] = $i;
+
+            $decoded = $raw === '' ? null : json_decode('"'.$raw.'"');
+            if (is_string($decoded) && $decoded !== '') {
+                $out[$name] = $decoded;
+            }
+        }
+
+        return $out;
+    }
+
+    public function closed(string $name): bool
+    {
+        return $this->fields[$name]['closed'];
+    }
+
+    public function json(): string
+    {
+        return $this->json;
+    }
+}
+```
+
+> `😀` kabi surrogat juftlik (emoji) ikki `\u` ga bo'linadi; yarmi kelgan bo'lsa `json_decode` `null` qaytaradi va bo'lak tashlab ketiladi. Shuning uchun `reply` hodisasi doim to'liq matnni qayta yuboradi — ilova yakuniy matnni undan oladi, `delta` faqat ko'rsatish uchun.
+
+#### Harakat: `StreamTurn`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Conversation;
+
+use App\Contracts\AiClient;
+use App\Contracts\SpeechSynthesizer;
+use App\DTO\AiRequest;
+use App\DTO\TurnInput;
+use App\DTO\TurnResult;
+use App\Enums\TutorTone;
+use App\Languages\TutorLanguages;
+use App\Models\Conversation;
+use App\Services\Ai\JsonFieldStreamer;
+use App\Services\Ai\PromptBuilder;
+use App\Services\Ai\Schemas\TurnSchema;
+use App\Services\Conversation\TurnHistory;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+final readonly class StreamTurn
+{
+    public function __construct(
+        private AiClient $ai,
+        private PromptBuilder $prompts,
+        private SpeechSynthesizer $speech,
+        private TurnHistory $history,
+        private TutorLanguages $languages,
+    ) {}
+
+    /**
+     * @param  callable(string $event, array $data): void  $emit
+     */
+    public function __invoke(Conversation $conversation, TurnInput $input, ?TutorTone $tone, callable $emit): void
+    {
+        Cache::lock("conversation:{$conversation->id}", 40)->block(3, function () use ($conversation, $input, $tone, $emit) {
+            if ($tone !== null && $tone !== $conversation->tone) {
+                $conversation->update(['tone' => $tone]);
+            }
+
+            $tutor = $this->languages->for($conversation->target_language);
+            $request = new AiRequest(
+                system: $this->prompts->system($conversation),
+                contents: [
+                    ...$this->history->contents($conversation),
+                    ['role' => 'user', 'parts' => $this->prompts->userParts($input, $tutor)],
+                ],
+                schema: TurnSchema::get(),
+            );
+
+            $fields = new JsonFieldStreamer(['transcript', 'reply']);
+            $transcriptSent = false;
+            $clipUrl = '';
+
+            $this->ai->stream($request, function (string $text) use ($fields, $emit, &$transcriptSent, &$clipUrl, $tutor) {
+                $fresh = $fields->push($text);
+
+                if (! $transcriptSent && $fields->closed('transcript')) {
+                    $transcriptSent = true;
+                    $said = $this->partial($fields, 'transcript');
+                    if ($said !== '') {
+                        $emit('transcript', ['text' => $said]);
+                    }
+                }
+                if (isset($fresh['reply'])) {
+                    $emit('delta', ['text' => $fresh['reply']]);
+                }
+
+                // Javob yopildi: matnni yakunlaymiz va xatolar yozilib bo'lishini kutmasdan ovozni boshlaymiz.
+                if ($clipUrl === '' && $fields->closed('reply')) {
+                    $reply = $this->partial($fields, 'reply');
+                    $emit('reply', ['id' => null, 'reply' => $reply, 'emotion' => $this->partial($fields, 'emotion') ?: 'neutral']);
+                    $clipUrl = $this->voice($reply, $tutor->voice(), $emit);
+                }
+            });
+
+            $result = TurnResult::from(json_decode($fields->json(), true, 512, JSON_THROW_ON_ERROR));
+            if ($clipUrl === '') {
+                // Model `reply` ni oxirgi bo'lakda yopgan bo'lsa, ovoz shu yerda boshlanadi.
+                $emit('reply', ['id' => null, 'reply' => $result->reply, 'emotion' => $result->emotion]);
+                $clipUrl = $this->voice($result->reply, $tutor->voice(), $emit);
+            }
+
+            $turn = $this->history->append($conversation, $input, $result, $clipUrl);
+            $emit('done', ['id' => $turn->id]);
+        });
+    }
+
+    /** Ovozni yaratadi va `audio` ni yuboradi. TTS xatosi turni buzmaydi: ilova qurilma ovoziga o'tadi. */
+    private function voice(string $reply, string $voice, callable $emit): string
+    {
+        try {
+            $clip = $this->speech->speak($reply, $voice);
+            $emit('audio', ['url' => $clip->url, 'ms' => $clip->durationMs]);
+
+            return $clip->url;
+        } catch (Throwable $error) {
+            Log::warning('tts.failed', ['error' => $error->getMessage()]);
+
+            return '';
+        }
+    }
+
+    /** Yopilgan maydonning to'liq qiymati (qisman JSON'dan). */
+    private function partial(JsonFieldStreamer $fields, string $name): string
+    {
+        return preg_match('/"'.$name.'"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/', $fields->json(), $m)
+            ? (string) json_decode('"'.$m[1].'"')
+            : '';
+    }
+}
+```
+
+`TurnHistory::append()` `$audioUrl` bo'sh bo'lsa `audio_url` ni `null` yozadi (TTS ishlamagan tur).
+
+#### Controller va route
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Conversation;
+
+use App\Actions\Conversation\StreamTurn;
+use App\Enums\TutorTone;
+use App\Exceptions\AiRateLimited;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTurnRequest;
+use App\Models\Conversation;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+use Throwable;
+
+final class StreamTurnController extends Controller
+{
+    public function __invoke(StoreTurnRequest $request, Conversation $conversation, StreamTurn $stream): StreamedResponse
+    {
+        $this->authorize('update', $conversation);
+        $input = $request->toInput();
+        $tone = $request->enum('tone', TutorTone::class);
+
+        return response()->stream(function () use ($stream, $conversation, $input, $tone) {
+            $emit = static function (string $event, array $data): void {
+                echo "event: {$event}\ndata: ".json_encode($data, JSON_UNESCAPED_UNICODE)."\n\n";
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            };
+
+            try {
+                $stream($conversation, $input, $tone, $emit);
+            } catch (LockTimeoutException) {
+                $emit('error', ['type' => 'turn_in_progress', 'status' => 409]);
+            } catch (AiRateLimited) {
+                $emit('error', ['type' => 'quota', 'status' => 429]);
+            } catch (Throwable $error) {
+                Log::error('turn.stream_failed', ['conversation' => $conversation->id, 'error' => $error->getMessage()]);
+                $emit('error', ['type' => 'turn_failed', 'status' => 502]);
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache, no-transform',
+            // nginx javobni bufferlamasin, aks holda hodisalar bitta bo'lak bo'lib keladi.
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+}
+```
+
+`StoreTurnRequest::rules()` ga: `'tone' => ['sometimes', Rule::enum(TutorTone::class)]`. `StartConversationRequest` ga ham xuddi shunday; `StartConversation` uni `conversations.tone` ga yozadi, yo'q bo'lsa profildagi `tutor_tone` olinadi.
+
+`routes/api.php` (`throttle:ai` guruhi ichida):
+
+```php
+Route::post('conversations/{conversation}/turns/stream', StreamTurnController::class)->middleware('quota:turns');
+```
+
+**Infratuzilma.** nginx: `proxy_buffering off;` (yoki `X-Accel-Buffering: no`, yuqorida bor), `proxy_read_timeout 60s;`. Octane (Swoole/RoadRunner) `StreamedResponse` ni qo'llaydi; PHP-FPM'da `fastcgi_buffering off;` va `output_buffering=0`. Cloudflare orqasida bo'lsa — `text/event-stream` bufferlanmaydi, qo'shimcha sozlash kerak emas.
+
+#### Model sozlamalari (tezlik)
+
+| Sozlama                    | Qiymat                                | Nima uchun                                                         |
+| -------------------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| Suhbat modeli              | `flash-lite` oilasi                   | Birinchi token eng tez; suhbat uchun yetarli                       |
+| Fikrlash (thinking)        | eng past daraja                       | Fikrlash tokenlari birinchi so'zni sekundlab kechiktiradi          |
+| `maxOutputTokens`          | 400                                   | Javob 1–2 gap, xatolar bilan birga sig'adi                         |
+| Tarix oynasi               | 12 tur (24 o'rniga)                   | Kirish tokenlari kamayadi, javob tezlashadi                        |
+| TTS                        | `CachedSynthesizer` + emoji'siz matn  | Ochilish gaplari va tez-tez uchraydigan javoblar keshdan           |
+
+> Fikrlash parametrining nomi va qiymatlari model avlodiga qarab farq qiladi (`thinkingBudget` yoki `thinkingLevel`). Tanlangan model uchun joriy Gemini hujjatidan tekshirib, `config/ai.php` ga yoziladi; noto'g'ri parametr 400 qaytaradi.
+
+**Ixtiyoriy keyingi qadam.** Klipni WAV o'rniga AAC/Opus'da saqlash (ffmpeg, ~48 kbps): 4 soniyali klip 190 KB o'rniga ~25 KB bo'ladi va mobil tarmoqda `audio` dan o'ynashgacha bo'lgan vaqt sezilarli qisqaradi. Yana bir qadam — birinchi gapni alohida sintez qilish (javobning birinchi jumlasi yopilishi bilan), ilova esa klip navbatini o'ynaydi.
+
+#### Profil: suhbatdosh va ohang
+
+`UpdateProfileRequest`:
+
+```php
+'tutor_character' => ['sometimes', Rule::enum(TutorCharacter::class)],
+'tutor_tone' => ['sometimes', Rule::enum(TutorTone::class)],
+```
+
+`UserResource` ga `'tutor_character' => $profile->tutor_character->value, 'tutor_tone' => $profile->tutor_tone->value`. Ilova bu maydonlarni ixtiyoriy deb o'qiydi: ular yo'q eski server bilan ham ishlaydi.
+
+#### Testlar
+
+```php
+<?php
+
+declare(strict_types=1);
+
+use App\Services\Ai\JsonFieldStreamer;
+
+it('streams a string field as it is written, across split escapes', function () {
+    $fields = new JsonFieldStreamer(['reply']);
+    $chunks = ['{"transcript":"","emotion":"happy","rep', 'ly":"Прив', 'ет! \\', 'n\\u043a', 'ак дела?"', ',"mistakes":[]}'];
+
+    $text = '';
+    foreach ($chunks as $chunk) {
+        $text .= $fields->push($chunk)['reply'] ?? '';
+    }
+
+    expect($text)->toBe("Привет! \nкак дела?")
+        ->and($fields->closed('reply'))->toBeTrue();
+});
+```
+
+```php
+it('sends the reply before the voice and stores the turn', function () {
+    $user = User::factory()->hasProfile()->create();
+    $conversation = Conversation::factory()->for($user)->create();
+    $this->app->instance(AiClient::class, FakeAi::streaming(
+        '{"transcript":"Я хочу кофе","emotion":"happy","reply":"Отлично!","mistakes":[]}',
+        chunkSize: 7,
+    ));
+
+    $body = $this->actingAs($user)
+        ->post("/api/v1/conversations/{$conversation->id}/turns/stream", ['text' => 'Я хочу кофе', 'tone' => 'funny'])
+        ->assertOk()
+        ->assertHeader('Content-Type', 'text/event-stream; charset=UTF-8')
+        ->streamedContent();
+
+    preg_match_all('/^event: (\w+)$/m', $body, $events);
+    // `delta` soni bo'laklarga bog'liq, tartib esa yo'q.
+    expect(array_values(array_unique($events[1])))->toBe(['transcript', 'delta', 'reply', 'audio', 'done'])
+        ->and($conversation->fresh()->tone)->toBe(TutorTone::Funny)
+        ->and($conversation->turns()->count())->toBe(2);
+});
+```
+
+`FakeAi::streaming()` javobni `mb_str_split($json, $chunkSize)` bilan **belgilar** bo'yicha bo'ladi, xuddi Gemini kabi: SSE'dagi har bir qism to'liq UTF-8 satr bo'lib keladi.
+
 ---
 
 ## 8. Admin panel (Filament)
@@ -2475,7 +3021,7 @@ Yuk testida Gemini o'rniga **soxta AI server** (1.5–4 s tasodifiy kechikish qa
 Ilova allaqachon interfeyslarga tayanadi (`ConversationService`, `AuthService`), shuning uchun UI o'zgarmaydi:
 
 1. `src/services/api/client.ts`: `fetch` o'rami, `Authorization` sarlavhasi, `problem+json` xatolarini `NoticeCode`ga (`quota`, `turnFailed`, `network`) o'girish.
-2. `ApiConversationService implements ConversationService`: `connect` → `POST /conversations`; `sendAudio/sendText` → `POST /turns`; `requestHint` → `/hint`; `end` → `/finish`. Audio endi mijozda sintez qilinmaydi, `audio_url` to'g'ridan-to'g'ri `useTutorVoice` ga beriladi.
+2. `ApiConversationService implements ConversationService`: `connect` → `POST /conversations`; `sendAudio/sendText` → `POST /turns/stream` (server uni bilmasa avtomatik `POST /turns`, 7.12); `requestHint` → `/hint`; `end` → `/finish`. Audio endi mijozda sintez qilinmaydi, `audio_url` to'g'ridan-to'g'ri `useTutorVoice` ga beriladi.
 3. `ApiAuthService implements AuthService`: Google ID token → `POST /auth/google`, token `expo-secure-store`ga.
 4. Stsenariylar `GET /bootstrap` dan olinadi (`mocks/scenarios.ts` faqat zaxira); `If-None-Match` bilan.
 5. `vocabularyStore`: mahalliy (offline) ishlashda davom etadi, `POST /vocabulary/sync` fon rejimida (ilova ochilganda va raunddan keyin). Raund tugagach javoblar `POST /vocabulary/reviews` ga yuboriladi.

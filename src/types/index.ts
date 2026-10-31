@@ -28,7 +28,19 @@ export interface AiMessage {
   emotion?: TutorEmotion;
   /** Synthesized speech for the line. When absent, the UI reads `text` with the device voice. */
   audioUri?: string;
+  /** The line is still arriving word by word: show it, but do not say it yet. */
+  streaming?: boolean;
+  /** The text is final and its recording is on the way; the voice waits a moment for it. */
+  audioPending?: boolean;
 }
+
+/** How the tutor talks: the same lesson, a different mood. */
+export type TutorTone = 'calm' | 'funny' | 'angry';
+export const TUTOR_TONES: readonly TutorTone[] = ['calm', 'funny', 'angry'];
+
+/** Who the learner talks to on the conversation screen: the flat `bubble` (default) or the SOBO mascot. */
+export type TutorCharacter = 'bubble' | 'sobo';
+export const TUTOR_CHARACTERS: readonly TutorCharacter[] = ['bubble', 'sobo'];
 
 export type MetricId = 'speech' | 'vocabulary' | 'grammar';
 
@@ -86,6 +98,8 @@ export type CountryCode = string;
 
 export interface LearnerProfile {
   name: string;
+  /** The tone the conversation starts in; it can change mid-chat with `ConversationSession.setTone`. */
+  tone: TutorTone;
   gender: Gender | null;
   country: CountryCode | null;
   age: number | null;

@@ -1,7 +1,8 @@
-import type { AiMessage, ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
+import type { AiMessage, ConversationResult, LearnerProfile, Scenario, TutorTone, VoiceState } from '@/types';
 
 export type ConversationEvent =
   | { type: 'state'; state: VoiceState }
+  /** A tutor line. The same `id` arrives again as it grows (streaming) and when its audio is ready. */
   | { type: 'aiMessage'; message: AiMessage }
   /** What the learner said, as recognised from their voice. Arrives just before the tutor's reply. */
   | { type: 'learnerMessage'; text: string }
@@ -53,6 +54,8 @@ export interface ConversationSession {
   /** Keyboard input as an alternative to voice. */
   sendText(text: string): void;
   requestHint(): Promise<string>;
+  /** The tutor's mood from the next reply on. */
+  setTone(tone: TutorTone): void;
   /** Ends the conversation and returns the evaluation. */
   end(): Promise<ConversationResult>;
   /** Releases all resources. Safe to call multiple times. */

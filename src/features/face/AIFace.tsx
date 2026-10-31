@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedProps, useAnimatedStyle } from 'react-native-reanimated';
-import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { colors } from '@/theme';
 
@@ -123,9 +123,13 @@ const SvgFace = memo(function SvgFace({
   audioLevel,
   size = 240,
   color = colors.primaryDark,
+  mouthColor = MOUTH_INSIDE,
+  eyeLight = colors.primaryLight,
+  blush,
+  mood = 'calm',
   style,
 }: AIFaceProps) {
-  const motion = useFaceMotion(state, emotion, audioLevel);
+  const motion = useFaceMotion(state, emotion, audioLevel, mood);
   const { breathe, sway, smile, mouthShift, mouth, reaction } = motion;
   const leftBrow = useBrowProps(motion, 0);
   const rightBrow = useBrowProps(motion, 1);
@@ -165,10 +169,17 @@ const SvgFace = memo(function SvgFace({
         <Svg width="100%" height="100%" viewBox="0 0 200 144">
           <Defs>
             <LinearGradient id="eye" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colors.primaryLight} />
+              <Stop offset="0" stopColor={eyeLight} />
               <Stop offset="1" stopColor={color} />
             </LinearGradient>
           </Defs>
+
+          {blush ? (
+            <>
+              <Ellipse cx={EYE_X[0] - 20} cy={EYE_Y + 30} rx={15} ry={8.5} fill={blush} opacity={0.55} />
+              <Ellipse cx={EYE_X[1] + 20} cy={EYE_Y + 30} rx={15} ry={8.5} fill={blush} opacity={0.55} />
+            </>
+          ) : null}
 
           {/* Soft halo, then the eyes themselves */}
           <AnimatedPath fill="none" stroke={color} strokeOpacity={0.14} strokeWidth={9} strokeLinejoin="round" animatedProps={leftEye} />
@@ -182,7 +193,7 @@ const SvgFace = memo(function SvgFace({
           <AnimatedPath fill="none" stroke={color} strokeWidth={5} strokeLinecap="round" animatedProps={rightBrow} />
 
           <AnimatedPath
-            fill={MOUTH_INSIDE}
+            fill={mouthColor}
             stroke={color}
             strokeWidth={5}
             strokeLinejoin="round"

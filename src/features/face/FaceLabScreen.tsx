@@ -10,10 +10,10 @@ import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 
 import { useTutorVoice } from '@/features/conversation/useTutorVoice';
+import { BubbleTutor } from '@/features/tutor/BubbleTutor';
 import type { AiMessage } from '@/types';
 
 import { AIFace } from './AIFace';
-import { TutorAvatar } from './avatar3d/TutorAvatar';
 import { useLipSync } from './lipsync/useLipSync';
 import type { FaceEmotion, FaceState } from './types';
 import { useMockAudioLevel } from './useMockAudioLevel';
@@ -47,7 +47,7 @@ export function FaceLabScreen() {
       <ScreenHeader title="Mascot lab" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.stage}>
-          <TutorAvatar state={shownState} emotion={emotion} speech={lipSync.face} size={210} />
+          <BubbleTutor state={shownState} emotion={emotion} audioLevel={lipSync.face.jaw} size={190} />
         </View>
 
         <View style={styles.compare}>

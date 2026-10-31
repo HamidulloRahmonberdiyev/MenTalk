@@ -393,6 +393,15 @@ export const en = {
   'home.vocab.streak': 'Streak:',
   'res.title': 'Resources',
   'res.starter': 'Starter words',
+  'tutor.title': 'Conversation partner',
+  'tutor.subtitle': 'Who you talk to, and how',
+  'tutor.character': 'Look',
+  'tutor.character.bubble': 'Bubble',
+  'tutor.character.sobo': 'SOBO',
+  'tutor.tone': 'Conversation tone',
+  'tutor.tone.calm': 'Calm',
+  'tutor.tone.funny': 'Funny',
+  'tutor.tone.angry': 'Angry',
 } as const;
 
 export type TranslationKey = keyof typeof en;

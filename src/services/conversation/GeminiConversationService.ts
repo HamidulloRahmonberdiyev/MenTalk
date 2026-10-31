@@ -12,7 +12,7 @@ import {
   turnSchema,
 } from '@/services/gemini/prompts';
 import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
-import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, VoiceState } from '@/types';
+import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, TutorTone, VoiceState } from '@/types';
 
 import {
   ConnectError,
@@ -65,7 +65,6 @@ function noticeFor(error: unknown): NoticeCode {
 
 class GeminiSession implements ConversationSession {
   private readonly listeners = new Set<ConversationListener>();
-  private readonly system: string;
   private readonly pack: StudyLanguagePack;
   private readonly startedAt = Date.now();
   /** Plain-text transcript of the conversation so far; the audio itself is only sent for the current turn. */
@@ -78,13 +77,23 @@ class GeminiSession implements ConversationSession {
   private turn = 0;
   private learnerTurns = 0;
   private disposed = false;
+  private tone: TutorTone;
 
   constructor(
     private readonly scenario: Scenario,
     private readonly learner: LearnerProfile,
   ) {
     this.pack = studyLanguagePack(learner.studyLanguage);
-    this.system = buildSystemPrompt(scenario.id, learner);
+    this.tone = learner.tone;
+  }
+
+  /** Rebuilt per request, so a tone picked mid-chat applies to the very next reply. */
+  private get system(): string {
+    return buildSystemPrompt(this.scenario.id, { ...this.learner, tone: this.tone });
+  }
+
+  setTone(tone: TutorTone): void {
+    this.tone = tone;
   }
 
   subscribe(listener: ConversationListener): Unsubscribe {
@@ -230,17 +239,17 @@ class GeminiSession implements ConversationSession {
       }
       this.history.push({ role: 'model', parts: [{ text: result.reply }] });
 
+      // Show the line now and voice it once the recording is made, instead of keeping the learner waiting for both.
+      const message = { id: `${this.scenario.id}-${id}`, text: result.reply, emotion: result.emotion };
+      this.emit({ type: 'aiMessage', message: { ...message, audioPending: geminiConfig.ttsEnabled } });
+      this.setState('speaking');
+      this.holdSpeaking(id, result.reply.length * SPEAKING_MS_PER_CHAR);
+
+      if (!geminiConfig.ttsEnabled) return;
       const speech = await this.speak(result.reply);
       if (this.isStale(id)) return;
-
-      this.emit({
-        type: 'aiMessage',
-        message: { id: `${this.scenario.id}-${id}`, text: result.reply, emotion: result.emotion, audioUri: speech?.uri },
-      });
-      this.setState('speaking');
-      this.speakingTimer = setTimeout(() => {
-        if (!this.isStale(id) && this.state === 'speaking') this.setState('idle');
-      }, speech?.durationMs ?? result.reply.length * SPEAKING_MS_PER_CHAR);
+      this.emit({ type: 'aiMessage', message: { ...message, audioUri: speech?.uri } });
+      if (speech) this.holdSpeaking(id, speech.durationMs);
     } catch (error) {
       if (this.isStale(id)) return;
       this.setState('idle');
@@ -293,6 +302,14 @@ class GeminiSession implements ConversationSession {
 
   private emit(event: ConversationEvent): void {
     this.listeners.forEach((listener) => listener(event));
+  }
+
+  /** Stays in `speaking` for about as long as the line takes to say, then hands the floor back. */
+  private holdSpeaking(id: number, durationMs: number): void {
+    this.clearSpeakingTimer();
+    this.speakingTimer = setTimeout(() => {
+      if (!this.isStale(id) && this.state === 'speaking') this.setState('idle');
+    }, durationMs);
   }
 
   private clearSpeakingTimer(): void {

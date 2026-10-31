@@ -1,7 +1,8 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { LearnerExperience, LevelSource } from '@/types';
+import type { LearnerExperience, LevelSource, TutorCharacter, TutorTone } from '@/types';
 
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
+import { streamEvents } from './stream';
 
 export interface ApiUser {
   id: number;
@@ -26,6 +27,9 @@ export interface ApiUser {
   daily_goal_minutes: number;
   xp: number;
   streak: number;
+  /** Tutor preferences; missing on servers that predate them. */
+  tutor_character?: TutorCharacter | null;
+  tutor_tone?: TutorTone | null;
 }
 
 export type ApiProfilePatch = Partial<
@@ -45,6 +49,8 @@ export type ApiProfilePatch = Partial<
     | 'target_language'
     | 'timezone'
     | 'daily_goal_minutes'
+    | 'tutor_character'
+    | 'tutor_tone'
   >
 >;
 
@@ -119,7 +125,20 @@ export interface ApiCard {
   deleted: boolean;
 }
 
-export type TurnPayload = { text: string } | { audio: string; mime: string };
+export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & { tone?: TutorTone };
+
+/**
+ * Events of `POST /conversations/{id}/turns/stream`, in the order they arrive:
+ * `transcript` (voice turns), `delta`… (the reply as it is written), `reply` (final text),
+ * `audio` (once the voice is recorded; absent if that failed), `done`. `error` may replace any of them.
+ */
+export type TurnStreamEvent =
+  | { event: 'transcript'; data: { text: string } }
+  | { event: 'delta'; data: { text: string } }
+  | { event: 'reply'; data: { id?: number | null; reply: string; emotion: string } }
+  | { event: 'audio'; data: { url: string; ms: number | null } }
+  | { event: 'error'; data: { type?: string; status?: number } }
+  | { event: 'done'; data: unknown };
 
 export const endpoints = {
   /** `uiLanguage` becomes the language of a newly created profile; an existing one keeps its own. */
@@ -134,14 +153,23 @@ export const endpoints = {
   stats: () => api<ApiStats>('GET', '/stats'),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
 
-  startConversation: (scenarioId: string, targetLanguage: StudyLanguage, signal?: AbortSignal) =>
+  startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, signal?: AbortSignal) =>
     api<ApiOpening>('POST', '/conversations', {
-      body: { scenario_id: scenarioId, target_language: targetLanguage },
+      body: { scenario_id: scenarioId, target_language: targetLanguage, tone },
       timeoutMs: AI_TIMEOUT_MS,
       signal,
     }),
   sendTurn: (conversationId: number, payload: TurnPayload, signal?: AbortSignal) =>
     api<ApiTurn>('POST', `/conversations/${conversationId}/turns`, { body: payload, timeoutMs: AI_TIMEOUT_MS, signal }),
+  /** Same turn as `sendTurn`, answered as a stream. Throws `StreamUnsupportedError` on servers without it. */
+  streamTurn: (conversationId: number, payload: TurnPayload, onEvent: (event: TurnStreamEvent) => void, signal?: AbortSignal) =>
+    streamEvents(`/conversations/${conversationId}/turns/stream`, {
+      body: payload,
+      // Between events, not for the whole reply: a long answer keeps the stream alive by itself.
+      idleTimeoutMs: AI_TIMEOUT_MS,
+      signal,
+      onEvent: (event, data) => onEvent({ event, data } as TurnStreamEvent),
+    }),
   hint: (conversationId: number) =>
     api<{ hint: string }>('POST', `/conversations/${conversationId}/hint`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
   finish: (conversationId: number) =>

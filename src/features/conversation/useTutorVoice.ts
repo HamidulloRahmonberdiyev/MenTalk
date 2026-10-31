@@ -13,6 +13,11 @@ const RATE = 0.95;
 /** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
 const AUDIO_START_TIMEOUT_MS = 6_000;
 const PLAYABLE_URI = /^(https?|file):\/\//i;
+/**
+ * The text of a line can arrive before its recording. Waiting this long for the recording keeps the
+ * tutor's real voice in most turns; past it, the device voice reads the line so the learner never waits.
+ */
+const AUDIO_GRACE_MS = 2_500;
 
 /** Loudness 0..1 of a block of PCM frames, on a perceptual (dB) scale. */
 function loudness(sample: AudioSample): number {
@@ -52,14 +57,21 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   const spokenId = useRef<string | null>(null);
   const player = useRef<AudioPlayer | null>(null);
   const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const graceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearStartTimer = useCallback(() => {
     if (startTimer.current) clearTimeout(startTimer.current);
     startTimer.current = null;
   }, []);
 
+  const clearGraceTimer = useCallback(() => {
+    if (graceTimer.current) clearTimeout(graceTimer.current);
+    graceTimer.current = null;
+  }, []);
+
   const stop = useCallback(() => {
     clearStartTimer();
+    clearGraceTimer();
     Speech.stop();
     lipSync.stop();
     if (player.current) {
@@ -68,7 +80,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       player.current = null;
       setSpeaking(false);
     }
-  }, [lipSync, clearStartTimer]);
+  }, [lipSync, clearStartTimer, clearGraceTimer]);
 
   const speakWithDevice = useCallback(
     async (text: string) => {
@@ -156,10 +168,22 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   }, [stop]);
 
   useEffect(() => {
-    if (!message || message.id === spokenId.current) return;
+    // Still being written: shown on screen, said once complete.
+    if (!message || message.streaming || message.id === spokenId.current) return;
+    if (message.audioPending) {
+      if (graceTimer.current) return;
+      graceTimer.current = setTimeout(() => {
+        graceTimer.current = null;
+        if (spokenId.current === message.id) return;
+        spokenId.current = message.id;
+        play({ ...message, audioUri: undefined });
+      }, AUDIO_GRACE_MS);
+      return;
+    }
+    clearGraceTimer();
     spokenId.current = message.id;
     play(message);
-  }, [message, play]);
+  }, [message, play, clearGraceTimer]);
 
   // The user takes the floor (or the tutor is preparing an answer): stop talking.
   useEffect(() => {

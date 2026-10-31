@@ -44,9 +44,11 @@ const createStyles = (home: Palette) => StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg,
     borderRadius: radii.lg,
-    backgroundColor: home.primarySoft,
-    borderWidth: 1.5,
+    backgroundColor: home.panel,
+    borderWidth: 2,
+    borderBottomWidth: 5,
     borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
   },
   badge: {
     width: 36,
@@ -54,7 +56,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: home.panel,
+    backgroundColor: home.warningFill,
   },
   texts: {
     flex: 1,

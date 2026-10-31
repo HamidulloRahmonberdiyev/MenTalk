@@ -71,6 +71,10 @@ class MockConversationSession implements ConversationSession {
     this.reply();
   }
 
+  setTone(): void {
+    // The scripted lines are written in one tone.
+  }
+
   async requestHint(): Promise<string> {
     await this.wait(HINT_DELAY_MS);
     const index = Math.min(Math.max(this.turn - 1, 0), this.script.hints.length - 1);

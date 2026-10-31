@@ -5,6 +5,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Language } from '@/i18n';
 import { deviceLanguage } from '@/i18n/deviceLanguage';
 import { DEFAULT_STUDY_LANGUAGE, studyLanguagePack, type StudyLanguage, type StudyLanguagePack } from '@/services/learning';
+import { TUTOR_CHARACTERS, type TutorCharacter, type TutorTone } from '@/types';
 
 interface SettingsState {
   language: Language;
@@ -18,6 +19,12 @@ interface SettingsState {
   /** Dark or light look of the redesigned screens, chosen in the profile. */
   appearance: 'dark' | 'light';
   setAppearance: (appearance: 'dark' | 'light') => void;
+  /** The tutor's look on the conversation screen, chosen in the profile. */
+  tutorCharacter: TutorCharacter;
+  setTutorCharacter: (character: TutorCharacter) => void;
+  /** The tone new conversations start in; the last one picked in a chat or the profile. */
+  tutorTone: TutorTone;
+  setTutorTone: (tone: TutorTone) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -32,8 +39,21 @@ export const useSettingsStore = create<SettingsState>()(
       toggleTranscript: () => set((state) => ({ showTranscript: !state.showTranscript })),
       appearance: 'dark',
       setAppearance: (appearance) => set({ appearance }),
+      tutorCharacter: 'bubble',
+      setTutorCharacter: (tutorCharacter) => set({ tutorCharacter }),
+      tutorTone: 'calm',
+      setTutorTone: (tutorTone) => set({ tutorTone }),
     }),
-    { name: 'settings', storage: createJSONStorage(() => AsyncStorage) },
+    {
+      name: 'settings',
+      storage: createJSONStorage(() => AsyncStorage),
+      // A look saved before the robot and 3D tutors were removed falls back to the default.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<SettingsState>;
+        const known = saved.tutorCharacter && TUTOR_CHARACTERS.includes(saved.tutorCharacter);
+        return { ...current, ...saved, tutorCharacter: known ? saved.tutorCharacter! : current.tutorCharacter };
+      },
+    },
   ),
 );
 

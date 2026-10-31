@@ -395,4 +395,13 @@ export const uz: Dictionary = {
   'home.vocab.streak': 'Seriya:',
   'res.title': 'Resurslar',
   'res.starter': 'Boshlang‘ich so‘zlar',
+  'tutor.title': 'Suhbatdosh',
+  'tutor.subtitle': 'Kim bilan va qanday ohangda gaplashasiz',
+  'tutor.character': 'Ko‘rinishi',
+  'tutor.character.bubble': 'Pufak',
+  'tutor.character.sobo': 'SOBO',
+  'tutor.tone': 'Suhbat ohangi',
+  'tutor.tone.calm': 'Xotirjam',
+  'tutor.tone.funny': 'Kulgili',
+  'tutor.tone.angry': 'G‘azabli',
 };

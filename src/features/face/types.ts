@@ -10,6 +10,12 @@ export type FaceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'happy'
 export type FaceEmotion = TutorEmotion;
 
 /**
+ * Lasting temperament under every state and emotion (the conversation tone). `angry` keeps the brows
+ * knitted and the mouth turned down even while speaking; `funny` keeps a wide grin.
+ */
+export type FaceMood = 'calm' | 'funny' | 'angry';
+
+/**
  * Loudness of the tutor's voice, 0..1.
  * Prefer a Reanimated `SharedValue`: updating it never re-renders React, so it can be fed at
  * audio-frame rate. A plain number also works (it re-renders only when it changes).
@@ -25,6 +31,14 @@ export interface AIFaceProps {
   size?: number;
   /** Feature colour. Defaults to the app's Telegram blue. */
   color?: string;
+  /** Inside of the open mouth. Defaults to a deep blue that matches the default features. */
+  mouthColor?: string;
+  /** Top of the eye gradient. Defaults to the app's light blue. */
+  eyeLight?: string;
+  /** Cheek colour; omit for no cheeks. */
+  blush?: string;
+  /** Defaults to `calm`. */
+  mood?: FaceMood;
   style?: StyleProp<ViewStyle>;
 }
 

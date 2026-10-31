@@ -31,6 +31,7 @@ import { FloatingAvatar } from './FloatingAvatar';
 import { HintCard } from './HintCard';
 import { NoticeBanner } from './NoticeBanner';
 import { TextComposer } from './TextComposer';
+import { ToneMenu } from './ToneMenu';
 import { useConversation } from './useConversation';
 import { UserTranscript } from './UserTranscript';
 import { useTutorVoice } from './useTutorVoice';
@@ -161,22 +162,9 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
         <ConversationHeader
           title={t(`scenario.${scenario.id}.title`)}
           onBack={() => router.back()}
-          right={
-            status === 'ready' ? (
-              <PressableScale
-                accessibilityRole="button"
-                accessibilityLabel={t('conversation.finish')}
-                disabled={finishing}
-                hitSlop={8}
-                onPress={handleFinish}
-                style={styles.finish}
-              >
-                <AppText variant="captionStrong" color={home.accent}>
-                  {finishing ? '…' : t('conversation.finishShort')}
-                </AppText>
-              </PressableScale>
-            ) : null
-          }
+          onFinish={status === 'ready' ? handleFinish : undefined}
+          finishing={finishing}
+          right={<ToneMenu tone={conversation.tone} onChange={conversation.setTone} />}
         />
 
         <NoticeBanner notice={conversation.notice} onDismiss={conversation.dismissNotice} />
@@ -198,6 +186,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
               <AiMessageBubble
                 message={message}
                 speaking={shownState === 'speaking'}
+                thinking={voiceState === 'thinking'}
                 onReplay={tutor.replay}
                 onWordPress={handleWordPress}
                 savedWords={savedWords}
@@ -292,14 +281,6 @@ const createStyles = (home: Palette) => StyleSheet.create({
   },
   header: {
     marginTop: spacing.xs,
-  },
-  finish: {
-    height: 38,
-    paddingHorizontal: spacing.lg,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: home.panel,
   },
   stage: {
     flex: 1,
