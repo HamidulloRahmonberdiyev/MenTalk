@@ -9,10 +9,12 @@ interface CircularProgressProps {
   value: number;
   size?: number;
   strokeWidth?: number;
+  color?: string;
+  trackColor?: string;
   children?: ReactNode;
 }
 
-export function CircularProgress({ value, size = 84, strokeWidth = 8, children }: CircularProgressProps) {
+export function CircularProgress({ value, size = 84, strokeWidth = 8, color = colors.primary, trackColor = colors.border, children }: CircularProgressProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(Math.max(value, 0), 1);
@@ -21,13 +23,13 @@ export function CircularProgress({ value, size = 84, strokeWidth = 8, children }
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={styles.svg}>
-        <Circle cx={center} cy={center} r={radius} stroke={colors.border} strokeWidth={strokeWidth} fill="none" />
+        <Circle cx={center} cy={center} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
         {clamped > 0 ? (
           <Circle
             cx={center}
             cy={center}
             r={radius}
-            stroke={colors.primary}
+            stroke={color}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={`${circumference} ${circumference}`}

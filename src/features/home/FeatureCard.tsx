@@ -22,12 +22,16 @@ interface FeatureCardProps {
   edge: string;
   stats: FeatureStat[];
   onPress: () => void;
+  /** Shorter secondary card, so two big cards never stack on top of each other. */
+  compact?: boolean;
 }
 
 const RADIUS = 34;
 
 /** Big tappable gradient card with an oversized decorative icon, as on Englify's home. */
-export function FeatureCard({ title, icon, gradient, edge, stats, onPress }: FeatureCardProps) {
+export function FeatureCard({ title, icon, gradient, edge, stats, onPress, compact = false }: FeatureCardProps) {
+  const artSize = compact ? 130 : 190;
+
   return (
     <Pressable3D
       accessibilityRole="button"
@@ -40,31 +44,31 @@ export function FeatureCard({ title, icon, gradient, edge, stats, onPress }: Fea
       depth={6}
       radius={RADIUS}
     >
-      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, compact && styles.cardCompact]}>
         <View style={styles.art} pointerEvents="none">
-          <Ionicons name={icon} size={190} color="rgba(10, 20, 60, 0.22)" style={styles.artShadow} />
-          <Ionicons name={icon} size={190} color="rgba(255, 255, 255, 0.38)" />
+          <Ionicons name={icon} size={artSize} color="rgba(10, 20, 60, 0.22)" style={styles.artShadow} />
+          <Ionicons name={icon} size={artSize} color="rgba(255, 255, 255, 0.38)" />
         </View>
 
-        <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.title}>
+        <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={[styles.title, compact && styles.titleCompact]}>
           {title}
         </AppText>
 
-        <View style={styles.stats}>
+        <View style={[styles.stats, compact && styles.statsCompact]}>
           {stats.map((stat) => (
             <View key={stat.label} style={styles.stat}>
               <AppText color="#5B5A8C" numberOfLines={1} style={styles.statLabel}>
                 {stat.label}
               </AppText>
-              <AppText color="#2B1E5C" style={styles.statValue}>
+              <AppText color="#2B1E5C" style={[styles.statValue, compact && styles.statValueCompact]}>
                 {stat.value}
               </AppText>
             </View>
           ))}
         </View>
 
-        <View style={styles.arrow}>
-          <Ionicons name="arrow-up" size={26} color="#2B1E5C" style={styles.arrowIcon} />
+        <View style={[styles.arrow, compact && styles.arrowCompact]}>
+          <Ionicons name="arrow-up" size={compact ? 20 : 26} color="#2B1E5C" style={styles.arrowIcon} />
         </View>
       </LinearGradient>
     </Pressable3D>
@@ -79,6 +83,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderRadius: RADIUS,
     overflow: 'hidden',
+  },
+  cardCompact: {
+    minHeight: 0,
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingTop: spacing.md,
   },
   art: {
     position: 'absolute',
@@ -97,6 +107,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -1,
   },
+  titleCompact: {
+    marginRight: 52,
+    fontSize: 28,
+    lineHeight: 36,
+    letterSpacing: -0.5,
+  },
   stats: {
     flexDirection: 'row',
     alignSelf: 'flex-start',
@@ -105,6 +121,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radii.lg,
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
+  },
+  statsCompact: {
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
   },
   stat: {
     gap: 2,
@@ -119,6 +141,10 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontWeight: '700',
   },
+  statValueCompact: {
+    fontSize: 17,
+    lineHeight: 21,
+  },
   arrow: {
     position: 'absolute',
     top: spacing.lg,
@@ -132,5 +158,11 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     transform: [{ rotate: '45deg' }],
+  },
+  arrowCompact: {
+    top: spacing.md,
+    right: spacing.md,
+    width: 40,
+    height: 40,
   },
 });

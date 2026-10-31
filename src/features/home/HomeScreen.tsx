@@ -52,11 +52,11 @@ export function HomeScreen() {
   const minutes = Math.floor(minutesToday);
 
   const bars: SkillBar[] = [
-    { key: 'goal', label: t('home.stats.goal'), value: `${minutes}/${goalMinutes}`, progress: minutesToday / goalMinutes },
-    { key: 'score', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
-    { key: 'words', label: t('home.stats.words'), value: String(cards.length), progress: learned },
-    { key: 'streak', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
-    { key: 'topics', label: t('home.stats.topics'), value: `${topicsTried}/${SCENARIOS.length}`, progress: topicsTried / SCENARIOS.length },
+    { key: 'goal', icon: 'flag', tint: '#58CC02', label: t('home.stats.goal'), value: `${minutes}/${goalMinutes}`, progress: minutesToday / goalMinutes },
+    { key: 'score', icon: 'star', tint: '#E5A100', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
+    { key: 'words', icon: 'book', tint: '#CE82FF', label: t('home.stats.words'), value: String(cards.length), progress: learned },
+    { key: 'streak', icon: 'flame', tint: '#FF9600', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
+    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${topicsTried}/${SCENARIOS.length}`, progress: topicsTried / SCENARIOS.length },
   ];
 
   const shortcuts = useMemo<Shortcut[]>(
@@ -100,8 +100,8 @@ export function HomeScreen() {
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
             <View style={styles.handle} />
+            {/* Small shortcuts sit between the goal card and the talk card, so big cards never stack; vocabulary is the compact one. */}
             <ShortcutGrid items={shortcuts} />
-
             <FeatureCard
               title={t('home.talk.title')}
               icon="mic"
@@ -117,8 +117,9 @@ export function HomeScreen() {
             <FeatureCard
               title={t('home.vocab.title')}
               icon="library"
-              gradient={['#3FC1FF', '#1B8FE6']}
-              edge="#156DB0"
+              gradient={['#B79BFF', '#7B4FE0']}
+              edge="#5A35B8"
+              compact
               stats={[
                 { label: t('home.vocab.total'), value: cards.length },
                 { label: t('home.vocab.due'), value: due },
@@ -141,6 +142,7 @@ export function HomeScreen() {
               scenarios={lastScenarioId ? [SCENARIO_MAP[lastScenarioId], ...SCENARIOS.filter((s) => s.id !== lastScenarioId)] : SCENARIOS}
               onPress={(scenario) => openConversation(scenario.id)}
             />
+
           </View>
         </Fragment>
       </ScrollView>
@@ -155,7 +157,7 @@ const styles = StyleSheet.create({
   top: {
     gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
+    paddingBottom: spacing.xl,
   },
   sheet: {
     flexGrow: 1,
