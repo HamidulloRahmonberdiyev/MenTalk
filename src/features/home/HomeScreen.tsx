@@ -11,7 +11,8 @@ import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { SCENARIOS, SCENARIO_MAP } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
-import { colors, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
@@ -19,7 +20,6 @@ import { MAX_STAGE } from '../vocabulary/srs';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
-import { home } from './homeTheme';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { SkillBars, type SkillBar } from './SkillBars';
 import { TopicCarousel } from './TopicCarousel';
@@ -30,6 +30,8 @@ const RECENT_SCORES = 10;
 const STREAK_TARGET = 7;
 
 export function HomeScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
@@ -86,7 +88,7 @@ export function HomeScreen() {
   return (
     <View style={styles.root}>
       {/* Only this tab is dark, so the status bar flips back once another screen takes over. */}
-      <StatusBar style={focused ? 'light' : 'dark'} />
+      <StatusBar style={focused ? home.statusBar : 'dark'} />
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
         showsVerticalScrollIndicator={false}
@@ -133,7 +135,7 @@ export function HomeScreen() {
                 {t('home.chooseTopic')}
               </AppText>
               <PressableScale hitSlop={10} onPress={() => router.push('/scenarios')} accessibilityRole="button">
-                <AppText variant="bodyStrong" color={colors.primaryLight}>
+                <AppText variant="bodyStrong" color={home.accent}>
                   {t('home.all')}
                 </AppText>
               </PressableScale>
@@ -151,7 +153,7 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: home.background },
   content: { flexGrow: 1 },
   top: {
@@ -174,7 +176,7 @@ const styles = StyleSheet.create({
     height: 5,
     marginBottom: spacing.sm,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: home.handle,
   },
   sectionHeader: {
     flexDirection: 'row',

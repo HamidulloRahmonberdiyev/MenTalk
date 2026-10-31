@@ -160,6 +160,9 @@ export const uz: Dictionary = {
   'profile.keepEditing': 'Davom etish',
   'profile.section.about': 'Men haqimda',
   'profile.section.learning': 'O‘qish',
+  'profile.appearance': 'Ko‘rinish',
+  'profile.appearance.dark': 'Qorong‘i',
+  'profile.appearance.light': 'Yorug‘',
   'common.cancel': 'Bekor qilish',
 
   'tab.translate': 'Tarjima',

@@ -160,6 +160,9 @@ export const ru: Dictionary = {
   'profile.keepEditing': 'Продолжить',
   'profile.section.about': 'Обо мне',
   'profile.section.learning': 'Обучение',
+  'profile.appearance': 'Тема',
+  'profile.appearance.dark': 'Тёмная',
+  'profile.appearance.light': 'Светлая',
   'common.cancel': 'Отмена',
 
   'tab.translate': 'Перевод',

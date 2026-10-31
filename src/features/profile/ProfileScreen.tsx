@@ -21,9 +21,10 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing } from '@/theme';
 import { enter } from '@/theme/motion';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 import { useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
+import { AppearanceSwitch } from './AppearanceSwitch';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ProfileHero } from './ProfileHero';
 import { SettingsGroup, SettingsRow } from './SettingsRow';
@@ -32,6 +33,8 @@ import { StatsCard } from './StatsCard';
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
 export function ProfileScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
@@ -67,7 +70,7 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style={focused ? 'light' : 'dark'} />
+      <StatusBar style={focused ? home.statusBar : 'dark'} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <AppText variant="title" color={home.text} accessibilityRole="header" style={styles.flex}>
           {t('profile.title')}
@@ -113,6 +116,7 @@ export function ProfileScreen() {
 
           <Animated.View entering={enter.rise(120)} style={styles.section}>
             <SectionTitle>{t('profile.settings')}</SectionTitle>
+            <AppearanceSwitch />
             <SettingsGroup>
               <SettingsRow icon="person" tint={colors.primary} label={t('profile.edit')} onPress={() => router.push('/profile-edit')} />
               <SettingsRow
@@ -162,6 +166,8 @@ export function ProfileScreen() {
 }
 
 function SectionTitle({ children }: { children: string }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <AppText variant="heading" color={home.text} style={styles.sectionTitle} accessibilityRole="header">
       {children}
@@ -169,7 +175,7 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: home.background },
   flex: { flex: 1 },
   // Same bar as the resources tab, so the dark tabs read as one family.
@@ -179,9 +185,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
-    backgroundColor: '#212228',
+    backgroundColor: home.header,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomColor: home.divider,
   },
   editButton: {
     width: 44,

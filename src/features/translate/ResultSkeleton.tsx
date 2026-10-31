@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-import { colors, radii, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 /** Pulsing placeholder shown while the first translation loads. */
 export function ResultSkeleton() {
+  const styles = useThemedStyles(createStyles);
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -23,9 +25,18 @@ export function ResultSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { gap: spacing.md, padding: spacing.xl, borderRadius: radii.xl, backgroundColor: colors.surface },
-  line: { height: 18, borderRadius: radii.sm, backgroundColor: colors.primarySoft },
-  short: { width: '35%', height: 12 },
-  medium: { width: '70%' },
-});
+const createStyles = (home: Palette) =>
+  StyleSheet.create({
+    card: {
+      gap: spacing.md,
+      padding: spacing.xl,
+      borderRadius: 30,
+      borderWidth: 2,
+      borderBottomWidth: 6,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    line: { height: 18, borderRadius: radii.sm, backgroundColor: home.track },
+    short: { width: '35%', height: 12 },
+    medium: { width: '70%' },
+  });

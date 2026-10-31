@@ -4,10 +4,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 import type { LanguageCode, UzbekScript } from '@/types';
 
 import { TRANSLATE_LANGUAGES, languageOf } from './languages';
@@ -28,6 +30,8 @@ type Side = 'source' | 'target';
 
 export function LanguageBar({ source, target, detected, uzScript, onChange, onSwap, onUzScript }: LanguageBarProps) {
   const t = useT();
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const [picking, setPicking] = useState<Side | null>(null);
 
   const sourceLabel =
@@ -55,38 +59,47 @@ export function LanguageBar({ source, target, detected, uzScript, onChange, onSw
     <View style={styles.wrap}>
       <View style={styles.row}>
         <LanguageChip label={sourceLabel} hint={t('translate.from')} detected={source === 'auto' && Boolean(detected)} onPress={() => setPicking('source')} />
-        <PressableScale
+        <Pressable3D
           accessibilityRole="button"
           accessibilityLabel={t('translate.swap')}
-          onPress={onSwap}
-          style={styles.swap}
+          onPress={() => {
+            haptics.light();
+            onSwap();
+          }}
+          edgeColor="#1A84BF"
+          depth={4}
+          radius={radii.pill}
+          faceStyle={styles.swap}
         >
-          <Ionicons name="swap-horizontal" size={22} color={colors.primary} />
-        </PressableScale>
+          <Ionicons name="swap-horizontal" size={22} color={colors.onPrimary} />
+        </Pressable3D>
         <LanguageChip label={targetLabel} hint={t('translate.to')} onPress={() => setPicking('target')} />
       </View>
 
       {target === 'uz' ? (
         <View style={styles.script}>
-          <AppText variant="caption" color={colors.textSecondary}>
+          <AppText variant="captionStrong" color={home.textMuted}>
             {t('translate.script')}
           </AppText>
-          {(['latin', 'cyrillic'] as const).map((value) => (
-            <PressableScale
-              key={value}
-              accessibilityRole="button"
-              accessibilityState={{ selected: uzScript === value }}
-              onPress={() => {
-                haptics.selection();
-                onUzScript(value);
-              }}
-              style={[styles.scriptChip, uzScript === value && styles.scriptChipOn]}
-            >
-              <AppText variant="captionStrong" color={uzScript === value ? colors.onPrimary : colors.textSecondary}>
-                {value === 'latin' ? 'Lotin' : 'Кирилл'}
-              </AppText>
-            </PressableScale>
-          ))}
+          {(['latin', 'cyrillic'] as const).map((value) => {
+            const on = uzScript === value;
+            return (
+              <PressableScale
+                key={value}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+                onPress={() => {
+                  haptics.selection();
+                  onUzScript(value);
+                }}
+                style={[styles.scriptChip, on && styles.scriptChipOn]}
+              >
+                <AppText variant="captionStrong" color={on ? home.accent : home.textMuted}>
+                  {value === 'latin' ? 'Lotin' : 'Кирилл'}
+                </AppText>
+              </PressableScale>
+            );
+          })}
         </View>
       ) : null}
 
@@ -109,26 +122,32 @@ interface LanguageChipProps {
 }
 
 function LanguageChip({ label, hint, detected = false, onPress }: LanguageChipProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
-    <PressableScale
+    <Pressable3D
       accessibilityRole="button"
       accessibilityLabel={`${hint}: ${label}`}
       onPress={() => {
         haptics.light();
         onPress();
       }}
-      style={styles.chip}
+      edgeColor={home.rim}
+      depth={4}
+      radius={radii.md}
+      style={styles.flex}
+      faceStyle={styles.chip}
     >
-      <AppText variant="captionStrong" color={detected ? colors.primaryDark : colors.textMuted}>
+      <AppText variant="captionStrong" color={detected ? home.accent : home.textMuted} style={styles.caps}>
         {hint}
       </AppText>
       <View style={styles.chipRow}>
-        <AppText variant="bodyStrong" numberOfLines={1} style={styles.chipLabel}>
+        <AppText variant="bodyStrong" color={home.text} numberOfLines={1} style={styles.chipLabel}>
           {label}
         </AppText>
-        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-down" size={16} color={home.textMuted} />
       </View>
-    </PressableScale>
+    </Pressable3D>
   );
 }
 
@@ -142,6 +161,7 @@ interface LanguagePickerProps {
 
 function LanguagePicker({ side: requested, source, target, onClose, onPick }: LanguagePickerProps) {
   const t = useT();
+  const styles = useThemedStyles(createStyles);
   // The list keeps showing while the sheet slides away after a pick.
   const [side, setSide] = useState(requested);
   if (requested && requested !== side) setSide(requested);
@@ -153,59 +173,65 @@ function LanguagePicker({ side: requested, source, target, onClose, onPick }: La
 
   return (
     <BottomSheet visible={requested !== null} onClose={onClose} closeLabel={t('common.cancel')} style={styles.sheet}>
-          <AppText variant="heading" >
-            {side === 'source' ? t('translate.from') : t('translate.to')}
-          </AppText>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {options.map(({ code, label }) => {
-              const active = code === selected;
-              return (
-                <PressableScale
-                  key={code}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: active }}
-                  onPress={() => onPick(code)}
-                  style={[styles.option, active && styles.optionOn]}
-                >
-                  <AppText variant="bodyStrong" style={styles.optionLabel}>
-                    {label}
-                  </AppText>
-                  {active ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
-                </PressableScale>
-              );
-            })}
-          </ScrollView>
+      <AppText variant="heading">{side === 'source' ? t('translate.from') : t('translate.to')}</AppText>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {options.map(({ code, label }) => {
+          const active = code === selected;
+          return (
+            <PressableScale
+              key={code}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active }}
+              onPress={() => onPick(code)}
+              style={[styles.option, active && styles.optionOn]}
+            >
+              <AppText variant="bodyStrong" style={styles.flex}>
+                {label}
+              </AppText>
+              {active ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+            </PressableScale>
+          );
+        })}
+      </ScrollView>
     </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.sm },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radii.xl,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  chip: { flex: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 2 },
-  chipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  chipLabel: { flexShrink: 1 },
-  swap: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
-  },
-  script: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
-  scriptChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radii.pill, backgroundColor: colors.primarySoft },
-  scriptChipOn: { backgroundColor: colors.primary },
-  sheet: { maxHeight: '75%', gap: spacing.sm },
-  option: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radii.md },
-  optionOn: { backgroundColor: colors.primaryTint },
-  optionLabel: { flex: 1 },
-});
+const createStyles = (home: Palette) =>
+  StyleSheet.create({
+    wrap: { gap: spacing.md },
+    flex: { flex: 1 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    chip: {
+      gap: 2,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    caps: { textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 11, lineHeight: 14 },
+    chipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    chipLabel: { flexShrink: 1 },
+    swap: {
+      width: 48,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+    },
+    script: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
+    scriptChip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: radii.pill,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    scriptChipOn: { borderColor: colors.primary, backgroundColor: home.selected },
+    // The picker lives in the light bottom sheet, so it keeps the light tokens.
+    sheet: { maxHeight: '75%', gap: spacing.sm },
+    option: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radii.md },
+    optionOn: { backgroundColor: colors.primaryTint },
+  });

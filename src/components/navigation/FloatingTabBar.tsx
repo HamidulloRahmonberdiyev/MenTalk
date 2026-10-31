@@ -11,6 +11,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { colors, radii, shadows, spacing } from '@/theme';
 import type { IconName } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 type BottomTabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>>[0];
 
@@ -20,7 +21,6 @@ export const TAB_BAR_SPACE = TAB_BAR_HEIGHT + spacing.xxl;
 const INNER_PADDING = 8;
 const BUBBLE = TAB_BAR_HEIGHT - INNER_PADDING * 2;
 const SPRING = { damping: 18, stiffness: 220, mass: 0.8 };
-const INACTIVE = '#8E95A3';
 
 export type TabIconMap = Record<string, IconName>;
 
@@ -45,6 +45,8 @@ interface FloatingTabBarProps extends BottomTabBarProps {
 }
 
 export function FloatingTabBar({ state, descriptors, navigation, icons }: FloatingTabBarProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   const [width, setWidth] = useState(0);
   const slot = state.routes.length ? (width - INNER_PADDING * 2) / state.routes.length : 0;
@@ -64,7 +66,7 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
       <View style={styles.shadow}>
         <View style={styles.bar} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
           {Platform.OS !== 'web' ? (
-            <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={60} tint={home.appearance} style={StyleSheet.absoluteFill} />
           ) : null}
           <View style={[StyleSheet.absoluteFill, styles.glass]} />
 
@@ -97,9 +99,9 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
                 style={styles.tab}
               >
                 {/* The active tab is just its icon inside the blue bubble, as in Englify. */}
-                <Ionicons name={icons[route.name]} size={focused ? 28 : 24} color={focused ? colors.onPrimary : INACTIVE} />
+                <Ionicons name={icons[route.name]} size={focused ? 28 : 24} color={focused ? colors.onPrimary : home.tabInactive} />
                 {focused ? null : (
-                  <AppText variant="captionStrong" color={INACTIVE} style={styles.label} numberOfLines={1}>
+                  <AppText variant="captionStrong" color={home.tabInactive} style={styles.label} numberOfLines={1}>
                     {options.title}
                   </AppText>
                 )}
@@ -112,7 +114,7 @@ export function FloatingTabBar({ state, descriptors, navigation, icons }: Floati
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   wrap: {
     position: 'absolute',
     left: spacing.xl,
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
   },
   shadow: {
     borderRadius: radii.pill,
-    boxShadow: '0 14px 34px rgba(0, 0, 0, 0.35)',
+    boxShadow: home.appearance === 'dark' ? '0 14px 34px rgba(0, 0, 0, 0.35)' : '0 12px 30px rgba(20, 50, 90, 0.14)',
   },
   bar: {
     flexDirection: 'row',
@@ -129,10 +131,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: home.tabRim,
   },
   glass: {
-    backgroundColor: 'rgba(24, 25, 30, 0.92)',
+    backgroundColor: home.tabGlass,
   },
   indicator: {
     position: 'absolute',

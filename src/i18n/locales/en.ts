@@ -158,6 +158,9 @@ export const en = {
   'profile.keepEditing': 'Keep editing',
   'profile.section.about': 'About me',
   'profile.section.learning': 'Learning',
+  'profile.appearance': 'Appearance',
+  'profile.appearance.dark': 'Dark',
+  'profile.appearance.light': 'Light',
   'common.cancel': 'Cancel',
 
   'tab.translate': 'Translate',

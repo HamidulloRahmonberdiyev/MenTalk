@@ -10,8 +10,8 @@ import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
 import { spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { starterWords } from '../vocabulary/starterWords';
 import { countDue, useStudyCards, useVocabularyStore } from '../vocabulary/vocabularyStore';
@@ -19,6 +19,8 @@ import { ResourceCard, type Resource } from './ResourceCard';
 
 /** The book tab: one big colourful card per thing to practise with, as on Englify's "Resurslar". */
 export function ResourcesScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
@@ -94,7 +96,7 @@ export function ResourcesScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style={focused ? 'light' : 'dark'} />
+      <StatusBar style={focused ? home.statusBar : 'dark'} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
         <AppText variant="title" color={home.text} accessibilityRole="header">
           {t('res.title')}
@@ -113,14 +115,14 @@ export function ResourcesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: home.background },
   header: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
-    backgroundColor: '#212228',
+    backgroundColor: home.header,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomColor: home.divider,
   },
   list: {
     gap: spacing.lg,

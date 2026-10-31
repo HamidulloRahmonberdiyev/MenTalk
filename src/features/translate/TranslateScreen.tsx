@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useIsFocused } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Fragment } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -12,6 +13,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { HistoryPanel } from './HistoryPanel';
 import { LanguageBar } from './LanguageBar';
@@ -25,7 +27,10 @@ const ERROR_KEYS = { network: 'notice.network', quota: 'notice.quota', failed: '
 
 export function TranslateScreen() {
   const t = useT();
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
   const translator = useTranslator();
   const { refreshControl, version } = useRefreshControl();
   const { result, status, text } = translator;
@@ -39,22 +44,21 @@ export function TranslateScreen() {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={[colors.primarySoft, colors.background]} style={styles.glow} pointerEvents="none" />
+      <StatusBar style={focused ? home.statusBar : 'dark'} />
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <AppText variant="title" color={home.text} accessibilityRole="header">
+          {t('translate.title')}
+        </AppText>
+      </View>
+
       <ScrollView
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + spacing.xl, paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
-          <AppText variant="title" accessibilityRole="header">
-            {t('translate.title')}
-          </AppText>
-
           <LanguageBar
             source={translator.source}
             target={translator.target}
@@ -78,7 +82,7 @@ export function TranslateScreen() {
           {!translator.configured ? (
             <View style={styles.banner}>
               <Ionicons name="key-outline" size={20} color={colors.warning} />
-              <AppText variant="caption" color={colors.textSecondary} style={styles.flex}>
+              <AppText variant="caption" color={home.textMuted} style={styles.flex}>
                 {t('translate.noKey')}
               </AppText>
             </View>
@@ -90,13 +94,13 @@ export function TranslateScreen() {
               onPress={() => translator.changeText(result.correctedInput)}
               style={styles.suggest}
             >
-              <AppText variant="caption" color={colors.textSecondary}>
+              <AppText variant="caption" color={home.textMuted}>
                 {t('translate.didYouMean')}
               </AppText>
-              <AppText variant="captionStrong" color={colors.primaryDark} style={styles.flex}>
+              <AppText variant="captionStrong" color={home.accent} style={styles.flex}>
                 {result.correctedInput}
               </AppText>
-              <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+              <Ionicons name="arrow-forward" size={16} color={home.accent} />
             </PressableScale>
           ) : null}
 
@@ -121,10 +125,10 @@ export function TranslateScreen() {
               {status === 'error' && translator.error ? (
                 <Animated.View entering={FadeIn.duration(200)} style={styles.error}>
                   <Ionicons name="cloud-offline-outline" size={22} color={colors.danger} />
-                  <AppText variant="bodyStrong" style={styles.flex}>
+                  <AppText variant="bodyStrong" color={home.text} style={styles.flex}>
                     {t(ERROR_KEYS[translator.error])}
                   </AppText>
-                  <Button title={t('translate.retry')} onPress={translator.retry} variant="soft" style={styles.retry} />
+                  <Button title={t('translate.retry')} onPress={translator.retry} style={styles.retry} />
                 </Animated.View>
               ) : null}
 
@@ -139,35 +143,50 @@ export function TranslateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: 320 },
-  content: { paddingHorizontal: spacing.xl, gap: spacing.lg },
-  flex: { flex: 1 },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: '#FFF6E5',
-  },
-  suggest: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.pill,
-    backgroundColor: colors.primarySoft,
-  },
-  error: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: '#FDECEC',
-  },
-  retry: { height: 40, paddingHorizontal: spacing.md, borderRadius: radii.pill },
-});
+const createStyles = (home: Palette) =>
+  StyleSheet.create({
+    root: { flex: 1, backgroundColor: home.background },
+    // Same bar as the other tabs.
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.lg,
+      backgroundColor: home.header,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: home.divider,
+    },
+    content: { padding: spacing.xl, gap: spacing.lg },
+    flex: { flex: 1 },
+    banner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.warningFill,
+    },
+    suggest: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderRadius: radii.lg,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: home.selected,
+    },
+    error: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      borderWidth: 2,
+      borderBottomWidth: 5,
+      borderColor: home.dangerRim,
+      backgroundColor: home.dangerFill,
+    },
+    retry: { height: 44, borderRadius: radii.md },
+  });

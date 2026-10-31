@@ -6,8 +6,7 @@ import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { spacing } from '@/theme';
 import type { IconName } from '@/types';
-
-import { home } from './homeTheme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 export interface Shortcut {
   key: string;
@@ -19,6 +18,8 @@ export interface Shortcut {
 const TILE = 64;
 
 function ShortcutTile({ label, icon, onPress }: Shortcut) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <PressableScale
       accessibilityRole="button"
@@ -32,8 +33,8 @@ function ShortcutTile({ label, icon, onPress }: Shortcut) {
     >
       <View style={styles.tile}>
         {/* A darker copy underneath gives the glyph a bit of depth, like the 3D icons it imitates. */}
-        <Ionicons name={icon} size={44} color="#1F5FB8" style={[styles.glyph, styles.glyphShadow]} />
-        <Ionicons name={icon} size={44} color="#6CC0FF" style={styles.glyph} />
+        <Ionicons name={icon} size={44} color={home.glyphShadow} style={[styles.glyph, styles.glyphShadow]} />
+        <Ionicons name={icon} size={44} color={home.glyph} style={styles.glyph} />
       </View>
       <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={styles.label}>
         {label}
@@ -43,6 +44,7 @@ function ShortcutTile({ label, icon, onPress }: Shortcut) {
 }
 
 export function ShortcutGrid({ items }: { items: Shortcut[] }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.grid}>
       {items.map(({ key, ...item }) => (
@@ -52,7 +54,7 @@ export function ShortcutGrid({ items }: { items: Shortcut[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -69,7 +71,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: home.tile,
     borderBottomWidth: 4,
-    borderBottomColor: '#252C40',
+    borderBottomColor: home.tileEdge,
   },
   glyph: {
     position: 'absolute',

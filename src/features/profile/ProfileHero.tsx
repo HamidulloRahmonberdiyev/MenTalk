@@ -12,8 +12,8 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing } from '@/theme';
 import { enter } from '@/theme/motion';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 import { countryName, flagOf } from '../onboarding/countries';
 import { LEVELS } from '../onboarding/options';
 import { AvatarSheet } from './AvatarSheet';
@@ -23,6 +23,8 @@ const AVATAR = 96;
 
 /** Who the learner is: photo, name, level and country, on an outlined dark panel. */
 export function ProfileHero() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const language = useSettingsStore((state) => state.language);
   const { name, email, avatarUrl, avatarCustom, level, country } = useUserStore(
@@ -102,7 +104,7 @@ export function ProfileHero() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   card: {
     alignItems: 'center',
     gap: spacing.md,
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     padding: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: '#3A2328',
+    backgroundColor: home.dangerFill,
   },
   flex: { flex: 1 },
 });

@@ -7,8 +7,8 @@ import { Pressable3D } from '@/components/ui/Pressable3D';
 import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 
 const ICON = 40;
 
@@ -24,6 +24,8 @@ interface SettingsRowProps {
 
 /** A chunky dark button: solid icon tile, label, and a face that presses down onto its edge. */
 export function SettingsRow({ icon, tint, label, value, destructive = false, onPress }: SettingsRowProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable3D
       accessibilityRole="button"
@@ -32,7 +34,7 @@ export function SettingsRow({ icon, tint, label, value, destructive = false, onP
         haptics.light();
         onPress();
       }}
-      edgeColor={destructive ? '#8E1F1F' : home.rim}
+      edgeColor={destructive ? home.dangerEdge : home.rim}
       depth={4}
       radius={radii.lg}
       faceStyle={[styles.row, destructive && styles.destructive]}
@@ -55,10 +57,11 @@ export function SettingsRow({ icon, tint, label, value, destructive = false, onP
 
 /** Stacks rows with a little air between them, each its own button. */
 export function SettingsGroup({ children }: { children: ReactNode }) {
+  const styles = useThemedStyles(createStyles);
   return <View style={styles.group}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -69,7 +72,7 @@ const styles = StyleSheet.create({
     borderColor: home.rim,
     backgroundColor: home.panel,
   },
-  destructive: { borderColor: '#5A2A2E', backgroundColor: '#3A2328' },
+  destructive: { borderColor: home.dangerRim, backgroundColor: home.dangerFill },
   icon: { width: ICON, height: ICON, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
   label: { flex: 1 },
   group: { gap: spacing.md },

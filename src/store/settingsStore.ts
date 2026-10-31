@@ -14,6 +14,9 @@ interface SettingsState {
   /** Show what the user said as text in the conversation. */
   showTranscript: boolean;
   toggleTranscript: () => void;
+  /** Dark or light look of the redesigned screens, chosen in the profile. */
+  appearance: 'dark' | 'light';
+  setAppearance: (appearance: 'dark' | 'light') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -25,6 +28,8 @@ export const useSettingsStore = create<SettingsState>()(
       setStudyLanguage: (studyLanguage) => set({ studyLanguage }),
       showTranscript: true,
       toggleTranscript: () => set((state) => ({ showTranscript: !state.showTranscript })),
+      appearance: 'dark',
+      setAppearance: (appearance) => set({ appearance }),
     }),
     { name: 'settings', storage: createJSONStorage(() => AsyncStorage) },
   ),

@@ -4,8 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 
 export interface Stat {
   icon: IconName;
@@ -16,6 +16,8 @@ export interface Stat {
 
 /** Three tiles to a row, each outlined with a chunky bottom edge. */
 export function StatsCard({ stats }: { stats: readonly Stat[] }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.grid}>
       {stats.map(({ icon, tint, value, label }) => (
@@ -33,7 +35,7 @@ export function StatsCard({ stats }: { stats: readonly Stat[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   tile: {
     flexGrow: 1,

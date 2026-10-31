@@ -10,9 +10,9 @@ import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { countDue, useStudyCards } from '../vocabulary/vocabularyStore';
-import { home } from './homeTheme';
 
 interface HeaderButtonProps {
   icon: IconName;
@@ -22,6 +22,8 @@ interface HeaderButtonProps {
 }
 
 function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <PressableScale
       accessibilityRole="button"
@@ -36,7 +38,7 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
       <Ionicons name={icon} size={28} color={home.text} />
       {badge > 0 ? (
         <View style={styles.badge}>
-          <AppText color={home.text} style={styles.badgeText}>
+          <AppText color="#FFFFFF" style={styles.badgeText}>
             {badge > 99 ? '99+' : badge}
           </AppText>
         </View>
@@ -46,6 +48,8 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
 }
 
 export function HomeHeader({ name }: { name: string }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const avatarUrl = useUserStore((state) => state.avatarUrl);
   const due = countDue(useStudyCards());
@@ -70,7 +74,7 @@ export function HomeHeader({ name }: { name: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',

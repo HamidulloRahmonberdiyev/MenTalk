@@ -18,8 +18,8 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
 import type { IconName, LearningGoal } from '@/types';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { home } from '../home/homeTheme';
 import { parseBirthDate } from '../onboarding/birthDate';
 import { BirthDateField, type BirthParts } from '../onboarding/BirthDateField';
 import { CountryPicker } from '../onboarding/CountryPicker';
@@ -39,6 +39,8 @@ function initialForm(): ProfileEdits {
 }
 
 export function EditProfileScreen() {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const t = useT();
   const language = useSettingsStore((state) => state.language);
   const { height } = useWindowDimensions();
@@ -98,7 +100,7 @@ export function EditProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style={home.statusBar} />
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Pressable3D
           accessibilityRole="button"
@@ -168,7 +170,7 @@ export function EditProfileScreen() {
             </Field>
 
             <Field label={t('profile.field.birth')}>
-              <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} autoFocus={false} dark />
+              <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} autoFocus={false} themed />
             </Field>
           </Section>
 
@@ -264,6 +266,8 @@ interface SectionProps {
 
 /** One outlined dark card per group of fields, headed by a solid icon tile. */
 function Section({ icon, tint, title, children }: SectionProps) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
@@ -280,6 +284,8 @@ function Section({ icon, tint, title, children }: SectionProps) {
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.field}>
       <AppText variant="captionStrong" color={home.textMuted} style={styles.label}>
@@ -290,7 +296,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: home.background },
   flex: { flex: 1 },
   // Same bar as the profile and resources tabs.
@@ -300,9 +306,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
-    backgroundColor: '#212228',
+    backgroundColor: home.header,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomColor: home.divider,
   },
   back: {
     width: 44,
@@ -355,9 +361,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.xl,
-    backgroundColor: '#212228',
+    backgroundColor: home.header,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255, 255, 255, 0.12)',
+    borderTopColor: home.divider,
   },
   error: {
     flexDirection: 'row',
@@ -365,6 +371,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: '#3A2328',
+    backgroundColor: home.dangerFill,
   },
 });

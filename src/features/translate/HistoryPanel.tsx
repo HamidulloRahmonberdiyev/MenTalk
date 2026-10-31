@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { colors, radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 import type { SavedTranslation } from '@/types';
 
 import { languageOf } from './languages';
@@ -21,6 +23,8 @@ type Tab = 'history' | 'favorites';
 /** Recent translations and saved phrases, shown while the input is empty. */
 export function HistoryPanel({ onPick }: HistoryPanelProps) {
   const t = useT();
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
   const [tab, setTab] = useState<Tab>('history');
   const history = useTranslatorStore((state) => state.history);
   const favorites = useTranslatorStore((state) => state.favorites);
@@ -33,31 +37,32 @@ export function HistoryPanel({ onPick }: HistoryPanelProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.tabs}>
-        {(['history', 'favorites'] as const).map((value) => (
-          <PressableScale
-            key={value}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: tab === value }}
-            onPress={() => {
-              haptics.selection();
-              setTab(value);
-            }}
-            style={[styles.tab, tab === value && styles.tabOn]}
-          >
-            <Ionicons
-              name={value === 'history' ? 'time-outline' : 'star-outline'}
-              size={16}
-              color={tab === value ? colors.primaryDark : colors.textMuted}
-            />
-            <AppText variant="captionStrong" color={tab === value ? colors.primaryDark : colors.textMuted}>
-              {t(`translate.${value}`)}
-            </AppText>
-          </PressableScale>
-        ))}
+        <View style={styles.segment} accessibilityRole="tablist">
+          {(['history', 'favorites'] as const).map((value) => {
+            const on = tab === value;
+            return (
+              <PressableScale
+                key={value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                onPress={() => {
+                  haptics.selection();
+                  setTab(value);
+                }}
+                style={[styles.tab, on && styles.tabOn]}
+              >
+                <Ionicons name={value === 'history' ? 'time' : 'star'} size={16} color={on ? colors.onPrimary : home.textMuted} />
+                <AppText variant="captionStrong" color={on ? colors.onPrimary : home.textMuted}>
+                  {t(`translate.${value}`)}
+                </AppText>
+              </PressableScale>
+            );
+          })}
+        </View>
         <View style={styles.flex} />
         {tab === 'history' && history.length > 0 ? (
           <PressableScale accessibilityRole="button" hitSlop={8} onPress={clearHistory}>
-            <AppText variant="captionStrong" color={colors.textMuted}>
+            <AppText variant="captionStrong" color={home.textMuted}>
               {t('translate.clearAll')}
             </AppText>
           </PressableScale>
@@ -66,26 +71,31 @@ export function HistoryPanel({ onPick }: HistoryPanelProps) {
 
       {items.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name={tab === 'history' ? 'language' : 'star'} size={32} color={colors.primaryLight} />
-          <AppText color={colors.textSecondary} style={styles.emptyText}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name={tab === 'history' ? 'language' : 'star'} size={30} color={home.accent} />
+          </View>
+          <AppText color={home.textMuted} style={styles.emptyText}>
             {tab === 'history' ? t('translate.historyEmpty') : t('translate.favoritesEmpty')}
           </AppText>
         </View>
       ) : (
         <View style={styles.list}>
           {items.map((item) => (
-            <PressableScale
+            <Pressable3D
               key={item.id}
               accessibilityRole="button"
               accessibilityLabel={`${item.sourceText} — ${item.translation}`}
               onPress={() => onPick(item)}
-              style={styles.row}
+              edgeColor={home.rim}
+              depth={4}
+              radius={radii.lg}
+              faceStyle={styles.row}
             >
               <View style={styles.texts}>
-                <AppText variant="caption" color={colors.textMuted} numberOfLines={1}>
+                <AppText variant="caption" color={home.textMuted} numberOfLines={1}>
                   {`${languageOf(item.sourceLanguage).flag} ${item.sourceText}`}
                 </AppText>
-                <AppText variant="bodyStrong" numberOfLines={2}>
+                <AppText variant="bodyStrong" color={home.text} numberOfLines={2}>
                   {`${languageOf(item.targetLanguage).flag} ${item.translation}`}
                 </AppText>
               </View>
@@ -96,9 +106,9 @@ export function HistoryPanel({ onPick }: HistoryPanelProps) {
                 onPress={() => (tab === 'history' ? removeHistory(item.id) : toggleFavorite(item))}
                 style={styles.remove}
               >
-                <Ionicons name={tab === 'history' ? 'close' : 'star'} size={18} color={tab === 'history' ? colors.textMuted : colors.warning} />
+                <Ionicons name={tab === 'history' ? 'close' : 'star'} size={18} color={tab === 'history' ? home.textMuted : colors.warning} />
               </PressableScale>
-            </PressableScale>
+            </Pressable3D>
           ))}
         </View>
       )}
@@ -106,31 +116,59 @@ export function HistoryPanel({ onPick }: HistoryPanelProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.md },
-  flex: { flex: 1 },
-  tabs: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs + 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-  },
-  tabOn: { backgroundColor: colors.primarySoft },
-  empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
-  emptyText: { textAlign: 'center', maxWidth: 260 },
-  list: { gap: spacing.sm },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-    ...shadows.card,
-  },
-  texts: { flex: 1, gap: 2 },
-  remove: { width: 32, height: 32, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-});
+const createStyles = (home: Palette) =>
+  StyleSheet.create({
+    wrap: { gap: spacing.md, marginTop: spacing.sm },
+    flex: { flex: 1 },
+    tabs: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    segment: {
+      flexDirection: 'row',
+      gap: 4,
+      padding: 4,
+      borderRadius: radii.pill,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    tab: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs + 2,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.pill,
+    },
+    tabOn: { backgroundColor: colors.primary },
+    empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl },
+    emptyIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: radii.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderBottomWidth: 5,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    emptyText: { textAlign: 'center', maxWidth: 260 },
+    list: { gap: spacing.md },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    texts: { flex: 1, gap: 2 },
+    remove: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: home.track,
+    },
+  });
