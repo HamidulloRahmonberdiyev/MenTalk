@@ -31,8 +31,10 @@ const RETRY_STATUSES = new Set([429, 500, 503]);
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function post(model: string, body: unknown, signal?: AbortSignal): Promise<GenerateResponse> {
-  const url = `${geminiConfig.baseUrl}/models/${model}:generateContent`;
+const post = (model: string, body: unknown, signal?: AbortSignal) => request<GenerateResponse>(`/models/${model}:generateContent`, body, signal);
+
+async function request<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  const url = `${geminiConfig.baseUrl}${path}`;
 
   for (let attempt = 0; ; attempt += 1) {
     const controller = new AbortController();
@@ -47,7 +49,7 @@ async function post(model: string, body: unknown, signal?: AbortSignal): Promise
         signal: controller.signal,
       });
 
-      if (response.ok) return (await response.json()) as GenerateResponse;
+      if (response.ok) return (await response.json()) as T;
       if (attempt === 0 && RETRY_STATUSES.has(response.status)) {
         await delay(RETRY_DELAY_MS);
         continue;
@@ -136,12 +138,30 @@ export interface SpeechData {
   sampleRate: number;
 }
 
+interface InteractionResponse {
+  steps?: { type?: string; content?: { data?: string; mime_type?: string }[] }[];
+}
+
 /**
- * Turns a line into natural speech with Gemini TTS. Only the words to say are sent: the model reads
- * everything in the prompt aloud, so a style instruction would be spoken. It detects the language
- * from the text itself, and the voice (see `geminiConfig.voice`) sets the character.
+ * Turns a line into natural speech with Gemini TTS. It detects the language from the text itself,
+ * and the voice (see `geminiConfig.voice`) sets the character.
+ *
+ * `style` ("angry and stern") goes through the Interactions API as a `speech_metadata` note: in
+ * generateContent the model reads everything in the prompt aloud, and it refuses a system
+ * instruction. Should that call fail (e.g. a proxy without the route), the line is still voiced,
+ * just without the style.
  */
-export async function synthesizeSpeech(text: string): Promise<SpeechData> {
+export async function synthesizeSpeech(text: string, style?: string): Promise<SpeechData> {
+  if (style) {
+    try {
+      return await synthesizeStyled(stripEmoji(text), style);
+    } catch (error) {
+      // Out of quota: the plain call would be refused too.
+      if (error instanceof GeminiError && error.status === 429) throw error;
+      if (__DEV__) console.warn('Styled Gemini speech failed, voicing without the style:', error);
+    }
+  }
+
   const response = await post(geminiConfig.ttsModel, {
     contents: [{ parts: [{ text: stripEmoji(text) }] }],
     generationConfig: {
@@ -154,4 +174,22 @@ export async function synthesizeSpeech(text: string): Promise<SpeechData> {
   if (!inline?.data) throw new GeminiError('Gemini returned no audio');
   const rate = /rate=(\d+)/.exec(inline.mimeType ?? '')?.[1];
   return { base64: inline.data, mimeType: inline.mimeType ?? 'audio/wav', sampleRate: rate ? Number(rate) : 24_000 };
+}
+
+async function synthesizeStyled(text: string, style: string): Promise<SpeechData> {
+  const response = await request<InteractionResponse>('/interactions', {
+    model: geminiConfig.ttsModel,
+    input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style }] }] }],
+    response_format: { type: 'audio' },
+    generation_config: { speech_config: [{ voice: geminiConfig.voice }] },
+  });
+
+  const audio = response.steps
+    ?.filter((step) => step.type === 'model_output')
+    .flatMap((step) => step.content ?? [])
+    .find((item) => item.data);
+  if (!audio?.data) throw new GeminiError('Gemini returned no audio');
+  const mimeType = audio.mime_type ?? 'audio/wav';
+  const rate = /rate=(\d+)/.exec(mimeType)?.[1];
+  return { base64: audio.data, mimeType, sampleRate: rate ? Number(rate) : 24_000 };
 }

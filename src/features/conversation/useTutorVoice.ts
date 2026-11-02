@@ -5,11 +5,11 @@ import { Platform } from 'react-native';
 
 import type { LipSync } from '@/features/face';
 import { getDeviceVoiceId } from '@/services/speech/deviceVoice';
+import { voiceStyleFor } from '@/services/speech/voiceStyle';
 import { stripEmoji } from '@/services/text';
-import { useStudyLanguage } from '@/store/settingsStore';
+import { useSettingsStore, useStudyLanguage } from '@/store/settingsStore';
 import type { AiMessage, VoiceState } from '@/types';
 
-const RATE = 0.95;
 /** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
 const AUDIO_START_TIMEOUT_MS = 6_000;
 const PLAYABLE_URI = /^(https?|file):\/\//i;
@@ -48,7 +48,8 @@ async function enableSampling(player: AudioPlayer): Promise<void> {
 
 /**
  * Plays the tutor's lines aloud: the synthesized audio that came with the message, or, when there
- * is none (mock backend, TTS failure), the device's text-to-speech in the studied language. `lipSync` is fed the
+ * is none (mock backend, TTS failure), the device's text-to-speech in the studied language, pitched and
+ * paced for the tutor's tone and the line's emotion. `lipSync` is fed the
  * spoken text, word boundaries, playback position and loudness so the face moves with the voice.
  */
 export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState, lipSync: LipSync) {
@@ -83,10 +84,12 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   }, [lipSync, clearStartTimer, clearGraceTimer]);
 
   const speakWithDevice = useCallback(
-    async (text: string) => {
-      const spoken = stripEmoji(text);
+    async (line: AiMessage) => {
+      const spoken = stripEmoji(line.text);
       const voice = await getDeviceVoiceId(speechTag);
-      lipSync.load(spoken, RATE);
+      // Read at speaking time, so a tone picked mid-chat is heard on the next line.
+      const { pitch, rate } = voiceStyleFor(useSettingsStore.getState().tutorTone, line.emotion);
+      lipSync.load(spoken, rate);
       const finish = () => {
         lipSync.stop();
         setSpeaking(false);
@@ -94,7 +97,8 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       Speech.speak(spoken, {
         language: speechTag,
         voice,
-        rate: RATE,
+        pitch,
+        rate,
         onStart: () => {
           lipSync.start();
           setSpeaking(true);
@@ -116,7 +120,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       stop();
       if (!line.audioUri || !PLAYABLE_URI.test(line.audioUri)) {
         if (__DEV__ && line.audioUri) console.warn('Unplayable tutor audio URL:', line.audioUri);
-        void speakWithDevice(line.text);
+        void speakWithDevice(line);
         return;
       }
       try {
@@ -129,7 +133,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
           if (started || player.current !== next) return;
           if (__DEV__) console.warn(`Tutor audio failed (${reason}):`, line.audioUri);
           stop();
-          void speakWithDevice(line.text);
+          void speakWithDevice(line);
         };
         startTimer.current = setTimeout(() => fallBack('timeout'), AUDIO_START_TIMEOUT_MS);
         next.addListener('playbackStatusUpdate', (status) => {
@@ -155,7 +159,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
         void enableSampling(next);
         next.play();
       } catch {
-        void speakWithDevice(line.text);
+        void speakWithDevice(line);
       }
     },
     [stop, speakWithDevice, lipSync, clearStartTimer],

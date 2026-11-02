@@ -12,6 +12,7 @@ import {
   turnSchema,
 } from '@/services/gemini/prompts';
 import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
+import { voiceStyleFor } from '@/services/speech/voiceStyle';
 import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, TutorTone, VoiceState } from '@/types';
 
 import {
@@ -246,7 +247,7 @@ class GeminiSession implements ConversationSession {
       this.holdSpeaking(id, result.reply.length * SPEAKING_MS_PER_CHAR);
 
       if (!geminiConfig.ttsEnabled) return;
-      const speech = await this.speak(result.reply);
+      const speech = await this.speak(result.reply, result.emotion);
       if (this.isStale(id)) return;
       this.emit({ type: 'aiMessage', message: { ...message, audioUri: speech?.uri } });
       if (speech) this.holdSpeaking(id, speech.durationMs);
@@ -272,11 +273,11 @@ class GeminiSession implements ConversationSession {
     }
   }
 
-  /** Synthesizes the line with Gemini. Any failure falls back to the device voice (no audio file). */
-  private async speak(text: string): Promise<SpeechFile | null> {
+  /** Synthesizes the line with Gemini in the voice of the current tone. Any failure falls back to the device voice (no audio file). */
+  private async speak(text: string, emotion: TutorEmotion): Promise<SpeechFile | null> {
     if (!geminiConfig.ttsEnabled) return null;
     try {
-      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text));
+      const file = writeSpeechFile(`tutor-${Date.now()}`, await synthesizeSpeech(text, voiceStyleFor(this.tone, emotion).style));
       this.speechFiles.push(file);
       return file;
     } catch (error) {

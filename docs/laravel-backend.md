@@ -814,7 +814,7 @@ final readonly class PromptBuilder
 }
 ```
 
-Boshlang'ich seed: `tutor.system`, `tutor.flow`, `turn.opening`, `turn.audio`, `level.*`, `gender.*`, `hint`, `evaluation`, `lookup`, `translate`. Matnlari hozirgi ilovadagi `src/services/gemini/prompts.ts` dan ko'chiriladi (suhbat hech qachon o'zi tugamaydi, har javob savol bilan tugaydi, xatolarga ishora qilinmaydi). Tilga xos so'zlar o'rniga joylar yoziladi: `Russian` → `{language}`, `Anna` → `{tutor}`, `(Cyrillic)` → `{script}`, misol savollar → `{follow_ups}`, `"вы"` qoidasi → `{language_rules}`, `привет, да, нет` → `{basic_words}` (to'liq ro'yxat 7.11 da). TTS'ga faqat gapning o'zi yuboriladi, uslub ko'rsatmasi emas (aks holda model ko'rsatmani o'qib yuboradi).
+Boshlang'ich seed: `tutor.system`, `tutor.flow`, `turn.opening`, `turn.audio`, `level.*`, `gender.*`, `hint`, `evaluation`, `lookup`, `translate`. Matnlari hozirgi ilovadagi `src/services/gemini/prompts.ts` dan ko'chiriladi (suhbat hech qachon o'zi tugamaydi, har javob savol bilan tugaydi, xatolarga ishora qilinmaydi). Tilga xos so'zlar o'rniga joylar yoziladi: `Russian` → `{language}`, `Anna` → `{tutor}`, `(Cyrillic)` → `{script}`, misol savollar → `{follow_ups}`, `"вы"` qoidasi → `{language_rules}`, `привет, да, нет` → `{basic_words}` (to'liq ro'yxat 7.11 da). TTS matniga faqat gapning o'zi yuboriladi (aks holda model ko'rsatmani o'qib yuboradi); ovoz uslubi alohida `speech_metadata.style` maydonida beriladi (7.14).
 
 ### 7.4 Suhbat: tur yuborish
 
@@ -3083,6 +3083,96 @@ Kvota: `quota:pronunciation` free tarifda kuniga 30 urinish, premiumda 300. Redi
 6. Vaqtinchalik fayl so'rovdan keyin mavjud emas.
 7. Azure 5xx bo'lsa, `502 assessment_failed` qaytadi.
 
+
+### 7.14 Ovoz uslubi: ohang va emotsiya
+
+Tutor faqat so'zlari bilan emas, ovozi bilan ham ohangga mos gapiradi: `angry` da jahldor va keskin, `funny` da quvnoq, `calm` da yumshoq. Har javobning `emotion` i shu ovozga tus beradi (jahldor tutor maqtasa ham to'ng ovozda: "grudgingly satisfied"). Jadval ilovadagi `src/services/speech/voiceStyle.ts` bilan bir xil bo'lishi shart.
+
+Uslub TTS'ga **matn ichida emas**, Interactions API'ning `speech_metadata.style` maydonida beriladi. Tekshirilgan (`gemini-3.8-flash-tts`, 2026-11-02):
+
+- `generateContent` + `"Say angrily: …"` prefiksi: model prefiksni ham o'qiydi (audio ikki baravar uzun).
+- `generateContent` + `systemInstruction`: `400 Developer instruction is not enabled for this model`.
+- `POST /v1beta/interactions` + `speech_metadata.style`: matn so'zma-so'z o'qiladi, ovoz uslubi o'zgaradi.
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Speech;
+
+use App\Enums\TutorTone;
+
+final class VoiceStyle
+{
+    private const TONES = [
+        'calm' => 'calm, warm and patient, unhurried, soft and reassuring',
+        'funny' => 'playful and upbeat, a smile in the voice, lively and bouncy',
+        'angry' => 'angry, irritated and stern, clipped forceful delivery, sharp emphasis',
+    ];
+
+    /** emotion => [calm, funny, angry]; `neutral` faqat ohangning o'zi. */
+    private const EMOTIONS = [
+        'happy' => ['quietly pleased', 'delighted, almost laughing', 'grudgingly satisfied'],
+        'encouraging' => ['gently encouraging', 'cheering the learner on', 'demanding, pushing the learner to do better'],
+        'curious' => ['genuinely curious', 'curious and teasing', 'suspicious and probing'],
+        'empathetic' => ['tender and understanding', 'kind and reassuring', 'softening a little, still gruff'],
+        'surprised' => ['pleasantly surprised', 'astonished, exaggerated', 'shocked and indignant'],
+        'playful' => ['lightly playful', 'mischievous and joking', 'sarcastic'],
+    ];
+
+    public static function for(TutorTone $tone, string $emotion): string
+    {
+        $base = self::TONES[$tone->value];
+        $index = array_search($tone->value, ['calm', 'funny', 'angry'], true);
+        $note = self::EMOTIONS[$emotion][$index] ?? null;
+
+        return $note ? "{$base}; right now {$note}" : $base;
+    }
+}
+```
+
+`SpeechSynthesizer::speak()` ga ixtiyoriy `?string $style = null` qo'shiladi (eski chaqiruvlar o'zgarmaydi):
+
+`GeminiTransport` ga `interact(array $payload): array` qo'shiladi: `generate()` bilan bir xil (kalit puli, 429/5xx ishlovi), faqat manzil `interactions`. Umumiy qismni `private function post(string $path, array $payload)` ga ajratish kifoya.
+
+```php
+// GeminiSynthesizer::speak(string $text, string $voice, ?string $style = null)
+if ($style !== null) {
+    $response = $this->transport->interact([
+        'model' => $this->model,
+        'input' => [['type' => 'user_input', 'content' => [[
+            'type' => 'text',
+            'text' => $text,
+            'annotations' => [['type' => 'speech_metadata', 'style' => $style]],
+        ]]]],
+        'response_format' => ['type' => 'audio'],
+        'generation_config' => ['speech_config' => [['voice' => $voice]]],
+    ]);
+    // Javob: steps[type=model_output].content[].data — tayyor WAV (24 kHz, mono, 16-bit), Wav::fromPcm KERAK EMAS.
+    $wav = base64_decode(collect($response['steps'] ?? [])
+        ->where('type', 'model_output')->flatMap(fn ($step) => $step['content'] ?? [])
+        ->firstWhere('data')['data'] ?? throw new AiRejected(0), true);
+    $path = hash('sha256', "{$voice}|{$style}|{$text}").'.wav';
+    Storage::disk('speech')->put($path, $wav);
+
+    return new SpeechClip(Storage::disk('speech')->url($path), intdiv((strlen($wav) - 44) * 1000, 48_000));
+}
+// … uslubsiz yo'l avvalgidek generateContent orqali.
+```
+
+- `CachedSynthesizer`: kesh kaliti `"{$voice}|{$style}|{$text}"` bo'ladi. Aks holda jahldor tutor keshdan yumshoq ovozni oladi.
+- Interactions chaqiruvi xato bersa (`AiRateLimited` dan tashqari), uslubsiz `generateContent` ga qaytiladi: tur ovozsiz qolmaydi.
+- Chaqiruvlar (`SendTurn`, oqimdagi `voice()`, ochilish gapi) uslubni beradi:
+
+```php
+$clipUrl = $this->voice($reply, $tutor->voice(), $emit, VoiceStyle::for($conversation->tone, $emotion));
+// voice(...) ichida: $this->speech->speak($reply, $voice, $style)
+```
+
+`$conversation->tone` tur boshida yangilangani uchun (7.12) o'quvchi ohangni almashtirsa, keyingi javob ovozi ham darhol o'zgaradi. Ilova qo'shimcha maydon yubormaydi: `tone` allaqachon keladi, `emotion` modelning javobida bor.
+
+**Testlar:** `VoiceStyle::for(Angry, 'happy')` → `…; right now grudgingly satisfied`; ikki xil `tone` bilan bir xil matn ikki xil kesh kaliti oladi; Interactions 500 bersa `generateContent` chaqiriladi va tur `audio` oladi.
 
 ---
 
