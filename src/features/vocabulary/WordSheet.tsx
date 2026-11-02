@@ -95,7 +95,7 @@ export function WordSheet({ request, onClose }: WordSheetProps) {
                 variant={isSaved ? 'soft' : 'primary'}
                 disabled={isSaved}
                 onPress={() => {
-                  addWords([result]);
+                  addWords([result], 'ai_chat');
                   haptics.success();
                 }}
               />

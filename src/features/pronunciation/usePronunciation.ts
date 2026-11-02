@@ -9,6 +9,7 @@ import { stopSpeaking } from '@/services/speech';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { WordSuggestion } from '@/types';
 
+import { isUntouched } from '../vocabulary/srs';
 import { findCard, useVocabularyStore } from '../vocabulary/vocabularyStore';
 import { phrasesFor, type PhraseLevel } from './phrases';
 
@@ -71,7 +72,7 @@ export function usePronunciation(): Pronunciation {
           // Badly said words go straight into the word list; the store syncs it to the server.
           const vocabulary = useVocabularyStore.getState();
           const fresh = assessed.newWords.filter((word, i, all) => !findCard(vocabulary.cards, word.word) && all.findIndex((other) => other.word === word.word) === i);
-          if (fresh.length) vocabulary.addWords(fresh);
+          if (fresh.length) vocabulary.addWords(fresh, 'lesson');
           setSaved(fresh);
           setResult(assessed);
           setPhase('result');
@@ -141,7 +142,7 @@ export function usePronunciation(): Pronunciation {
     const vocabulary = useVocabularyStore.getState();
     const card = findCard(vocabulary.cards, word);
     // Only a card nobody has practised yet; one with progress stays.
-    if (card && card.stage === 0) vocabulary.removeWord(card.id);
+    if (card && isUntouched(card)) vocabulary.removeWord(card.id);
     setSaved((current) => current.filter((item) => item.word !== word));
     haptics.selection();
   }, []);

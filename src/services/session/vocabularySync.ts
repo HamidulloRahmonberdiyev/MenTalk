@@ -1,57 +1,89 @@
-import { cardLanguage, useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
+import { START_EASE } from '@/features/vocabulary/srs';
+import { cardLanguage, useVocabularyStore, type RemovedWord } from '@/features/vocabulary/vocabularyStore';
 import { isApiConfigured } from '@/services/api/config';
-import { endpoints, type ApiCard } from '@/services/api/endpoints';
+import { endpoints, type ApiUserWord, type ApiUserWordChange } from '@/services/api/endpoints';
 import { getToken } from '@/services/api/tokenStore';
 import { DEFAULT_STUDY_LANGUAGE, studyLanguageOfWord } from '@/services/learning';
-import type { VocabCard } from '@/types';
+import type { ReviewRating, VocabCard } from '@/types';
 
 const MAX_CHANGES = 500;
 const DEBOUNCE_MS = 3000;
 
 export interface ReviewAnswer {
   word: string;
-  correct: boolean;
+  rating: ReviewRating;
   answeredAt: number;
+  /** From showing the exercise to answering it. */
+  durationMs?: number;
 }
 
 const iso = (time: number) => new Date(time).toISOString();
 
-function toApi(card: VocabCard): ApiCard {
-  const updated = card.updatedAt ?? card.addedAt;
+function toApi(card: VocabCard): ApiUserWordChange {
   return {
-    word: card.id,
+    id: card.serverId ?? null,
+    word: card.word,
     language: cardLanguage(card),
     translation: card.translation,
-    example: card.example ?? null,
+    translation_language: card.translationLanguage ?? null,
     form: card.form ?? null,
-    stage: card.stage,
-    streak: card.streak,
+    context_sentence: card.example ?? null,
+    source: card.source ?? 'manual',
+    status: card.status,
+    ease: card.ease,
+    interval_days: card.intervalDays,
+    repetitions: card.repetitions,
     lapses: card.lapses,
     due_at: iso(card.due),
-    updated_at: iso(updated),
+    last_reviewed_at: card.lastReviewedAt ? iso(card.lastReviewedAt) : null,
+    updated_at: iso(card.updatedAt ?? card.addedAt),
     deleted: false,
   };
 }
 
-/** A deleted word. The card is gone, so its language is read from its alphabet. */
-function tombstone(id: string, time: number): ApiCard {
-  const language = studyLanguageOfWord(id) ?? DEFAULT_STUDY_LANGUAGE;
-  return { word: id, language, translation: id, example: null, form: null, stage: 0, streak: 0, lapses: 0, due_at: iso(time), updated_at: iso(time), deleted: true };
+/** A deleted word. Only the id (or the spelling and language) matters; the rest satisfies the format. */
+function tombstone(id: string, removed: RemovedWord): ApiUserWordChange {
+  const time = iso(removed.at);
+  return {
+    id: removed.serverId ?? null,
+    word: id,
+    language: removed.language,
+    translation: null,
+    translation_language: null,
+    form: null,
+    context_sentence: null,
+    source: 'manual',
+    status: 'new',
+    ease: START_EASE,
+    interval_days: 0,
+    repetitions: 0,
+    lapses: 0,
+    due_at: time,
+    last_reviewed_at: null,
+    updated_at: time,
+    deleted: true,
+  };
 }
 
-function fromApi(card: ApiCard): VocabCard {
-  const updatedAt = Date.parse(card.updated_at);
+function fromApi(word: ApiUserWord): VocabCard {
+  const updatedAt = Date.parse(word.updated_at);
   return {
-    id: card.word,
-    word: card.word,
-    language: card.language ?? DEFAULT_STUDY_LANGUAGE,
-    translation: card.translation,
-    example: card.example ?? undefined,
-    form: card.form ?? undefined,
-    stage: card.stage,
-    streak: card.streak,
-    lapses: card.lapses,
-    due: Date.parse(card.due_at),
+    id: word.word.trim().toLowerCase(),
+    serverId: word.id,
+    word: word.word,
+    language: word.language ?? DEFAULT_STUDY_LANGUAGE,
+    translation: word.translation ?? '',
+    translationLanguage: word.translation_language ?? undefined,
+    example: word.context_sentence ?? undefined,
+    form: word.form ?? undefined,
+    source: word.source,
+    status: word.status,
+    ease: word.ease,
+    intervalDays: word.interval_days,
+    repetitions: word.repetitions,
+    lapses: word.lapses,
+    due: Date.parse(word.due_at),
+    lastReviewedAt: word.last_reviewed_at ? Date.parse(word.last_reviewed_at) : undefined,
     addedAt: updatedAt,
     updatedAt,
   };
@@ -66,12 +98,12 @@ async function pass(): Promise<void> {
   const { cards, removed, cursor, pushedAt } = useVocabularyStore.getState();
   const changes = [
     ...cards.filter((card) => (card.updatedAt ?? card.addedAt) > pushedAt).map(toApi),
-    ...Object.entries(removed).filter(([, time]) => time > pushedAt).map(([id, time]) => tombstone(id, time)),
+    ...Object.entries(removed).filter(([, word]) => word.at > pushedAt).map(([id, word]) => tombstone(id, word)),
   ].slice(0, MAX_CHANGES);
 
-  const response = await endpoints.syncCards(cursor, changes);
-  const live = response.cards.filter((card) => !card.deleted).map(fromApi);
-  const deleted = response.cards.filter((card) => card.deleted).map((card) => card.word);
+  const response = await endpoints.syncWords(cursor, changes);
+  const live = response.words.filter((word) => !word.deleted).map(fromApi);
+  const deleted = response.words.filter((word) => word.deleted).map((word) => ({ id: word.word.trim().toLowerCase(), serverId: word.id }));
   useVocabularyStore.getState().applyRemote(live, deleted, { cursor: response.cursor, pushedAt: changes.length === MAX_CHANGES ? pushedAt : startedAt });
 }
 
@@ -98,7 +130,7 @@ export function syncVocabulary(): Promise<void> {
 
 function hasPendingChanges(): boolean {
   const { cards, removed, pushedAt } = useVocabularyStore.getState();
-  return cards.some((card) => (card.updatedAt ?? card.addedAt) > pushedAt) || Object.values(removed).some((time) => time > pushedAt);
+  return cards.some((card) => (card.updatedAt ?? card.addedAt) > pushedAt) || Object.values(removed).some((word) => word.at > pushedAt);
 }
 
 /** Syncs shortly after the last change, so a burst of edits makes one request. Merging the server's answer is not a change. */
@@ -109,21 +141,24 @@ export function scheduleVocabularySync(): void {
 }
 
 /**
- * Sends a finished round to the server, which advances the schedules and returns the XP total;
- * then syncs so this device picks up the server's schedule for those words.
+ * Sends a finished round to the server, which logs it, advances the schedules and returns the XP;
+ * then syncs so this device picks up the server's schedule for those words. A resent round is
+ * recognised by the server and changes nothing.
  */
 export async function submitReviews(answers: ReviewAnswer[]): Promise<void> {
   if (!isApiConfigured || answers.length === 0 || !(await getToken())) return;
   try {
     const cards = new Map(useVocabularyStore.getState().cards.map((card) => [card.id, card]));
-    const { xp } = await endpoints.reviewCards(
+    const { xp } = await endpoints.reviewWords(
       answers.slice(0, 30).map((answer) => {
         const card = cards.get(answer.word);
         return {
-          word: answer.word,
+          id: card?.serverId ?? null,
+          word: card?.word ?? answer.word,
           language: card ? cardLanguage(card) : (studyLanguageOfWord(answer.word) ?? DEFAULT_STUDY_LANGUAGE),
-          correct: answer.correct,
+          rating: answer.rating,
           answered_at: iso(answer.answeredAt),
+          duration_ms: answer.durationMs ?? null,
         };
       }),
     );

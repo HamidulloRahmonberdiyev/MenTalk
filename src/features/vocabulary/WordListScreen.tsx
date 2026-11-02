@@ -39,7 +39,7 @@ export function WordListScreen() {
   const due = countDue(cards);
   const counts = useMemo(() => {
     const result: Record<Mastery, number> = { new: 0, learning: 0, known: 0, mastered: 0 };
-    for (const card of cards) result[masteryOf(card.stage)] += 1;
+    for (const card of cards) result[masteryOf(card)] += 1;
     return result;
   }, [cards]);
 
@@ -96,7 +96,7 @@ export function WordListScreen() {
               title={t('words.starter')}
               icon="sparkles"
               onPress={() => {
-                addWords(starterWords(studyLanguage, language));
+                addWords(starterWords(studyLanguage, language), 'lesson');
                 haptics.success();
               }}
               style={styles.starter}

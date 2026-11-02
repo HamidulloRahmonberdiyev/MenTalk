@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { submitReviews, type ReviewAnswer } from '@/services/session/vocabularySync';
 
 import { DEFAULT_ROUND_SIZE, buildRound, exerciseFor, isCorrect, type Exercise, type GameMode } from './exercises';
 import { PERFECT_BONUS, xpForAnswer } from './progress';
+import { ratingOf } from './srs';
 import { currentStudyCards, useVocabularyStore, visibleStreak } from './vocabularyStore';
 
 export interface Answer {
@@ -36,6 +37,11 @@ export function usePracticeSession(mode: GameMode) {
   const [summary, setSummary] = useState<RoundSummary | null>(null);
   const answered = useRef(new Set<string>());
   const answers = useRef<ReviewAnswer[]>([]);
+  /** When the current exercise appeared, to tell how long the answer took. */
+  const shownAt = useRef<number | null>(null);
+  useEffect(() => {
+    shownAt.current = Date.now();
+  }, [index]);
 
   const reviewWord = useVocabularyStore((state) => state.reviewWord);
   const finishRound = useVocabularyStore((state) => state.finishRound);
@@ -52,8 +58,10 @@ export function usePracticeSession(mode: GameMode) {
       const first = !answered.current.has(exercise.card.id);
       answered.current.add(exercise.card.id);
       if (first) {
-        reviewWord(exercise.card.id, correct);
-        answers.current.push({ word: exercise.card.id, correct, answeredAt: Date.now() });
+        const rating = ratingOf(correct);
+        const answeredAt = Date.now();
+        reviewWord(exercise.card.id, rating);
+        answers.current.push({ word: exercise.card.id, rating, answeredAt, durationMs: shownAt.current === null ? undefined : answeredAt - shownAt.current });
       }
 
       if (correct) {

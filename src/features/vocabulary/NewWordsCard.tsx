@@ -38,7 +38,7 @@ export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
             accessibilityRole="button"
             hitSlop={10}
             onPress={() => {
-              addWords(unsaved);
+              addWords(unsaved, 'ai_chat');
               haptics.success();
             }}
           >
@@ -64,7 +64,7 @@ export function NewWordsCard({ words }: { words: WordSuggestion[] }) {
               disabled={saved}
               hitSlop={10}
               onPress={() => {
-                addWords([item]);
+                addWords([item], 'ai_chat');
                 haptics.success();
               }}
             >

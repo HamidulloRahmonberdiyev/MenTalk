@@ -16,7 +16,7 @@ import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
-import { MAX_STAGE } from '../vocabulary/srs';
+import { MAX_LEVEL, levelOf } from '../vocabulary/srs';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
@@ -49,7 +49,7 @@ export function HomeScreen() {
   const recent = history.slice(0, RECENT_SCORES);
   const average = recent.length ? recent.reduce((sum, entry) => sum + entry.score, 0) / recent.length : 0;
   const topicsTried = new Set(history.map((entry) => entry.scenarioId)).size;
-  const learned = cards.length ? cards.reduce((sum, card) => sum + card.stage, 0) / (cards.length * MAX_STAGE) : 0;
+  const learned = cards.length ? cards.reduce((sum, card) => sum + levelOf(card), 0) / (cards.length * MAX_LEVEL) : 0;
   const minutes = Math.floor(minutesToday);
 
   const bars: SkillBar[] = [

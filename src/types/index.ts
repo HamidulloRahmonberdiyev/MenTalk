@@ -190,19 +190,36 @@ export interface WordSuggestion {
   example?: string;
   /** The inflected form as it appears in `example`, when it differs from `word`. */
   form?: string;
+  /** The language `translation` is written in; missing means the interface language at the time of saving. */
+  translationLanguage?: string;
 }
 
-/** A saved word plus its spaced-repetition state. */
+/** Where the learner stands with a word; follows from the schedule. Same values as the server. */
+export type WordStatus = 'new' | 'learning' | 'known';
+
+/** How a word reached the list. Same values as the server. */
+export type WordSource = 'ai_chat' | 'lesson' | 'manual';
+
+/** How well a word was recalled: again, hard, good, easy. */
+export type ReviewRating = 1 | 2 | 3 | 4;
+
+/** A saved word plus its SM-2 schedule (see `srs.ts`). */
 export interface VocabCard extends WordSuggestion {
+  /** Local key: the word in lowercase. */
   id: string;
+  /** The server's id, once the word has been synced. */
+  serverId?: string;
+  source?: WordSource;
   addedAt: number;
-  /** 0 (new) to 6 (mastered): how far along the review ladder the word is. */
-  stage: number;
+  status: WordStatus;
+  ease: number;
+  intervalDays: number;
+  /** Reviews in a row that were recalled; a miss resets it. */
+  repetitions: number;
+  lapses: number;
   /** When the word is next worth reviewing. */
   due: number;
-  /** Correct answers in a row. */
-  streak: number;
-  lapses: number;
+  lastReviewedAt?: number;
   /** Last local change (ms). Decides which side wins when the card is synced. */
   updatedAt?: number;
 }

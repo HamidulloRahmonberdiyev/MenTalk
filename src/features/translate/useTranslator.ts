@@ -4,6 +4,7 @@ import { Alert, Linking, Share } from 'react-native';
 
 import { useT } from '@/i18n';
 import { useVoiceCapture } from '@/features/conversation/useVoiceCapture';
+import { isUntouched } from '@/features/vocabulary/srs';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { GeminiError } from '@/services/gemini/client';
 import { isGeminiConfigured } from '@/services/gemini/config';
@@ -216,7 +217,7 @@ export function useTranslator() {
       return;
     }
     const card = vocabulary.cards.find((item) => item.id === word.word.toLowerCase());
-    if (card && card.stage === 0) vocabulary.removeWord(card.id);
+    if (card && isUntouched(card)) vocabulary.removeWord(card.id);
   }, [entry, toggleFavoriteInStore]);
 
   const reuse = useCallback(

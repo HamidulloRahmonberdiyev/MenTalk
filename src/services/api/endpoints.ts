@@ -1,5 +1,5 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { LearnerExperience, LevelSource, TutorCharacter, TutorTone } from '@/types';
+import type { LearnerExperience, LevelSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
 
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
 import { streamEvents } from './stream';
@@ -110,19 +110,40 @@ export interface ApiResult {
   new_words: ApiNewWord[];
 }
 
-export interface ApiCard {
+/** A word on the learner's list as the server keeps it: a dictionary word plus this learner's schedule. */
+export interface ApiUserWord {
+  id: string;
+  /** The dictionary spelling, which may differ from how this device wrote it. */
   word: string;
-  /** Missing on cards stored before English existed: those are Russian. */
-  language?: StudyLanguage;
-  translation: string;
-  example: string | null;
+  language: StudyLanguage;
+  pos: string | null;
+  transcription: string | null;
+  translation: string | null;
+  translation_language: string | null;
   form: string | null;
-  stage: number;
-  streak: number;
+  context_sentence: string | null;
+  source: WordSource;
+  status: WordStatus;
+  ease: number;
+  interval_days: number;
+  repetitions: number;
   lapses: number;
   due_at: string;
+  last_reviewed_at: string | null;
   updated_at: string;
   deleted: boolean;
+}
+
+/** A word as this device last saw it, for `POST /vocabulary/sync`. `id` is null until the server has assigned one. */
+export type ApiUserWordChange = Omit<ApiUserWord, 'id' | 'pos' | 'transcription'> & { id: string | null };
+
+export interface ApiReviewAnswer {
+  id: string | null;
+  word: string;
+  language: StudyLanguage;
+  rating: ReviewRating;
+  answered_at: string;
+  duration_ms: number | null;
 }
 
 /** `POST /pronunciation/assess`. `error_type` follows Azure: None, Mispronunciation, Omission, Insertion. */
@@ -195,8 +216,8 @@ export const endpoints = {
       idempotent: true,
       signal,
     }),
-  syncCards: (cursor: string | null, changes: ApiCard[]) =>
-    api<{ cards: ApiCard[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
-  reviewCards: (answers: { word: string; language: StudyLanguage; correct: boolean; answered_at: string }[]) =>
-    api<{ xp: number }>('POST', '/vocabulary/reviews', { body: { answers } }),
+  syncWords: (cursor: string | null, changes: ApiUserWordChange[]) =>
+    api<{ words: ApiUserWord[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
+  /** The server ignores answers it has already logged, so a round is safe to resend. */
+  reviewWords: (answers: ApiReviewAnswer[]) => api<{ xp: number }>('POST', '/vocabulary/reviews', { body: { answers }, idempotent: true }),
 };

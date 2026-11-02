@@ -56,7 +56,7 @@ function EmptyRound() {
           {t('practice.empty')}
         </AppText>
         <View style={styles.actions}>
-          <Button title={t('words.starter')} icon="sparkles" onPress={() => addWords(starterWords(studyLanguage, language))} />
+          <Button title={t('words.starter')} icon="sparkles" onPress={() => addWords(starterWords(studyLanguage, language), 'lesson')} />
           <Button title={t('practice.done.back')} variant="soft" onPress={() => router.back()} />
         </View>
       </View>

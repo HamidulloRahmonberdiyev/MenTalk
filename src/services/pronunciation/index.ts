@@ -8,10 +8,13 @@ import type { PronunciationService } from './types';
 
 export * from './types';
 
-/** Same choice as the conversation backend: the MenTalk server, else Gemini directly, else the mock. */
+/**
+ * Gemini directly whenever it is configured, even in prod: the MenTalk server has no
+ * `/pronunciation/assess` route yet (404). Then the server, else the mock.
+ */
 function create(): PronunciationService {
-  if (isApiConfigured) return new ApiPronunciationService();
-  return isGeminiConfigured ? new GeminiPronunciationService() : new MockPronunciationService();
+  if (isGeminiConfigured) return new GeminiPronunciationService();
+  return isApiConfigured ? new ApiPronunciationService() : new MockPronunciationService();
 }
 
 export const pronunciationService: PronunciationService = create();

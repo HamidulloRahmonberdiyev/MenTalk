@@ -96,7 +96,7 @@ export function ResourcesScreen() {
       gradient: ['#6A86F8', '#9A4BF0'],
       edge: '#7433C9',
       onPress: () => {
-        addWords(starterWords(studyLanguage, language));
+        addWords(starterWords(studyLanguage, language), 'lesson');
         haptics.success();
       },
     });

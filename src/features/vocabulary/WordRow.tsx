@@ -12,7 +12,7 @@ import { radii, spacing } from '@/theme';
 import type { VocabCard } from '@/types';
 
 import { masteryStyle } from './masteryStyle';
-import { MAX_STAGE, masteryOf } from './srs';
+import { MAX_LEVEL, levelOf, masteryOf } from './srs';
 import { SpeakerButton } from './SpeakerButton';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
@@ -25,7 +25,7 @@ export function WordRow({ card, onRemove }: WordRowProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
-  const mastery = masteryStyle(home)[masteryOf(card.stage)];
+  const mastery = masteryStyle(home)[masteryOf(card)];
   const [confirming, setConfirming] = useState(false);
   /** The row is removed only after the sheet has slid away; removing it first would cut the sheet off. */
   const removeWhenClosed = useRef(false);
@@ -47,8 +47,8 @@ export function WordRow({ card, onRemove }: WordRowProps) {
             </AppText>
           </View>
           <View style={styles.dots} accessibilityElementsHidden>
-            {Array.from({ length: MAX_STAGE }, (_, index) => (
-              <View key={index} style={[styles.dot, index < card.stage && { backgroundColor: mastery.color }]} />
+            {Array.from({ length: MAX_LEVEL }, (_, index) => (
+              <View key={index} style={[styles.dot, index < levelOf(card) && { backgroundColor: mastery.color }]} />
             ))}
           </View>
         </View>

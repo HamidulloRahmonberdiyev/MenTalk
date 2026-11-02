@@ -1,5 +1,6 @@
 import type { VocabCard } from '@/types';
 
+import { levelOf } from './srs';
 import { maskWord, normalizeWord } from './words';
 
 /**
@@ -37,7 +38,7 @@ const OPTION_COUNT = 4;
 /** What the word is called when it has to be written or recognised: the form seen in the sentence. */
 export const surfaceOf = (card: VocabCard): string => card.form ?? card.word;
 
-const KINDS_BY_STAGE: readonly (readonly ExerciseKind[])[] = [
+const KINDS_BY_LEVEL: readonly (readonly ExerciseKind[])[] = [
   ['choice'],
   ['choice', 'listen'],
   ['reverse', 'listen', 'cloze'],
@@ -102,13 +103,13 @@ function make(kind: ExerciseKind, card: VocabCard, others: VocabCard[], random: 
 
 /**
  * The exercise for one card: in a single-type mode that type, otherwise the preferred type for its
- * stage that the word list can support.
+ * level that the word list can support.
  */
 export function exerciseFor(card: VocabCard, all: VocabCard[], previous: ExerciseKind | null, random: Random, mode: GameMode = 'mixed'): Exercise {
   const others = all.filter((item) => item.id !== card.id);
   const only = mode === 'mixed' ? null : make(mode, card, others, random);
   if (only) return only;
-  const preferred = shuffle(KINDS_BY_STAGE[Math.min(card.stage, KINDS_BY_STAGE.length - 1)], random);
+  const preferred = shuffle(KINDS_BY_LEVEL[Math.min(levelOf(card), KINDS_BY_LEVEL.length - 1)], random);
   const ordered = [...preferred.filter((kind) => kind !== previous), ...preferred.filter((kind) => kind === previous)];
   for (const kind of [...ordered, 'choice', 'spell'] as ExerciseKind[]) {
     const exercise = make(kind, card, others, random);
@@ -121,7 +122,7 @@ export function exerciseFor(card: VocabCard, all: VocabCard[], previous: Exercis
 /** Due words first (most overdue first), topped up with the least-known words, then mixed. */
 export function pickCards(cards: VocabCard[], now: number, size: number, random: Random): VocabCard[] {
   const due = cards.filter((card) => card.due <= now).sort((a, b) => a.due - b.due);
-  const rest = cards.filter((card) => card.due > now).sort((a, b) => a.stage - b.stage || a.due - b.due);
+  const rest = cards.filter((card) => card.due > now).sort((a, b) => levelOf(a) - levelOf(b) || a.due - b.due);
   return shuffle([...due, ...rest].slice(0, size), random);
 }
 
