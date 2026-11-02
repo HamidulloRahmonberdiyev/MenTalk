@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -12,6 +13,7 @@ import { radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { countUnread, useNotificationsStore } from '../notifications/notificationsStore';
 import { countDue, useStudyCards } from '../vocabulary/vocabularyStore';
 
 interface HeaderButtonProps {
@@ -53,6 +55,10 @@ export function HomeHeader({ name }: { name: string }) {
   const t = useT();
   const avatarUrl = useUserStore((state) => state.avatarUrl);
   const due = countDue(useStudyCards());
+  const unread = useNotificationsStore(countUnread);
+
+  // Until the server sends notifications, a first launch gets the demo set so the bell has something to show.
+  useEffect(() => useNotificationsStore.getState().seedDemo(), []);
 
   return (
     <View style={styles.row}>
@@ -68,7 +74,7 @@ export function HomeHeader({ name }: { name: string }) {
       <AppText variant="heading" color={home.text} accessibilityRole="header" numberOfLines={1} style={styles.title}>
         {t('home.greetingName', { name })}
       </AppText>
-      <HeaderButton icon="chatbubble-ellipses-outline" label={t('tab.conversations')} href="/conversations" />
+      <HeaderButton icon="notifications-outline" label={t('notif.title')} href="/notifications" badge={unread} />
       <HeaderButton icon="book-outline" label={t('tab.words')} href="/words" badge={due} />
     </View>
   );
