@@ -74,6 +74,23 @@ export interface ApiHistoryItem {
   ended_at: string | null;
 }
 
+export interface ApiPathStage {
+  stage: number;
+  scenario_id: string;
+  status: 'passed' | 'open' | 'locked';
+  best_score: number | null;
+  attempts: number;
+  stars: number;
+  last_played_at: string | null;
+}
+
+export interface ApiPath {
+  language: string;
+  pass_score: number;
+  passed: number;
+  stages: ApiPathStage[];
+}
+
 export interface ApiTurn {
   id: number;
   transcript: string | null;
@@ -198,6 +215,7 @@ export const endpoints = {
   deleteAvatar: () => api<ApiUser>('DELETE', '/me/avatar'),
   stats: () => api<ApiStats>('GET', '/stats'),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
+  path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
 
   startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, signal?: AbortSignal) =>
     api<ApiOpening>('POST', '/conversations', {

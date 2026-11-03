@@ -5,17 +5,16 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
-import { AppText } from '@/components/ui/AppText';
-import { PressableScale } from '@/components/ui/PressableScale';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
-import { SCENARIOS, SCENARIO_MAP } from '@/mocks/scenarios';
+import { SCENARIOS } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { ReminderPrompt } from '../reminders/ReminderPrompt';
 import { useReminderRoute } from '../reminders/useReminderRoute';
+import { usePath } from '../path/usePath';
 import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { MAX_LEVEL, levelOf } from '../vocabulary/srs';
@@ -24,7 +23,7 @@ import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { SkillBars, type SkillBar } from './SkillBars';
-import { TopicCarousel } from './TopicCarousel';
+import { PathCard } from './PathCard';
 
 /** Average of the latest conversation scores (out of 10). */
 const RECENT_SCORES = 10;
@@ -51,7 +50,10 @@ export function HomeScreen() {
   const due = countDue(cards);
   const recent = history.slice(0, RECENT_SCORES);
   const average = recent.length ? recent.reduce((sum, entry) => sum + entry.score, 0) / recent.length : 0;
-  const topicsTried = new Set(history.map((entry) => entry.scenarioId)).size;
+  const stages = usePath();
+  const passedStages = stages.filter((stage) => stage.status === 'passed').length;
+  const openStage = stages.find((stage) => stage.status === 'open');
+  const unlocked = stages.filter((stage) => stage.status !== 'locked');
   const learned = cards.length ? cards.reduce((sum, card) => sum + levelOf(card), 0) / (cards.length * MAX_LEVEL) : 0;
   const minutes = Math.floor(minutesToday);
 
@@ -60,7 +62,7 @@ export function HomeScreen() {
     { key: 'score', icon: 'star', tint: '#E5A100', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
     { key: 'words', icon: 'book', tint: '#CE82FF', label: t('home.stats.words'), value: String(cards.length), progress: learned },
     { key: 'streak', icon: 'flame', tint: '#FF9600', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
-    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${topicsTried}/${SCENARIOS.length}`, progress: topicsTried / SCENARIOS.length },
+    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}`, progress: passedStages / stages.length },
   ];
 
   const shortcuts = useMemo<Shortcut[]>(
@@ -74,18 +76,19 @@ export function HomeScreen() {
         key: 'continue',
         label: t('home.menu.continue'),
         art: 'play',
-        onPress: () => openConversation(lastScenarioId ?? SCENARIOS[0].id),
+        // Carries on along the path; once it is all passed, back to the last chat.
+        onPress: () => openConversation(openStage?.scenario.id ?? lastScenarioId ?? SCENARIOS[0].id),
       },
       {
         key: 'random',
         label: t('home.menu.random'),
         art: 'dice',
-        onPress: () => openConversation(SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)].id),
+        onPress: () => openConversation(unlocked[Math.floor(Math.random() * unlocked.length)].scenario.id),
       },
       // Profile already has its own tab, so its slot went to pronunciation practice.
       { key: 'pronunciation', label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],
-    [t, lastScenarioId],
+    [t, lastScenarioId, openStage, unlocked],
   );
 
   return (
@@ -133,21 +136,11 @@ export function HomeScreen() {
               onPress={() => router.navigate('/words')}
             />
 
-            <View style={styles.sectionHeader}>
-              <AppText variant="heading" color={home.text} accessibilityRole="header">
-                {t('home.chooseTopic')}
-              </AppText>
-              <PressableScale hitSlop={10} onPress={() => router.push('/scenarios')} accessibilityRole="button">
-                <AppText variant="bodyStrong" color={home.accent}>
-                  {t('home.all')}
-                </AppText>
-              </PressableScale>
-            </View>
-            <TopicCarousel
-              scenarios={lastScenarioId ? [SCENARIO_MAP[lastScenarioId], ...SCENARIOS.filter((s) => s.id !== lastScenarioId)] : SCENARIOS}
-              onPress={(scenario) => openConversation(scenario.id)}
+            <PathCard
+              stages={stages}
+              onOpenPath={() => router.push('/scenarios')}
+              onStart={(stage) => openConversation(stage.scenario.id)}
             />
-
           </View>
         </Fragment>
       </ScrollView>
@@ -182,11 +175,5 @@ const createStyles = (home: Palette) => StyleSheet.create({
     marginBottom: spacing.sm,
     borderRadius: radii.pill,
     backgroundColor: home.handle,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
   },
 });

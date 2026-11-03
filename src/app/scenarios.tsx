@@ -1,3 +1,3 @@
-import { ScenariosScreen } from '@/features/scenarios/ScenariosScreen';
+import { PathScreen } from '@/features/path/PathScreen';
 
-export default ScenariosScreen;
+export default PathScreen;

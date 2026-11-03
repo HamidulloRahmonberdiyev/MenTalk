@@ -11,6 +11,7 @@ import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
 import { syncNotifications } from './notificationsSync';
+import { syncPath } from './pathSync';
 import { syncVocabulary } from './vocabularySync';
 
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
@@ -74,6 +75,7 @@ export async function hydrateFromServer(user: ApiUser): Promise<void> {
   }
   void syncVocabulary();
   void syncNotifications();
+  void syncPath();
 }
 
 async function signedIn(): Promise<boolean> {

@@ -6,6 +6,7 @@ import { cancelReminders } from '@/features/reminders/scheduler';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { isApiConfigured } from '@/services/api/config';
 import { onUnauthorized } from '@/services/api/tokenStore';
+import { usePathStore } from '@/store/pathStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 
@@ -15,6 +16,7 @@ import { scheduleVocabularySync, syncVocabulary } from './vocabularySync';
 
 export { syncNotifications } from './notificationsSync';
 export { pushOnboarding, refreshFromServer, saveAvatar, saveProfile, type ProfileEdits } from './profileSync';
+export { syncPath } from './pathSync';
 export { submitReviews } from './vocabularySync';
 
 /** Forgets the signed-in person's data on this device. */
@@ -22,6 +24,7 @@ export function endSession(): void {
   useUserStore.getState().reset();
   useVocabularyStore.getState().clear();
   useNotificationsStore.getState().reset();
+  usePathStore.getState().reset();
   // Reminders speak to one person by name; the next one to sign in starts fresh.
   cancelReminders();
   useRemindersStore.getState().reset();

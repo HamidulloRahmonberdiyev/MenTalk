@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { INITIAL_USER } from '@/mocks/user';
+import { usePathStore } from '@/store/pathStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { StudyLanguage } from '@/services/learning';
 import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, ScenarioId, UserProfile } from '@/types';
@@ -38,10 +39,12 @@ export const useUserStore = create<UserState>((set) => ({
     useSettingsStore.getState().setStudyLanguage(studyLanguage);
     set({ ...profile, onboarded: true });
   },
-  recordConversation: (scenarioId, durationSec, score) =>
+  recordConversation: (scenarioId, durationSec, score) => {
+    usePathStore.getState().record(useSettingsStore.getState().studyLanguage, scenarioId, score);
     set((state) => ({
       lastScenarioId: scenarioId,
       minutesToday: state.minutesToday + durationSec / 60,
       history: [{ id: `${Date.now()}`, scenarioId, durationSec, score, date: Date.now() }, ...state.history],
-    })),
+    }));
+  },
 }));
