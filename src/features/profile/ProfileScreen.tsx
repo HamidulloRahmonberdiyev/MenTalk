@@ -23,6 +23,8 @@ import { colors, radii, spacing } from '@/theme';
 import { enter } from '@/theme/motion';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { ReminderSettingsSheet } from '../reminders/ReminderSettingsSheet';
+import { formatTime, useRemindersStore } from '../reminders/remindersStore';
 import { useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { AppearanceSwitch } from './AppearanceSwitch';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -50,6 +52,9 @@ export function ProfileScreen() {
   const average = history.length ? (sum(history.map((entry) => entry.score)) / history.length).toFixed(1) : '–';
 
   const [choosingLanguage, setChoosingLanguage] = useState(false);
+  const [editingReminders, setEditingReminders] = useState(false);
+  const remindersOn = useRemindersStore((state) => state.enabled);
+  const reminderTime = useRemindersStore((state) => state.time);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const signedOut = useRef(false);
@@ -127,6 +132,13 @@ export function ProfileScreen() {
                 value={language ? `${language.flag} ${language.label}` : undefined}
                 onPress={() => setChoosingLanguage(true)}
               />
+              <SettingsRow
+                icon="notifications"
+                tint="#FF9600"
+                label={t('reminders.settings.title')}
+                value={remindersOn ? formatTime(reminderTime) : t('reminders.settings.off')}
+                onPress={() => setEditingReminders(true)}
+              />
               {__DEV__ ? (
                 <SettingsRow icon="happy" tint="#FF9600" label="Face lab" onPress={() => router.push('/face-lab' as Href)} />
               ) : null}
@@ -148,6 +160,8 @@ export function ProfileScreen() {
         </AppText>
         <LanguageSwitcher onSelect={() => setChoosingLanguage(false)} />
       </BottomSheet>
+
+      <ReminderSettingsSheet visible={editingReminders} onClose={() => setEditingReminders(false)} />
 
       <ConfirmSheet
         visible={confirmingLogout}

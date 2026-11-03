@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
 import Animated, {
   FadeIn,
@@ -40,6 +40,8 @@ interface PlacementTestProps {
 }
 
 const TOTAL = BAND_COUNT * PER_BAND;
+/** Long enough to see the chosen option light up, short enough to feel instant. */
+const AUTO_SUBMIT_MS = 400;
 
 /** Fisher–Yates on a copy, so the right answer is not always first. */
 function shuffled<T>(items: readonly T[]): T[] {
@@ -86,8 +88,28 @@ export function PlacementTest({
     return () => subscription.remove();
   }, [onExit]);
 
+  // Tapping an option is the answer: it lights up, then the next question comes by itself.
+  const submitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (submitTimer.current) clearTimeout(submitTimer.current);
+  }, []);
+
+  const choose = (option: string) => {
+    if (submitTimer.current) return;
+    haptics.selection();
+    setPicked(option);
+    submitTimer.current = setTimeout(() => {
+      submitTimer.current = null;
+      submit(option);
+    }, AUTO_SUBMIT_MS);
+  };
+
   const submit = (choice: string | null) => {
     if (!question) return;
+    if (submitTimer.current) {
+      clearTimeout(submitTimer.current);
+      submitTimer.current = null;
+    }
     const next = answerPlacement(state, choice === question.options[0]);
     if (next.finished) haptics.success();
     else haptics.light();
@@ -173,10 +195,7 @@ export function PlacementTest({
                   accessibilityRole="radio"
                   accessibilityState={{ checked: chosen }}
                   accessibilityLabel={option}
-                  onPress={() => {
-                    haptics.selection();
-                    setPicked(option);
-                  }}
+                  onPress={() => choose(option)}
                   edgeColor={chosen ? "#1A84BF" : home.rimBottom}
                   depth={4}
                   radius={radii.lg}
@@ -206,12 +225,6 @@ export function PlacementTest({
           title={t("placement.skip")}
           variant="soft"
           onPress={() => submit(null)}
-          style={styles.footerButton}
-        />
-        <Button
-          title={t("placement.check")}
-          disabled={picked === null}
-          onPress={() => submit(picked)}
           style={styles.footerButton}
         />
       </View>

@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
-import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
@@ -27,16 +26,28 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
   const t = useT();
   const [picked, setPicked] = useState<number[]>([]);
   const locked = answer !== null;
-  const complete = picked.length === exercise.tiles.length;
-  const spelled = picked.map((tile) => exercise.tiles[tile]).join('');
+
+  // The last letter is the answer: it is checked by itself, after a beat to see the word whole.
+  const submitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (submitTimer.current) clearTimeout(submitTimer.current);
+  }, []);
 
   const pick = (tile: number) => {
-    if (locked || picked.includes(tile)) return;
+    if (locked || picked.includes(tile) || submitTimer.current) return;
     haptics.selection();
-    setPicked((value) => [...value, tile]);
+    const next = [...picked, tile];
+    setPicked(next);
+    if (next.length === exercise.tiles.length) {
+      const word = next.map((index) => exercise.tiles[index]).join('');
+      submitTimer.current = setTimeout(() => {
+        submitTimer.current = null;
+        onSubmit(word);
+      }, AUTO_SUBMIT_MS);
+    }
   };
   const remove = (position: number) => {
-    if (locked) return;
+    if (locked || submitTimer.current) return;
     haptics.selection();
     setPicked((value) => value.filter((_, index) => index !== position));
   };
@@ -95,13 +106,13 @@ export function SpellExercise({ exercise, answer, onSubmit }: SpellExerciseProps
           </PressableScale>
         ))}
       </View>
-
-      {!locked ? <Button title={t('practice.check')} disabled={!complete} onPress={() => onSubmit(spelled)} /> : null}
     </View>
   );
 }
 
 const TILE = 48;
+/** Long enough to see the finished word, short enough to feel instant. */
+const AUTO_SUBMIT_MS = 350;
 
 const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { flex: 1, gap: spacing.xl },

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,6 +29,9 @@ import { PlacementTest } from './placement/PlacementTest';
 import { ProgressSegments } from './ProgressSegments';
 import { Reveal } from './Reveal';
 import { StepHero } from './StepHero';
+
+/** Long enough to see the choice light up, short enough to feel instant. */
+const AUTO_ADVANCE_MS = 380;
 
 type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'experience' | 'level' | 'goals' | 'focus' | 'daily' | 'plan';
 
@@ -70,6 +73,8 @@ export function OnboardingScreen() {
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [focus, setFocus] = useState<LearningFocus[]>([]);
   const [daily, setDaily] = useState<number>(10);
+  /** Pending move to the next step after a one-tap answer (see `autoAdvance`). */
+  const autoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Someone who never studied the language is a beginner; asking them to test or rate themselves is noise.
   const steps = useMemo(() => STEPS.filter(({ id }) => id !== 'level' || experience !== 'none'), [experience]);
@@ -94,6 +99,8 @@ export function OnboardingScreen() {
 
   const goBack = useCallback(() => {
     haptics.light();
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = null;
     if (step === 0) {
       router.back();
       return;
@@ -112,9 +119,27 @@ export function OnboardingScreen() {
   }, [step, goBack]);
 
   const advance = () => {
+    cancelAutoAdvance();
     setForward(true);
     setStep((value) => value + 1);
   };
+
+  // One-answer steps move on by themselves: the tap is the answer. A short beat lets the chosen
+  // card light up first, and a second tap within it (changing one's mind) restarts the wait.
+  const cancelAutoAdvance = () => {
+    if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
+    autoAdvanceTimer.current = null;
+  };
+  const autoAdvance = () => {
+    cancelAutoAdvance();
+    autoAdvanceTimer.current = setTimeout(() => {
+      autoAdvanceTimer.current = null;
+      haptics.light();
+      setForward(true);
+      setStep((value) => value + 1);
+    }, AUTO_ADVANCE_MS);
+  };
+  useEffect(() => cancelAutoAdvance, []);
 
   const goNext = () => {
     if (!canContinue) return;
@@ -148,6 +173,7 @@ export function OnboardingScreen() {
     if (language !== study) setPlacement(null);
     setStudy(language);
     setStudyLanguage(language);
+    autoAdvance();
   };
 
   const chooseExperience = (value: LearnerExperience) => {
@@ -161,11 +187,35 @@ export function OnboardingScreen() {
       setLevel(null);
       setLevelSource(null);
     }
+    autoAdvance();
   };
 
   const chooseLevel = (value: LearnerLevel) => {
     setLevel(value);
     setLevelSource(placement?.level === value ? 'placement' : 'self');
+    autoAdvance();
+  };
+
+  const chooseGender = (value: Gender) => {
+    setGender(value);
+    autoAdvance();
+  };
+
+  const chooseCountry = (value: CountryCode) => {
+    setCountry(value);
+    autoAdvance();
+  };
+
+  const chooseDaily = (minutes: number) => {
+    setDaily(minutes);
+    autoAdvance();
+  };
+
+  // The date is complete once a valid four-digit year is in; nothing is left to confirm.
+  const changeBirth = (value: BirthParts) => {
+    setBirth(value);
+    if (value.year.length === 4 && parseBirthDate(value.day, value.month, value.year)) autoAdvance();
+    else cancelAutoAdvance();
   };
 
   const finishPlacement = (result: PlacementResult) => {
@@ -208,7 +258,7 @@ export function OnboardingScreen() {
             </Reveal>
           </View>
           <Reveal index={2} style={styles.countryPicker}>
-            <CountryPicker value={country} onChange={setCountry} />
+            <CountryPicker value={country} onChange={chooseCountry} />
           </Reveal>
         </View>
       ) : (
@@ -267,14 +317,14 @@ export function OnboardingScreen() {
               {current.id === 'gender'
                 ? GENDERS.map(({ id, emoji }, index) => (
                     <Reveal key={id} index={2 + index}>
-                      <OptionCard emoji={emoji} title={t(`onb.gender.${id}`)} selected={gender === id} onPress={() => setGender(id)} />
+                      <OptionCard emoji={emoji} title={t(`onb.gender.${id}`)} selected={gender === id} onPress={() => chooseGender(id)} />
                     </Reveal>
                   ))
                 : null}
 
               {current.id === 'birth' ? (
                 <Reveal index={2}>
-                  <BirthDateField value={birth} onChange={setBirth} parsed={parsedBirth} />
+                  <BirthDateField value={birth} onChange={changeBirth} parsed={parsedBirth} />
                 </Reveal>
               ) : null}
 
@@ -369,7 +419,7 @@ export function OnboardingScreen() {
                         title={t('common.minutes', { n: minutes })}
                         description={t(`onb.daily.${minutes}`)}
                         selected={daily === minutes}
-                        onPress={() => setDaily(minutes)}
+                        onPress={() => chooseDaily(minutes)}
                       />
                     </Reveal>
                   ))}

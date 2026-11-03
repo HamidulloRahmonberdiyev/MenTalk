@@ -10,6 +10,7 @@ import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
+import { syncNotifications } from './notificationsSync';
 import { syncVocabulary } from './vocabularySync';
 
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
@@ -72,6 +73,7 @@ export async function hydrateFromServer(user: ApiUser): Promise<void> {
     profile.hydrate({ history: entries, lastScenarioId: entries[0]?.scenarioId ?? profile.lastScenarioId });
   }
   void syncVocabulary();
+  void syncNotifications();
 }
 
 async function signedIn(): Promise<boolean> {

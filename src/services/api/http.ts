@@ -119,6 +119,22 @@ async function sendWithRetry(method: string, path: string, options: RequestOptio
  * `idempotent`), and a 503 once more after the server's Retry-After.
  */
 export async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, options: RequestOptions = {}): Promise<T> {
+  const payload = await request<{ data: T } | undefined>(method, path, options);
+  return payload === undefined ? (undefined as T) : payload.data;
+}
+
+/** A cursor-paginated list, with the `meta` that `api()` would drop (`next_cursor` and extras). */
+export async function apiPage<T, M extends object = object>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ data: T[]; meta: M & { next_cursor: string | null } }> {
+  const payload = await request<{ data: T[]; meta: M & { next_cursor: string | null } }>('GET', path, options);
+  if (!payload) throw new ApiError(204, 'malformed_response');
+  return payload;
+}
+
+/** The whole JSON body, after the shared retry, 401 and error handling. */
+async function request<P>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, options: RequestOptions): Promise<P> {
   let sent = await sendWithRetry(method, path, options);
 
   if (sent.response.status === 503) {
@@ -132,7 +148,7 @@ export async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: st
     notifyUnauthorized();
   }
   if (!sent.response.ok) throw problemFrom(sent);
-  if (sent.response.status === 204) return undefined as T;
+  if (sent.response.status === 204) return undefined as P;
   if (!sent.payload) throw new ApiError(sent.response.status, 'malformed_response');
-  return (sent.payload as { data: T }).data;
+  return sent.payload as P;
 }

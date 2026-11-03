@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +12,9 @@ import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useT, type Translate, type TranslationKey } from '@/i18n';
+import { isApiConfigured } from '@/services/api/config';
 import { haptics } from '@/services/haptics';
+import { syncNotifications } from '@/services/session/notificationsSync';
 import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
@@ -65,7 +67,19 @@ export function NotificationsScreen() {
   // The clock the "5 min ago" labels read; ticks every minute while the screen is open.
   const [now, setNow] = useState(() => Date.now());
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(seedDemo, [seedDemo]);
+  // Fresh from the server each time the screen opens; what the device has shows meanwhile.
+  useEffect(() => {
+    void syncNotifications();
+  }, []);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await syncNotifications();
+    setRefreshing(false);
+  }, []);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), MINUTE);
     return () => clearInterval(timer);
@@ -110,6 +124,7 @@ export function NotificationsScreen() {
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxxl }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={isApiConfigured ? <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={home.textMuted} /> : undefined}
       >
         {unread > 0 ? (
           <Animated.View entering={enter.rise()}>

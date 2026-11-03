@@ -9,6 +9,7 @@ import { stopSpeaking } from '@/services/speech';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { WordSuggestion } from '@/types';
 
+import { useRemindersStore } from '../reminders/remindersStore';
 import { isUntouched } from '../vocabulary/srs';
 import { findCard, useVocabularyStore } from '../vocabulary/vocabularyStore';
 import { phrasesFor, type PhraseLevel } from './phrases';
@@ -76,6 +77,7 @@ export function usePronunciation(): Pronunciation {
           setSaved(fresh);
           setResult(assessed);
           setPhase('result');
+          useRemindersStore.getState().markActive();
           if (assessed.score >= 80) haptics.success();
           else haptics.light();
         })

@@ -20,4 +20,6 @@ export interface AppNotification {
   read: boolean;
   /** Where tapping it leads, with the label of its button. */
   action?: { href: Href; label: NotificationText };
+  /** Came from the server: reading or removing it is reported back. */
+  remote?: boolean;
 }

@@ -30,13 +30,17 @@ export function useT(): Translate {
   const language = useSettingsStore((state) => state.language);
   const study = useSettingsStore((state) => state.studyLanguage);
 
-  return useCallback<Translate>(
-    (key, params) => {
-      const dictionary = DICTIONARIES[language] as Record<string, string | undefined>;
-      const text = dictionary[`${key}@${study}`] ?? dictionary[key] ?? key;
-      const values: Record<string, string | number> = { tutor: dictionary[`tutor.name@${study}`] ?? dictionary['tutor.name'] ?? '', ...params };
-      return text.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
-    },
-    [language, study],
-  );
+  return useCallback<Translate>((key, params) => translateIn(language, study, key, params), [language, study]);
+}
+
+/** The same lookup as `useT()`, for code outside React (notification texts, services). */
+export function translatorFor(language: Language, study: string = useSettingsStore.getState().studyLanguage): Translate {
+  return (key, params) => translateIn(language, study, key, params);
+}
+
+function translateIn(language: Language, study: string, key: TranslationKey, params?: Record<string, string | number>): string {
+  const dictionary = DICTIONARIES[language] as Record<string, string | undefined>;
+  const text = dictionary[`${key}@${study}`] ?? dictionary[key] ?? key;
+  const values: Record<string, string | number> = { tutor: dictionary[`tutor.name@${study}`] ?? dictionary['tutor.name'] ?? '', ...params };
+  return text.replace(/\{(\w+)\}/g, (_, name: string) => String(values[name] ?? ''));
 }

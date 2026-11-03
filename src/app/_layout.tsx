@@ -2,12 +2,14 @@ import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { startReminders } from '@/features/reminders/scheduler';
 import { startSession } from '@/services/session';
 import { usePalette } from '@/theme/appearance';
 
 export default function RootLayout() {
   const home = usePalette();
   useEffect(() => startSession(() => router.replace('/')), []);
+  useEffect(startReminders, []);
 
   return (
     <>

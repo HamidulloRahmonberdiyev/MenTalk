@@ -14,6 +14,8 @@ import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { ReminderPrompt } from '../reminders/ReminderPrompt';
+import { useReminderRoute } from '../reminders/useReminderRoute';
 import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { MAX_LEVEL, levelOf } from '../vocabulary/srs';
@@ -36,6 +38,7 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { refreshControl, version } = useRefreshControl();
   const [picking, setPicking] = useState(false);
+  useReminderRoute();
 
   const name = useUserStore((state) => state.name);
   const goalMinutes = useUserStore((state) => state.dailyGoalMinutes);
@@ -149,6 +152,7 @@ export function HomeScreen() {
         </Fragment>
       </ScrollView>
       <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
+      <ReminderPrompt />
     </View>
   );
 }

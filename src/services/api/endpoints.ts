@@ -1,7 +1,7 @@
 import type { StudyLanguage } from '@/services/learning';
 import type { LearnerExperience, LevelSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
 
-import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api } from './http';
+import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api, apiPage } from './http';
 import { streamEvents } from './stream';
 
 export interface ApiUser {
@@ -155,6 +155,22 @@ export interface ApiPronunciation {
   new_words?: { word: string; form: string | null; translation: string }[];
 }
 
+/** A notification already put into words by the server, in the language asked for. */
+export interface ApiNotification {
+  id: string;
+  type: string;
+  kind: string;
+  title: string;
+  body: string;
+  /** `target` names a screen, not a path; unknown ones are ignored. */
+  action: { target: string; label: string } | null;
+  read: boolean;
+  created_at: string;
+}
+
+/** Either the listed notifications or all of them (up to `before`, when given). */
+export type ApiNotificationSelection = { ids: string[] } | { all: true; before?: string };
+
 export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & { tone?: TutorTone };
 
 /**
@@ -220,4 +236,12 @@ export const endpoints = {
     api<{ words: ApiUserWord[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
   /** The server ignores answers it has already logged, so a round is safe to resend. */
   reviewWords: (answers: ApiReviewAnswer[]) => api<{ xp: number }>('POST', '/vocabulary/reviews', { body: { answers }, idempotent: true }),
+
+  notifications: (language: 'uz' | 'ru' | 'en', limit = 50) =>
+    apiPage<ApiNotification, { unread_count: number }>(`/notifications?limit=${limit}&lang=${language}`),
+  /** Both are idempotent on the server: ids already read, deleted or unknown are skipped. */
+  readNotifications: (selection: ApiNotificationSelection) =>
+    api<{ unread_count: number }>('POST', '/notifications/read', { body: selection, idempotent: true }),
+  deleteNotifications: (selection: ApiNotificationSelection) =>
+    api<{ unread_count: number }>('POST', '/notifications/delete', { body: selection, idempotent: true }),
 };
