@@ -6,6 +6,8 @@ import { translatorFor, type TranslationKey } from '@/i18n';
 import { SCENARIOS } from '@/mocks/scenarios';
 import { isApiConfigured } from '@/services/api/config';
 import { getToken } from '@/services/api/tokenStore';
+import { ACTION_ROUTES } from '@/services/session/notificationsSync';
+import { PUSH_SOURCE, registerPush } from '@/services/session/pushSync';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 
@@ -61,7 +63,10 @@ export async function requestReminderPermission(): Promise<boolean> {
   await ensureChannel();
   const settings = await Notifications.requestPermissionsAsync({ ios: { allowAlert: true, allowSound: true, allowBadge: false } });
   const granted = grantedFrom(settings);
-  if (granted) scheduleReschedule(0);
+  if (granted) {
+    scheduleReschedule(0);
+    void registerPush();
+  }
   return granted;
 }
 
@@ -194,6 +199,8 @@ const routeListeners = new Set<() => void>();
 function routeOf(response: Notifications.NotificationResponse): Href | null {
   if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return null;
   const data = response.notification.request.content.data;
+  // A push without a screen of its own opens the inbox, where its full text is.
+  if (data?.source === PUSH_SOURCE) return (typeof data.action === 'string' && ACTION_ROUTES[data.action]) || '/notifications';
   const ours = data?.source === SOURCE || data?.source === PREVIEW_SOURCE;
   return ours && typeof data.url === 'string' && ALLOWED_ROUTES.has(data.url) ? (data.url as Href) : null;
 }
@@ -234,7 +241,8 @@ export function startReminders(): () => void {
     // Inside the app the learner is already practising: a reminder would only interrupt.
     handleNotification: async (notification) => {
       const reminder = notification.request.content.data?.source === SOURCE;
-      return { shouldShowBanner: !reminder, shouldShowList: !reminder, shouldPlaySound: false, shouldSetBadge: false };
+      // On Android a silent notification does not drop down, so the banner needs the sound on too.
+      return { shouldShowBanner: !reminder, shouldShowList: !reminder, shouldPlaySound: !reminder, shouldSetBadge: false };
     },
   });
 

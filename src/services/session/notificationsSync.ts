@@ -14,7 +14,7 @@ const FLUSH_DEBOUNCE_MS = 1_000;
 const MAX_IDS = 100;
 
 /** The screens the server may point at, by name. Anything else is shown without a button. */
-const ACTION_ROUTES: Record<string, Href> = {
+export const ACTION_ROUTES: Record<string, Href> = {
   scenarios: '/scenarios',
   words: '/words',
   practice: '/practice',

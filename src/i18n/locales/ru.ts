@@ -500,6 +500,8 @@ export const ru: Dictionary = {
   'notif.demo.news.body': "Спокойный, весёлый или сердитый: голос теперь звучит в выбранном тоне.",
   'reminders.channel.name': "Напоминания об учёбе",
   'reminders.channel.description': "Дружеские напоминания поговорить, повторить слова и сохранить серию.",
+  'push.channel.name': "Новости и достижения",
+  'push.channel.description': "Объявления MenTalk и сообщения о ваших достижениях.",
   'reminders.prompt.title': "Напоминать вам? 🔔",
   'reminders.prompt.text': "Раз в день в {time}: короткое напоминание поговорить, повторить слова или сохранить серию. Без спама, обещаем.",
   'reminders.prompt.allow': "Да, напоминать",

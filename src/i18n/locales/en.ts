@@ -498,6 +498,8 @@ export const en = {
   'notif.demo.news.body': "Calm, funny or angry: the voice now matches the tone you pick.",
   'reminders.channel.name': "Learning reminders",
   'reminders.channel.description': "Friendly nudges to talk, review words and keep your streak.",
+  'push.channel.name': "News and achievements",
+  'push.channel.description': "MenTalk announcements and news about your achievements.",
   'reminders.prompt.title': "Shall I remind you? 🔔",
   'reminders.prompt.text': "Once a day at {time}: a short nudge to talk, review words or keep your streak. No spam, promise.",
   'reminders.prompt.allow': "Yes, remind me",

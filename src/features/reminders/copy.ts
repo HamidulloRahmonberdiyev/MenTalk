@@ -49,6 +49,7 @@ const uz: Catalogue = {
     { title: '{n} ta so‘z sizni chaqiryapti 🔔', body: 'Tezkor o‘yin: to‘g‘ri javoblar, kombo va XP. Boshladikmi?' },
   ],
   talk: [
+    { title: 'Bugun hali suhbat qilmadingiz 💬', body: '{tutor} sizni kutyapti. 5 daqiqalik suhbat — va kun bekor ketmaydi.' },
     { title: '{tutor} bilan 5 daqiqa? ☕', body: 'Bugungi kayfiyatingiz haqida gaplashing — tarjimasiz, bemalol.' },
     { title: 'Gapirish — eng tez yo‘l 🚀', body: '{name}, bugun bitta jonli suhbat bir hafta o‘qishdan foydaliroq.' },
     { title: '{tutor} yangi savol tayyorladi 💬', body: 'Kirib javob bering — u sizni tinglashga tayyor.' },
@@ -59,6 +60,7 @@ const uz: Catalogue = {
     { title: '{topic} — tayyormisiz? 🎬', body: '{tutor} rol o‘ynashga tayyor. Siz bosh qahramonsiz.' },
   ],
   game: [
+    { title: 'Bugun hali lug‘at yodlamadingiz 📚', body: 'Bitta tezkor o‘yin — 3 daqiqa, va yangi so‘zlar xotirada qoladi.' },
     { title: 'Tezkor o‘yin vaqti 🎮', body: '10 ta savol, kombo va XP. Rekordingizni yangilay olasizmi?' },
     { title: 'Miyangizni qizdirib oling 🧩', body: 'Bitta so‘z o‘yini — kofe tayyor bo‘lguncha tugaydi ☕' },
   ],
@@ -104,6 +106,7 @@ const ru: Catalogue = {
     { title: 'Вас зовут слова: {n} 🔔', body: 'Быстрая игра: верные ответы, комбо и XP. Начнём?' },
   ],
   talk: [
+    { title: 'Сегодня вы ещё не разговаривали 💬', body: '{tutor} ждёт вас. Всего 5 минут разговора — и день прошёл не зря.' },
     { title: '5 минут с {tutor}? ☕', body: 'Расскажите, как прошёл день — без перевода и без спешки.' },
     { title: 'Говорить — самый быстрый путь 🚀', body: '{name}, один живой разговор полезнее недели зубрёжки.' },
     { title: '{tutor} приготовила новый вопрос 💬', body: 'Загляните и ответьте — вас готовы выслушать.' },
@@ -114,6 +117,7 @@ const ru: Catalogue = {
     { title: '{topic} — готовы? 🎬', body: '{tutor} готова к ролевой игре. Главная роль — ваша.' },
   ],
   game: [
+    { title: 'Сегодня вы ещё не учили слова 📚', body: 'Одна быстрая игра на 3 минуты — и новые слова останутся в памяти.' },
     { title: 'Время быстрой игры 🎮', body: '10 вопросов, комбо и XP. Побьёте свой рекорд?' },
     { title: 'Разомните мозг 🧩', body: 'Одна игра со словами — успеете, пока закипает чайник ☕' },
   ],
@@ -159,6 +163,7 @@ const en: Catalogue = {
     { title: '{n} words are calling 🔔', body: 'Quick game: right answers, combos and XP. Ready?' },
   ],
   talk: [
+    { title: "You haven't talked today 💬", body: '{tutor} is waiting. Five minutes of talking and today counts.' },
     { title: '5 minutes with {tutor}? ☕', body: 'Talk about your day — no translation, no rush.' },
     { title: 'Speaking is the fastest way 🚀', body: '{name}, one real conversation beats a week of cramming.' },
     { title: '{tutor} has a new question 💬', body: 'Pop in and answer — someone is ready to listen.' },
@@ -169,6 +174,7 @@ const en: Catalogue = {
     { title: '{topic} — ready? 🎬', body: '{tutor} is ready to role-play. You play the lead.' },
   ],
   game: [
+    { title: "You haven't studied words today 📚", body: 'One quick 3-minute game and the new words will stick.' },
     { title: 'Quick game time 🎮', body: '10 questions, combos and XP. Can you beat your record?' },
     { title: 'Warm up your brain 🧩', body: 'One word game — done before the kettle boils ☕' },
   ],

@@ -262,4 +262,7 @@ export const endpoints = {
     api<{ unread_count: number }>('POST', '/notifications/read', { body: selection, idempotent: true }),
   deleteNotifications: (selection: ApiNotificationSelection) =>
     api<{ unread_count: number }>('POST', '/notifications/delete', { body: selection, idempotent: true }),
+  /** Registering the same device again changes nothing, so it is safe to resend. */
+  registerPushToken: (token: string, platform: 'android' | 'ios') =>
+    api<void>('POST', '/me/push-token', { body: { token, platform }, idempotent: true }),
 };

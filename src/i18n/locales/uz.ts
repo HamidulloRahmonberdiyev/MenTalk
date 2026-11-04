@@ -500,6 +500,8 @@ export const uz: Dictionary = {
   'notif.demo.news.body': "Sokin, quvnoq yoki jahldor: ovoz endi tanlagan ohangingizga mos chiqadi.",
   'reminders.channel.name': "O‘qish eslatmalari",
   'reminders.channel.description': "Suhbat, so‘z takrorlash va seriyani saqlash haqida do‘stona eslatmalar.",
+  'push.channel.name': "Yangiliklar va yutuqlar",
+  'push.channel.description': "MenTalk e’lonlari va yutuqlaringiz haqida xabarlar.",
   'reminders.prompt.title': "Eslatib turaymi? 🔔",
   'reminders.prompt.text': "Kuniga bir marta, soat {time} da: suhbat, so‘z takrorlash yoki seriyani saqlash haqida qisqa eslatma. Spam yo‘q, va’da.",
   'reminders.prompt.allow': "Ha, eslatib tur",

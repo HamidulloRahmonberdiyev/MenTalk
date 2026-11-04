@@ -12,6 +12,7 @@ import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperienc
 
 import { syncNotifications } from './notificationsSync';
 import { syncPath } from './pathSync';
+import { registerPush } from './pushSync';
 import { syncVocabulary } from './vocabularySync';
 
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
@@ -76,6 +77,7 @@ export async function hydrateFromServer(user: ApiUser): Promise<void> {
   void syncVocabulary();
   void syncNotifications();
   void syncPath();
+  void registerPush();
 }
 
 async function signedIn(): Promise<boolean> {

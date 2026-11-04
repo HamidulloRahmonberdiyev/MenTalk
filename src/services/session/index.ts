@@ -12,6 +12,7 @@ import { useUserStore } from '@/store/userStore';
 
 import { scheduleNotificationsFlush, syncNotifications } from './notificationsSync';
 import { pushLanguage } from './profileSync';
+import { forgetPushRegistration, registerPush, startPush } from './pushSync';
 import { scheduleVocabularySync, syncVocabulary } from './vocabularySync';
 
 export { syncNotifications } from './notificationsSync';
@@ -28,6 +29,7 @@ export function endSession(): void {
   // Reminders speak to one person by name; the next one to sign in starts fresh.
   cancelReminders();
   useRemindersStore.getState().reset();
+  forgetPushRegistration();
 }
 
 /**
@@ -39,6 +41,7 @@ export function startSession(onSignedOut: () => void): () => void {
   if (!isApiConfigured) return () => undefined;
 
   const unsubscribers = [
+    startPush(),
     useVocabularyStore.subscribe((state, previous) => {
       if (state.cards !== previous.cards || state.removed !== previous.removed) scheduleVocabularySync();
     }),
@@ -50,6 +53,8 @@ export function startSession(onSignedOut: () => void): () => void {
       void pushLanguage(state.language);
       // The server words notifications in the language asked for, so they are fetched again.
       void syncNotifications();
+      // Renames the Android channel.
+      void registerPush();
     }),
     onUnauthorized(() => {
       endSession();
@@ -60,6 +65,8 @@ export function startSession(onSignedOut: () => void): () => void {
     if (status !== 'active') return;
     void syncVocabulary();
     void syncNotifications();
+    // Notifications may have just been allowed in the phone's settings.
+    void registerPush();
   });
 
   return () => {

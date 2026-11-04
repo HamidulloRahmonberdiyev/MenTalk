@@ -44,3 +44,6 @@ example
 
 # local env files with secrets
 .env
+
+# Firebase service account key: goes to EAS, never to git (google-services.json is public and stays)
+*firebase-adminsdk*.json

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "896280779321",
+    "project_id": "devtip-1f232",
+    "storage_bucket": "devtip-1f232.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:896280779321:android:fbe94d351f4a4b55690be8",
+        "android_client_info": {
+          "package_name": "com.hamidullo_rahmonberdiyev.govori"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "896280779321-v8br9ecafltmudu4c0teimj9l934sreu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoNkXi2kjc3vZUQA8vtYaVr2vwHChTip4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "896280779321-v8br9ecafltmudu4c0teimj9l934sreu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
