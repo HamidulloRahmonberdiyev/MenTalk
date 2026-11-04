@@ -1,5 +1,8 @@
+import type { FontAwesome6 } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
+
 import type { StudyLanguage } from '@/services/learning';
-import type { Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal } from '@/types';
+import type { Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, ReferralSource } from '@/types';
 
 export const STUDY_OPTIONS: readonly { id: StudyLanguage; emoji: string }[] = [
   { id: 'ru', emoji: '🇷🇺' },
@@ -36,6 +39,18 @@ export const EXPERIENCES: readonly { id: LearnerExperience; emoji: string }[] = 
   { id: 'self_taught', emoji: '📱' },
   { id: 'courses', emoji: '👩‍🏫' },
   { id: 'immersion', emoji: '🌆' },
+];
+
+/** Brand colours stay as they are; `null` follows the theme, as TikTok's black would vanish on dark. */
+export const REFERRAL_SOURCES: readonly { id: ReferralSource; icon: ComponentProps<typeof FontAwesome6>['name']; color: string | null }[] = [
+  { id: 'instagram', icon: 'instagram', color: '#E4405F' },
+  { id: 'telegram', icon: 'telegram', color: '#26A5E4' },
+  { id: 'tiktok', icon: 'tiktok', color: null },
+  { id: 'youtube', icon: 'youtube', color: '#FF0000' },
+  { id: 'friend', icon: 'user-group', color: null },
+  { id: 'search', icon: 'google', color: '#4285F4' },
+  { id: 'store', icon: 'mobile-screen', color: null },
+  { id: 'other', icon: 'ellipsis', color: null },
 ];
 
 export const GOALS: readonly { id: LearningGoal; emoji: string }[] = [

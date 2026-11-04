@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
@@ -8,7 +9,9 @@ import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 interface OptionCardProps {
-  emoji: string;
+  emoji?: string;
+  /** Takes the emoji's place, for answers better shown by a logo. */
+  icon?: ReactNode;
   title: string;
   description?: string;
   selected: boolean;
@@ -24,7 +27,7 @@ interface OptionCardProps {
 const SELECTED_EDGE = '#1A84BF';
 
 /** A chunky answer card: it rests on a darker edge, sinks when pressed and turns blue when chosen. */
-export function OptionCard({ emoji, title, description, selected, onPress, tile = false, multi = false, tag }: OptionCardProps) {
+export function OptionCard({ emoji, icon, title, description, selected, onPress, tile = false, multi = false, tag }: OptionCardProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   return (
@@ -43,7 +46,7 @@ export function OptionCard({ emoji, title, description, selected, onPress, tile 
       faceStyle={[styles.card, tile ? styles.tile : styles.row, selected && styles.selected]}
     >
       <View style={[styles.emojiWrap, tile && styles.emojiWrapTile, selected && styles.emojiWrapSelected]}>
-        <AppText style={tile ? styles.emojiTile : styles.emoji}>{emoji}</AppText>
+        {icon ?? <AppText style={tile ? styles.emojiTile : styles.emoji}>{emoji}</AppText>}
       </View>
       <View style={tile ? styles.tileTexts : styles.texts}>
         <View style={styles.titleRow}>

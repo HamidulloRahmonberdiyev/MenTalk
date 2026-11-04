@@ -8,7 +8,7 @@ import { isStudyLanguage, type StudyLanguage } from '@/services/learning';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
-import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
+import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type ReferralSource, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
 import { syncNotifications } from './notificationsSync';
 import { syncPath } from './pathSync';
@@ -96,7 +96,7 @@ export async function refreshFromServer(): Promise<void> {
 }
 
 /** Saves the onboarding answers on the server. Failures are quiet: the local profile stays valid. */
-export async function pushOnboarding(data: OnboardingData): Promise<void> {
+export async function pushOnboarding(data: OnboardingData, referralSource: ReferralSource): Promise<void> {
   if (!(await signedIn())) return;
   await endpoints
     .updateMe({
@@ -109,6 +109,7 @@ export async function pushOnboarding(data: OnboardingData): Promise<void> {
       // The server only accepts a score alongside a placement result.
       ...(data.levelSource === 'placement' ? { placement_score: data.placementScore } : {}),
       experience: data.experience,
+      referral_source: referralSource,
       goals: data.goals,
       focus: data.focus,
       daily_goal_minutes: data.dailyGoalMinutes,

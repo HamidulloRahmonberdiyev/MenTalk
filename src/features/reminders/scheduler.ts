@@ -21,7 +21,9 @@ import { useRemindersStore } from './remindersStore';
  * changes (practice, words, settings, language) and each time the app goes to the background.
  */
 
-const CHANNEL_ID = 'reminders';
+/** Android fixes a channel's importance when it is created, so raising it took a new id. */
+const CHANNEL_ID = 'reminders-high';
+const LEGACY_CHANNEL_ID = 'reminders';
 /** Marks our notifications, so others (if any are added later) are never cancelled by mistake. */
 const SOURCE = 'mentalk-reminder';
 const PREVIEW_SOURCE = 'mentalk-reminder-preview';
@@ -48,10 +50,12 @@ async function ensureChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   const t = translatorFor(useSettingsStore.getState().language);
   // Re-run on language change: Android lets an existing channel be renamed, nothing more.
+  await Notifications.deleteNotificationChannelAsync(LEGACY_CHANNEL_ID);
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: t('reminders.channel.name'),
     description: t('reminders.channel.description'),
-    importance: Notifications.AndroidImportance.DEFAULT,
+    // High, so a reminder drops down over the screen while the app is closed.
+    importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 180, 120, 180],
     lightColor: '#1CB0F6',
   });

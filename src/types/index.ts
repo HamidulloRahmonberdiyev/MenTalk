@@ -89,6 +89,8 @@ export type LearningGoal = 'travel' | 'work' | 'study' | 'relocation' | 'family'
 export type LearnerExperience = 'none' | 'school' | 'self_taught' | 'courses' | 'immersion';
 /** A skill the learner finds hard and wants the tutor to work on. */
 export type LearningFocus = 'speaking' | 'listening' | 'vocabulary' | 'grammar' | 'pronunciation' | 'confidence';
+/** Where the learner first heard of the app. */
+export type ReferralSource = 'instagram' | 'telegram' | 'tiktok' | 'youtube' | 'friend' | 'search' | 'store' | 'other';
 /** 'placement': measured by the onboarding test; 'self': picked by hand. */
 export type LevelSource = 'placement' | 'self';
 

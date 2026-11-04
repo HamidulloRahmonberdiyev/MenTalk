@@ -1,5 +1,5 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { LearnerExperience, LevelSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
+import type { LearnerExperience, LevelSource, ReferralSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
 
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api, apiPage } from './http';
 import { streamEvents } from './stream';
@@ -18,6 +18,7 @@ export interface ApiUser {
   level_source?: LevelSource | null;
   placement_score?: number | null;
   experience?: LearnerExperience | null;
+  referral_source?: ReferralSource | null;
   goals: string[];
   focus?: string[];
   ui_language: 'uz' | 'ru' | 'en' | null;
@@ -43,6 +44,7 @@ export type ApiProfilePatch = Partial<
     | 'level_source'
     | 'placement_score'
     | 'experience'
+    | 'referral_source'
     | 'goals'
     | 'focus'
     | 'ui_language'

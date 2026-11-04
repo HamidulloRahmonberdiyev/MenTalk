@@ -28,7 +28,7 @@ async function ensureChannel(): Promise<void> {
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
     name: t('push.channel.name'),
     description: t('push.channel.description'),
-    // High, unlike reminders: these are news of the moment and should drop down over the screen.
+    // High, so these drop down over the screen while the app is closed.
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 180, 120, 180],
     lightColor: '#1CB0F6',

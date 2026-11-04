@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,23 +17,25 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
-import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource } from '@/types';
+import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, ReferralSource } from '@/types';
 
 import { BirthDateField, type BirthParts } from './BirthDateField';
 import { parseBirthDate } from './birthDate';
 import { CountryPicker } from './CountryPicker';
 import { OptionCard } from './OptionCard';
-import { DAILY, EXPERIENCES, FOCUS, GENDERS, GOALS, LEVELS, STUDY_OPTIONS, levelLook } from './options';
+import { DAILY, EXPERIENCES, FOCUS, GENDERS, GOALS, LEVELS, REFERRAL_SOURCES, STUDY_OPTIONS, levelLook } from './options';
 import type { PlacementResult } from './placement/placement';
 import { PlacementTest } from './placement/PlacementTest';
 import { ProgressSegments } from './ProgressSegments';
 import { Reveal } from './Reveal';
 import { StepHero } from './StepHero';
 
+const SOURCE_ICON_SIZE = 26;
+
 /** Long enough to see the choice light up, short enough to feel instant. */
 const AUTO_ADVANCE_MS = 380;
 
-type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'experience' | 'level' | 'goals' | 'focus' | 'daily' | 'plan';
+type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'source' | 'experience' | 'level' | 'goals' | 'focus' | 'daily' | 'plan';
 
 const STEPS: readonly { id: StepId; emoji: string }[] = [
   { id: 'study', emoji: '💬' },
@@ -41,6 +43,7 @@ const STEPS: readonly { id: StepId; emoji: string }[] = [
   { id: 'gender', emoji: '🙋' },
   { id: 'country', emoji: '🌍' },
   { id: 'birth', emoji: '🎂' },
+  { id: 'source', emoji: '📣' },
   { id: 'experience', emoji: '📖' },
   { id: 'level', emoji: '📊' },
   { id: 'goals', emoji: '🧭' },
@@ -65,6 +68,7 @@ export function OnboardingScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [country, setCountry] = useState<CountryCode | null>(null);
   const [birth, setBirth] = useState<BirthParts>({ day: '', month: '', year: '' });
+  const [source, setSource] = useState<ReferralSource | null>(null);
   const [experience, setExperience] = useState<LearnerExperience | null>(null);
   const [level, setLevel] = useState<LearnerLevel | null>(null);
   const [levelSource, setLevelSource] = useState<LevelSource | null>(null);
@@ -89,6 +93,7 @@ export function OnboardingScreen() {
     gender: gender !== null,
     country: country !== null,
     birth: parsedBirth !== null,
+    source: source !== null,
     experience: experience !== null,
     level: level !== null,
     goals: goals.length > 0,
@@ -147,7 +152,7 @@ export function OnboardingScreen() {
       advance();
       return;
     }
-    if (!study || !gender || !country || !level || !levelSource || !experience || !parsedBirth) return;
+    if (!study || !gender || !country || !level || !levelSource || !experience || !parsedBirth || !source) return;
     haptics.success();
     const answers = {
       studyLanguage: study,
@@ -164,7 +169,7 @@ export function OnboardingScreen() {
       dailyGoalMinutes: daily,
     };
     completeOnboarding(answers);
-    void pushOnboarding(answers);
+    void pushOnboarding(answers, source);
     router.replace('/home');
   };
 
@@ -203,6 +208,11 @@ export function OnboardingScreen() {
 
   const chooseCountry = (value: CountryCode) => {
     setCountry(value);
+    autoAdvance();
+  };
+
+  const chooseSource = (value: ReferralSource) => {
+    setSource(value);
     autoAdvance();
   };
 
@@ -326,6 +336,22 @@ export function OnboardingScreen() {
                 <Reveal index={2}>
                   <BirthDateField value={birth} onChange={changeBirth} parsed={parsedBirth} />
                 </Reveal>
+              ) : null}
+
+              {current.id === 'source' ? (
+                <View style={styles.grid}>
+                  {REFERRAL_SOURCES.map(({ id, icon, color }, index) => (
+                    <Reveal key={id} index={2 + index} style={styles.cell}>
+                      <OptionCard
+                        tile
+                        icon={<FontAwesome6 name={icon} size={SOURCE_ICON_SIZE} color={color ?? home.text} />}
+                        title={t(`onb.source.${id}`)}
+                        selected={source === id}
+                        onPress={() => chooseSource(id)}
+                      />
+                    </Reveal>
+                  ))}
+                </View>
               ) : null}
 
               {current.id === 'experience'
