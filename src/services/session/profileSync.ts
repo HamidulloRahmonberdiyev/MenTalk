@@ -1,18 +1,19 @@
 import { File } from 'expo-file-system';
 
-import { isScenarioId } from '@/mocks/scenarios';
 import { endpoints, type ApiHistoryItem, type ApiUser } from '@/services/api/endpoints';
 import { isApiConfigured } from '@/services/api/config';
 import { getToken } from '@/services/api/tokenStore';
 import { isStudyLanguage, type StudyLanguage } from '@/services/learning';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
+import type { PlacementResult } from '@/features/onboarding/placement/placement';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
 import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type ReferralSource, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
 import { syncNotifications } from './notificationsSync';
 import { syncPath } from './pathSync';
 import { registerPush } from './pushSync';
+import { syncScenarios } from './scenariosSync';
 import { syncVocabulary } from './vocabularySync';
 
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
@@ -24,7 +25,7 @@ const known = <T extends string>(allowed: readonly T[], values: readonly string[
   values.filter((value): value is T => allowed.includes(value as T));
 
 const toHistory = (item: ApiHistoryItem): HistoryEntry[] =>
-  item.state === 'finished' && isScenarioId(item.scenario_id)
+  item.state === 'finished'
     ? [{ id: `${item.id}`, scenarioId: item.scenario_id, durationSec: item.duration_sec ?? 0, score: item.score ?? 0, date: Date.parse(item.started_at) }]
     : [];
 
@@ -84,8 +85,12 @@ async function signedIn(): Promise<boolean> {
   return isApiConfigured && (await getToken()) !== null;
 }
 
-/** Pull-to-refresh: reloads the profile, progress, history and word list. Quiet when offline or signed out. */
+/** Pull-to-refresh: reloads the topics, and the profile, progress, history and word list. Quiet when offline or signed out. */
 export async function refreshFromServer(): Promise<void> {
+  await Promise.all([syncScenarios(), refreshAccount()]);
+}
+
+async function refreshAccount(): Promise<void> {
   if (!(await signedIn())) return;
   try {
     await hydrateFromServer(await endpoints.me());
@@ -145,6 +150,11 @@ export async function saveProfile({ studyLanguage, ...edits }: ProfileEdits): Pr
   );
   // Servers that predate English answer without the field; the choice still applies on this device.
   useSettingsStore.getState().setStudyLanguage(studyLanguage);
+}
+
+/** Records a placement test taken after onboarding. Throws, so the screen can say it failed. */
+export async function savePlacement({ level, score }: PlacementResult): Promise<void> {
+  applyUser(await endpoints.updateMe({ level, level_source: 'placement', placement_score: score }));
 }
 
 /** Uploads a prepared JPEG as the profile photo, or removes the uploaded one when `uri` is null. Throws on failure. */

@@ -117,6 +117,9 @@ export function ProfileScreen() {
                 { icon: 'star', tint: '#CE82FF', value: average, label: t('profile.statRating') },
               ]}
             />
+            <SettingsGroup>
+              <SettingsRow icon="ribbon" tint="#C9A85C" label={t('certificate.title')} onPress={() => router.push('/certificate')} />
+            </SettingsGroup>
           </Animated.View>
 
           <Animated.View entering={enter.rise(120)} style={styles.section}>

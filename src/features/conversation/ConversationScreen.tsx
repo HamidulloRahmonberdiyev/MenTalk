@@ -56,6 +56,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const [wordRequest, setWordRequest] = useState<WordRequest | null>(null);
   const savedWords = useSavedWords();
   const tipSeen = useVocabularyStore((state) => state.tipSeen);
+  const language = useSettingsStore((state) => state.language);
   const showTranscript = useSettingsStore((state) => state.showTranscript);
   const toggleTranscript = useSettingsStore((state) => state.toggleTranscript);
 
@@ -160,7 +161,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
 
       <View style={[styles.content, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <ConversationHeader
-          title={t(`scenario.${scenario.id}.title`)}
+          title={scenario.title[language]}
           onBack={() => router.back()}
           onFinish={status === 'ready' ? handleFinish : undefined}
           finishing={finishing}

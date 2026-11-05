@@ -15,7 +15,7 @@ export function ConversationBackdrop({ scenario }: { scenario: Scenario }) {
   const stage = { height: height * 0.58 };
 
   return (
-    <View style={[styles.stage, stage]} pointerEvents="none">
+    <View style={[styles.stage, stage, { backgroundColor: scenario.tint }]} pointerEvents="none">
       <Image source={scenario.image} contentFit="cover" blurRadius={3} transition={250} style={StyleSheet.absoluteFill} />
       <LinearGradient colors={fade} locations={[0, 0.32, 0.88, 1]} style={StyleSheet.absoluteFill} />
     </View>

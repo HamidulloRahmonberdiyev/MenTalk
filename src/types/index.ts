@@ -6,14 +6,25 @@ import type { ImageSourcePropType } from 'react-native';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
-export type ScenarioId = 'intro' | 'cafe' | 'shop' | 'taxi' | 'work' | 'airport';
+/** The topics the app ships with. The server can offer others, added from the admin panel. */
+export type BundledScenarioId = 'intro' | 'cafe' | 'shop' | 'taxi' | 'work' | 'airport';
+
+export type ScenarioId = string;
+
+/** A text in each language of the interface. */
+export type LocalizedText = Readonly<Record<'uz' | 'ru' | 'en', string>>;
 
 export interface Scenario {
   id: ScenarioId;
   icon: IconName;
   tint: string;
-  image: ImageSourcePropType;
-  gradient: readonly [string, string];
+  /** A topic added on the server may have no picture, and none is bundled for it. */
+  image?: ImageSourcePropType;
+  gradient: readonly [string, string, ...string[]];
+  title: LocalizedText;
+  subtitle: LocalizedText;
+  /** The taught languages it can be played in. */
+  languages: readonly string[];
 }
 
 /** Turn-taking state of the voice conversation. */

@@ -13,7 +13,7 @@ import {
 } from '@/services/gemini/prompts';
 import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
 import { voiceStyleFor } from '@/services/speech/voiceStyle';
-import type { ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, TutorTone, VoiceState } from '@/types';
+import type { BundledScenarioId, ConversationResult, LearnerProfile, Mistake, Scenario, TutorEmotion, TutorTone, VoiceState } from '@/types';
 
 import {
   ConnectError,
@@ -90,7 +90,8 @@ class GeminiSession implements ConversationSession {
 
   /** Rebuilt per request, so a tone picked mid-chat applies to the very next reply. */
   private get system(): string {
-    return buildSystemPrompt(this.scenario.id, { ...this.learner, tone: this.tone });
+    // Only the server offers other topics, and this service runs without one.
+    return buildSystemPrompt(this.scenario.id as BundledScenarioId, { ...this.learner, tone: this.tone });
   }
 
   setTone(tone: TutorTone): void {

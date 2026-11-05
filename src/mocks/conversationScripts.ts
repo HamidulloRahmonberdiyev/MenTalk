@@ -1,5 +1,5 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { ScenarioId } from '@/types';
+import type { BundledScenarioId } from '@/types';
 
 export interface ConversationScript {
   /** Tutor lines, played one per user turn. */
@@ -8,7 +8,7 @@ export interface ConversationScript {
   hints: readonly string[];
 }
 
-const RUSSIAN_SCRIPTS: Readonly<Record<ScenarioId, ConversationScript>> = {
+const RUSSIAN_SCRIPTS: Readonly<Record<BundledScenarioId, ConversationScript>> = {
   intro: {
     aiLines: [
       'Привет! Меня зовут Анна. А как вас зовут?',
@@ -95,7 +95,7 @@ const RUSSIAN_SCRIPTS: Readonly<Record<ScenarioId, ConversationScript>> = {
   },
 };
 
-const ENGLISH_SCRIPTS: Readonly<Record<ScenarioId, ConversationScript>> = {
+const ENGLISH_SCRIPTS: Readonly<Record<BundledScenarioId, ConversationScript>> = {
   intro: {
     aiLines: [
       "Hi! I'm Emma. What's your name?",
@@ -152,7 +152,7 @@ const ENGLISH_SCRIPTS: Readonly<Record<ScenarioId, ConversationScript>> = {
   },
 };
 
-export const CONVERSATION_SCRIPTS: Readonly<Record<StudyLanguage, Readonly<Record<ScenarioId, ConversationScript>>>> = {
+export const CONVERSATION_SCRIPTS: Readonly<Record<StudyLanguage, Readonly<Record<BundledScenarioId, ConversationScript>>>> = {
   ru: RUSSIAN_SCRIPTS,
   en: ENGLISH_SCRIPTS,
 };

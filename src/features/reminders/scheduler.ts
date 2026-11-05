@@ -2,12 +2,12 @@ import * as Notifications from 'expo-notifications';
 import type { Href } from 'expo-router';
 import { AppState, Platform } from 'react-native';
 
-import { translatorFor, type TranslationKey } from '@/i18n';
-import { SCENARIOS } from '@/mocks/scenarios';
+import { translatorFor } from '@/i18n';
 import { isApiConfigured } from '@/services/api/config';
 import { getToken } from '@/services/api/tokenStore';
 import { ACTION_ROUTES } from '@/services/session/notificationsSync';
 import { PUSH_SOURCE, registerPush } from '@/services/session/pushSync';
+import { useScenariosStore } from '@/store/scenariosStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 
@@ -96,9 +96,11 @@ async function reschedule(): Promise<void> {
   const t = translatorFor(settings.language, settings.studyLanguage);
   const user = useUserStore.getState();
   const lastTopic = user.lastScenarioId;
-  const topics = [...SCENARIOS]
+  const topics = useScenariosStore
+    .getState()
+    .scenarios.filter((scenario) => scenario.languages.includes(settings.studyLanguage))
     .sort((a, b) => Number(b.id === lastTopic) - Number(a.id === lastTopic))
-    .map(({ id }) => ({ id, title: t(`scenario.${id}.title` as TranslationKey) }));
+    .map(({ id, title }) => ({ id, title: title[settings.language] }));
 
   const plan = planReminders({
     now: Date.now(),

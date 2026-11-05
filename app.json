@@ -57,7 +57,8 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#1CB0F6"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

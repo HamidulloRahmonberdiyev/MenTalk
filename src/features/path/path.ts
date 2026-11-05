@@ -1,4 +1,3 @@
-import { SCENARIOS } from '@/mocks/scenarios';
 import type { LanguageProgress } from '@/store/pathStore';
 import type { Scenario } from '@/types';
 
@@ -25,9 +24,9 @@ export const starsFor = (score: number | null): number =>
  * Lays the scenarios out as stages: every passed one stays passed, the first one not yet passed is
  * open, and everything after it waits behind a lock.
  */
-export function buildPath(progress: LanguageProgress = {}): PathStage[] {
+export function buildPath(scenarios: readonly Scenario[], progress: LanguageProgress = {}): PathStage[] {
   let openFound = false;
-  return SCENARIOS.map((scenario, index) => {
+  return scenarios.map((scenario, index) => {
     const entry = progress[scenario.id];
     const best = entry?.best ?? null;
     const passed = best !== null && best >= PASS_SCORE;

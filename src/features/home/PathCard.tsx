@@ -15,6 +15,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Pressable3D } from '@/components/ui/Pressable3D';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
+import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { easing } from '@/theme/motion';
 
@@ -44,6 +45,7 @@ interface PathCardProps {
  */
 export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
   const t = useT();
+  const language = useSettingsStore((state) => state.language);
   const passed = stages.filter((stage) => stage.status === 'passed').length;
   const openIndex = stages.findIndex((stage) => stage.status === 'open');
   const current = openIndex >= 0 ? stages[openIndex] : null;
@@ -93,12 +95,12 @@ export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
                 {t('path.stage', { n: current.number }).toUpperCase()}
               </AppText>
               <AppText color={INK} style={styles.panelTitle} numberOfLines={1}>
-                {t(`scenario.${current.scenario.id}.title`)}
+                {current.scenario.title[language]}
               </AppText>
             </View>
             <Pressable3D
               accessibilityRole="button"
-              accessibilityLabel={`${t('path.start')}: ${t(`scenario.${current.scenario.id}.title`)}`}
+              accessibilityLabel={`${t('path.start')}: ${current.scenario.title[language]}`}
               onPress={() => {
                 haptics.selection();
                 onStart(current);

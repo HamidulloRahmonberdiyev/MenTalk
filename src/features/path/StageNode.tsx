@@ -16,6 +16,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Pressable3D } from '@/components/ui/Pressable3D';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
+import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
 import { radii, spacing } from '@/theme';
 import { easing, enter } from '@/theme/motion';
@@ -40,13 +41,14 @@ export const StageNode = memo(function StageNode({ stage, index, width, onPress 
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
+  const language = useSettingsStore((state) => state.language);
   const { scenario, status } = stage;
   const x = nodeX(index, width);
   const y = nodeY(index);
   const side = labelSide(index, width);
   const locked = status === 'locked';
   const open = status === 'open';
-  const title = t(`scenario.${scenario.id}.title`);
+  const title = scenario.title[language];
 
   const press = () => {
     if (locked) haptics.light();
@@ -54,7 +56,7 @@ export const StageNode = memo(function StageNode({ stage, index, width, onPress 
     onPress(stage);
   };
 
-  const faceColors: readonly [string, string] = locked
+  const faceColors: readonly [string, string, ...string[]] = locked
     ? home.appearance === 'dark'
       ? ['#3A3E48', '#30333C']
       : ['#EEF1F5', '#E2E7EE']
@@ -127,7 +129,7 @@ export const StageNode = memo(function StageNode({ stage, index, width, onPress 
           {title}
         </AppText>
         <AppText variant="caption" color={home.textMuted} numberOfLines={1} style={side === 'left' && styles.alignRight}>
-          {stage.best !== null ? `${t('path.best')}: ${stage.best}/10` : t(`scenario.${scenario.id}.subtitle`)}
+          {stage.best !== null ? `${t('path.best')}: ${stage.best}/10` : scenario.subtitle[language]}
         </AppText>
       </PressableScale>
     </Animated.View>

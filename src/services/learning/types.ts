@@ -1,4 +1,4 @@
-import type { ScenarioId } from '@/types';
+import type { BundledScenarioId } from '@/types';
 
 /** A language the app can teach. Adding one means adding a pack (see `./index.ts`), nothing else changes. */
 export type StudyLanguage = 'ru' | 'en';
@@ -20,7 +20,7 @@ export interface StudyLanguagePack {
   /** One word of the language in running text. Must have the global flag. */
   readonly wordPattern: RegExp;
   /** Where each scenario happens and who the tutor is in it. */
-  readonly scenarioBriefs: Readonly<Record<ScenarioId, string>>;
+  readonly scenarioBriefs: Readonly<Record<BundledScenarioId, string>>;
   /** Natural follow-up questions the tutor can end a reply with, quoted for the prompt. */
   readonly followUpExamples: string;
   /** Rules that only make sense for this language (politeness forms, spelling variety). */

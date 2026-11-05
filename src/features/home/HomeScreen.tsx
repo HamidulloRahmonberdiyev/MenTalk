@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
-import { SCENARIOS } from '@/mocks/scenarios';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
@@ -62,7 +61,7 @@ export function HomeScreen() {
     { key: 'score', icon: 'star', tint: '#E5A100', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
     { key: 'words', icon: 'book', tint: '#CE82FF', label: t('home.stats.words'), value: String(cards.length), progress: learned },
     { key: 'streak', icon: 'flame', tint: '#FF9600', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
-    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}`, progress: passedStages / stages.length },
+    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}`, progress: stages.length ? passedStages / stages.length : 0 },
   ];
 
   const shortcuts = useMemo<Shortcut[]>(
@@ -77,18 +76,24 @@ export function HomeScreen() {
         label: t('home.menu.continue'),
         art: 'play',
         // Carries on along the path; once it is all passed, back to the last chat.
-        onPress: () => openConversation(openStage?.scenario.id ?? lastScenarioId ?? SCENARIOS[0].id),
+        onPress: () => {
+          const next = openStage?.scenario.id ?? lastScenarioId ?? stages[0]?.scenario.id;
+          if (next) openConversation(next);
+        },
       },
       {
         key: 'random',
         label: t('home.menu.random'),
         art: 'dice',
-        onPress: () => openConversation(unlocked[Math.floor(Math.random() * unlocked.length)].scenario.id),
+        onPress: () => {
+          const stage = unlocked[Math.floor(Math.random() * unlocked.length)];
+          if (stage) openConversation(stage.scenario.id);
+        },
       },
       // Profile already has its own tab, so its slot went to pronunciation practice.
       { key: 'pronunciation', label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],
-    [t, lastScenarioId, openStage, unlocked],
+    [t, lastScenarioId, openStage, stages, unlocked],
   );
 
   return (

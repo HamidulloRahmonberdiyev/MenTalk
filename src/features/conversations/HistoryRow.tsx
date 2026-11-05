@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { AppText } from '@/components/ui/AppText';
 import { ScenarioThumb } from '@/components/ui/ScenarioThumb';
 import { useT } from '@/i18n';
-import { SCENARIO_MAP } from '@/mocks/scenarios';
+import { useScenario } from '@/store/scenariosStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
@@ -19,7 +19,7 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const language = useSettingsStore((state) => state.language);
-  const scenario = SCENARIO_MAP[entry.scenarioId];
+  const scenario = useScenario(entry.scenarioId);
   const date = new Date(entry.date).toLocaleDateString(LOCALES[language], { day: 'numeric', month: 'long' });
   const minutes = t('common.minutes', { n: Math.max(1, Math.round(entry.durationSec / 60)) });
   const tint = scoreTint(entry.score);
@@ -29,7 +29,7 @@ export function HistoryRow({ entry }: { entry: HistoryEntry }) {
       <ScenarioThumb scenario={scenario} />
       <View style={styles.texts}>
         <AppText variant="bodyStrong" color={home.text} numberOfLines={1}>
-          {t(`scenario.${scenario.id}.title`)}
+          {scenario?.title[language] ?? t('conversations.pastTopic')}
         </AppText>
         <AppText variant="caption" color={home.textMuted}>
           {date} · {minutes}

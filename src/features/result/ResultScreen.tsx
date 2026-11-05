@@ -8,6 +8,8 @@ import { Screen } from '@/components/ui/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useResultStore } from '@/store/resultStore';
 import { useT } from '@/i18n';
+import { useScenario } from '@/store/scenariosStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { colors, spacing } from '@/theme';
 
 import { NewWordsCard } from '../vocabulary/NewWordsCard';
@@ -21,7 +23,9 @@ export function ResultScreen() {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
+  const language = useSettingsStore((state) => state.language);
   const result = useResultStore((state) => state.result);
+  const scenario = useScenario(result?.scenarioId);
 
   if (!result) return <Redirect href="/home" />;
 
@@ -48,7 +52,7 @@ export function ResultScreen() {
             {t(verdict.subtitle)}
           </AppText>
           <AppText variant="captionStrong" color={colors.primary}>
-            {t(`scenario.${result.scenarioId}.title`)} · {result.overall}/10
+            {scenario?.title[language] ?? t('conversations.pastTopic')} · {result.overall}/10
           </AppText>
         </View>
 

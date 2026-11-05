@@ -15,6 +15,7 @@ import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { HistoryRow } from './HistoryRow';
+import { TopicStrip } from './TopicStrip';
 
 export function ConversationsScreen() {
   const t = useT();
@@ -39,6 +40,7 @@ export function ConversationsScreen() {
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
+          <TopicStrip />
           {history.length ? (
             history.map((entry) => <HistoryRow key={entry.id} entry={entry} />)
           ) : (

@@ -1,7 +1,7 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { LearnerExperience, LevelSource, ReferralSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
+import type { LearnerExperience, LevelSource, LocalizedText, ReferralSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
 
-import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api, apiPage } from './http';
+import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api, apiBody, apiPage } from './http';
 import { streamEvents } from './stream';
 
 export interface ApiUser {
@@ -55,6 +55,45 @@ export type ApiProfilePatch = Partial<
     | 'tutor_tone'
   >
 >;
+
+/** A conversation topic. `title` and `subtitle` carry every interface language. */
+export interface ApiScenario {
+  id: string;
+  icon: string;
+  tint: string;
+  gradient: string[] | null;
+  image_url: string | null;
+  title: Partial<LocalizedText> | null;
+  subtitle: Partial<LocalizedText> | null;
+  languages?: string[];
+}
+
+export interface ApiCertificate {
+  serial: string;
+  language: string;
+  level: string;
+  cefr: string;
+  holder_name: string;
+  speaking: number;
+  vocabulary: number;
+  grammar: number;
+  overall: number;
+  issued_at: string;
+  verify_url: string;
+}
+
+export interface ApiCertificateStatus {
+  language: string;
+  level: string | null;
+  cefr: string | null;
+  /** Whether the level was measured by the placement test; a hand-picked one earns no certificate. */
+  placed: boolean;
+  conversations: number;
+  required_conversations: number;
+  eligible: boolean;
+  /** The latest one issued in this language, which may be for an earlier level. */
+  certificate: ApiCertificate | null;
+}
 
 export interface ApiStats {
   daily_goal_minutes: number;
@@ -206,6 +245,9 @@ export type TurnStreamEvent =
   | { event: 'done'; data: unknown };
 
 export const endpoints = {
+  /** Public, and answered without the `{ data }` envelope. */
+  bootstrap: () => apiBody<{ scenarios: ApiScenario[] }>('/bootstrap'),
+
   /** `uiLanguage` becomes the language of a newly created profile; an existing one keeps its own. */
   signInWithGoogle: (idToken: string, device: string, uiLanguage: 'uz' | 'ru' | 'en') =>
     api<{ token: string; user: ApiUser }>('POST', '/auth/google', { body: { id_token: idToken, device, ui_language: uiLanguage } }),
@@ -216,6 +258,10 @@ export const endpoints = {
   uploadAvatar: (photo: FormData) => api<ApiUser>('POST', '/me/avatar', { body: photo, timeoutMs: UPLOAD_TIMEOUT_MS, idempotent: true }),
   deleteAvatar: () => api<ApiUser>('DELETE', '/me/avatar'),
   stats: () => api<ApiStats>('GET', '/stats'),
+  certificateStatus: () => api<ApiCertificateStatus>('GET', '/certificate'),
+  /** Safe to repeat: the server hands back the certificate already issued for this level. */
+  issueCertificate: () => api<ApiCertificate>('POST', '/certificate', { idempotent: true }),
+  certificateDocument: (serial: string) => api<{ html: string }>('GET', `/certificate/${serial}/document`),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
   path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
 

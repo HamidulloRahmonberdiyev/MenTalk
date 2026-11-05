@@ -1,6 +1,6 @@
 import { CONVERSATION_SCRIPTS, type ConversationScript } from '@/mocks/conversationScripts';
 import { createMockResult } from '@/mocks/results';
-import type { ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
+import type { BundledScenarioId, ConversationResult, LearnerProfile, Scenario, VoiceState } from '@/types';
 
 import type {
   ConversationEvent,
@@ -29,7 +29,8 @@ class MockConversationSession implements ConversationSession {
     private readonly scenario: Scenario,
     learner: LearnerProfile,
   ) {
-    this.script = CONVERSATION_SCRIPTS[learner.studyLanguage][scenario.id];
+    // Only the server offers other topics, and this service runs without one.
+    this.script = CONVERSATION_SCRIPTS[learner.studyLanguage][scenario.id as BundledScenarioId];
   }
 
   subscribe(listener: ConversationListener): Unsubscribe {

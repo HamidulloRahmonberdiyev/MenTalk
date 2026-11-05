@@ -8,6 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { useT } from '@/i18n';
+import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
@@ -29,12 +30,13 @@ export function StageSheet({ stage, previous, visible, onClose, onClosed, onStar
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
+  const language = useSettingsStore((state) => state.language);
 
   return (
     <BottomSheet visible={visible} onClose={onClose} onClosed={onClosed} closeLabel={t('common.close')}>
       {stage ? (
         <View style={styles.body}>
-          <View style={styles.cover}>
+          <View style={[styles.cover, { backgroundColor: stage.scenario.tint }]}>
             <Image source={stage.scenario.image} contentFit="cover" transition={200} style={StyleSheet.absoluteFill} />
             <LinearGradient
               colors={['rgba(8,24,40,0.05)', 'rgba(8,24,40,0.35)', 'rgba(8,24,40,0.88)']}
@@ -59,10 +61,10 @@ export function StageSheet({ stage, previous, visible, onClose, onClosed, onStar
             </View>
             <View style={styles.caption}>
               <AppText variant="title" color="#FFFFFF" numberOfLines={1} style={styles.title}>
-                {t(`scenario.${stage.scenario.id}.title`)}
+                {stage.scenario.title[language]}
               </AppText>
               <AppText variant="caption" color="rgba(255,255,255,0.88)" numberOfLines={2}>
-                {t(`scenario.${stage.scenario.id}.subtitle`)}
+                {stage.scenario.subtitle[language]}
               </AppText>
             </View>
           </View>
@@ -93,7 +95,7 @@ export function StageSheet({ stage, previous, visible, onClose, onClosed, onStar
             />
             <AppText variant="caption" color={home.textSecondary} style={styles.noteText}>
               {stage.status === 'locked' && previous
-                ? t('path.lockedHint', { prev: t(`scenario.${previous.scenario.id}.title`), score: PASS_SCORE })
+                ? t('path.lockedHint', { prev: previous.scenario.title[language], score: PASS_SCORE })
                 : t('path.goal', { score: PASS_SCORE })}
             </AppText>
           </View>

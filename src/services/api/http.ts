@@ -123,6 +123,11 @@ export async function api<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: st
   return payload === undefined ? (undefined as T) : payload.data;
 }
 
+/** A GET whose JSON body has no `{ data }` envelope, like `/bootstrap`. */
+export async function apiBody<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return request<T>('GET', path, options);
+}
+
 /** A cursor-paginated list, with the `meta` that `api()` would drop (`next_cursor` and extras). */
 export async function apiPage<T, M extends object = object>(
   path: string,

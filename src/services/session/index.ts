@@ -13,10 +13,11 @@ import { useUserStore } from '@/store/userStore';
 import { scheduleNotificationsFlush, syncNotifications } from './notificationsSync';
 import { pushLanguage } from './profileSync';
 import { forgetPushRegistration, registerPush, startPush } from './pushSync';
+import { syncScenarios } from './scenariosSync';
 import { scheduleVocabularySync, syncVocabulary } from './vocabularySync';
 
 export { syncNotifications } from './notificationsSync';
-export { pushOnboarding, refreshFromServer, saveAvatar, saveProfile, type ProfileEdits } from './profileSync';
+export { pushOnboarding, refreshFromServer, saveAvatar, savePlacement, saveProfile, type ProfileEdits } from './profileSync';
 export { syncPath } from './pathSync';
 export { submitReviews } from './vocabularySync';
 
@@ -39,6 +40,8 @@ export function endSession(): void {
  */
 export function startSession(onSignedOut: () => void): () => void {
   if (!isApiConfigured) return () => undefined;
+
+  void syncScenarios();
 
   const unsubscribers = [
     startPush(),
@@ -63,6 +66,7 @@ export function startSession(onSignedOut: () => void): () => void {
   ];
   const appState = AppState.addEventListener('change', (status) => {
     if (status !== 'active') return;
+    void syncScenarios();
     void syncVocabulary();
     void syncNotifications();
     // Notifications may have just been allowed in the phone's settings.

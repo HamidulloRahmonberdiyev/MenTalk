@@ -1,4 +1,3 @@
-import { isScenarioId } from '@/mocks/scenarios';
 import { isApiConfigured } from '@/services/api/config';
 import { endpoints } from '@/services/api/endpoints';
 import { getToken } from '@/services/api/tokenStore';
@@ -13,7 +12,7 @@ export async function syncPath(language: StudyLanguage = useSettingsStore.getSta
     const path = await endpoints.path(language);
     const stages: LanguageProgress = {};
     for (const stage of path.stages) {
-      if (isScenarioId(stage.scenario_id) && stage.best_score !== null) {
+      if (stage.best_score !== null) {
         stages[stage.scenario_id] = { best: stage.best_score, attempts: stage.attempts };
       }
     }

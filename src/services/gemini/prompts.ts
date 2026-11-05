@@ -1,6 +1,6 @@
 import { englishCountryName } from '@/features/onboarding/countries';
 import { studyLanguagePack, type StudyLanguagePack } from '@/services/learning';
-import type { LearnerProfile, ScenarioId, TutorTone } from '@/types';
+import type { BundledScenarioId, LearnerProfile, TutorTone } from '@/types';
 
 import type { Schema } from './client';
 
@@ -8,7 +8,7 @@ import type { Schema } from './client';
  * Where to steer the chat once the scenario's own business is done. The topics are the same in every
  * language; the scenario's place and the tutor come from the study language pack.
  */
-const NEXT_TOPICS: Record<ScenarioId, string> = {
+const NEXT_TOPICS: Record<BundledScenarioId, string> = {
   intro: 'family, hometown, favourite food, music and films, travel, weekend plans, dreams, daily routine',
   cafe: 'favourite dishes and cuisines, recipes, restaurants in their city, coffee or tea habits, trying something new, who they eat out with',
   shop: 'fashion and favourite colours, gifts for friends and family, prices at home versus here, weekend shopping habits, a recent purchase',
@@ -65,7 +65,7 @@ const GENDER_RULE = {
   unspecified: 'Use neutral phrasing that avoids gendered forms where possible.',
 } as const;
 
-export function buildSystemPrompt(scenarioId: ScenarioId, learner: LearnerProfile): string {
+export function buildSystemPrompt(scenarioId: BundledScenarioId, learner: LearnerProfile): string {
   const pack = studyLanguagePack(learner.studyLanguage);
   const uiLanguage = LANGUAGE_NAMES[learner.uiLanguage];
   const gender = GENDER_RULE[learner.gender ?? 'unspecified'];
