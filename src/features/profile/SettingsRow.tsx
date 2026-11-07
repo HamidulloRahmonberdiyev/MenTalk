@@ -13,23 +13,29 @@ import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 const ICON = 40;
 
 interface SettingsRowProps {
-  icon: IconName;
-  tint: string;
+  icon?: IconName;
+  tint?: string;
+  /** Drawn in place of the icon tile, e.g. a brand's own logo. */
+  iconNode?: ReactNode;
   label: string;
+  /** A second line under the label. */
+  hint?: string;
   /** Current value, shown muted before the chevron. */
   value?: string;
+  /** Leaves the app (a link): an outward arrow instead of the chevron. */
+  external?: boolean;
   destructive?: boolean;
   onPress: () => void;
 }
 
 /** A chunky dark button: solid icon tile, label, and a face that presses down onto its edge. */
-export function SettingsRow({ icon, tint, label, value, destructive = false, onPress }: SettingsRowProps) {
+export function SettingsRow({ icon, tint, iconNode, label, hint, value, external = false, destructive = false, onPress }: SettingsRowProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   return (
     <Pressable3D
-      accessibilityRole="button"
-      accessibilityLabel={value ? `${label}: ${value}` : label}
+      accessibilityRole={external ? 'link' : 'button'}
+      accessibilityLabel={[label, hint, value].filter(Boolean).join(', ')}
       onPress={() => {
         haptics.light();
         onPress();
@@ -39,18 +45,27 @@ export function SettingsRow({ icon, tint, label, value, destructive = false, onP
       radius={radii.lg}
       faceStyle={[styles.row, destructive && styles.destructive]}
     >
-      <View style={[styles.icon, { backgroundColor: tint }]}>
-        <Ionicons name={icon} size={22} color="#FFFFFF" />
+      {iconNode ?? (
+        <View style={[styles.icon, { backgroundColor: tint }]}>
+          {icon ? <Ionicons name={icon} size={22} color="#FFFFFF" /> : null}
+        </View>
+      )}
+      <View style={styles.label}>
+        <AppText variant="bodyStrong" color={destructive ? colors.danger : home.text} numberOfLines={1}>
+          {label}
+        </AppText>
+        {hint ? (
+          <AppText variant="caption" color={home.textMuted} numberOfLines={1}>
+            {hint}
+          </AppText>
+        ) : null}
       </View>
-      <AppText variant="bodyStrong" color={destructive ? colors.danger : home.text} style={styles.label} numberOfLines={1}>
-        {label}
-      </AppText>
       {value ? (
         <AppText variant="captionStrong" color={home.textMuted} numberOfLines={1}>
           {value}
         </AppText>
       ) : null}
-      {destructive ? null : <Ionicons name="chevron-forward" size={20} color={home.textMuted} />}
+      {destructive ? null : <Ionicons name={external ? 'open-outline' : 'chevron-forward'} size={20} color={home.textMuted} />}
     </Pressable3D>
   );
 }

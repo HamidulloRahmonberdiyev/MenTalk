@@ -2,13 +2,14 @@ import Constants from 'expo-constants';
 import { router, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { AppText } from '@/components/ui/AppText';
 import { ConfirmSheet } from '@/components/ui/ConfirmSheet';
+import { TelegramLogo } from '@/components/ui/TelegramLogo';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
 import { authService } from '@/services/auth';
@@ -19,6 +20,7 @@ import { enter } from '@/theme/motion';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { WeekCard } from '../activity/WeekCard';
+import { useTelegramUrl } from '../support/useSupportLinks';
 import { ReminderSettingsSheet } from '../reminders/ReminderSettingsSheet';
 import { formatTime, useRemindersStore } from '../reminders/remindersStore';
 import { useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
@@ -41,6 +43,7 @@ export function ProfileScreen() {
   const streak = useVocabularyStore(visibleStreak);
   const remindersOn = useRemindersStore((state) => state.enabled);
   const reminderTime = useRemindersStore((state) => state.time);
+  const telegramUrl = useTelegramUrl();
 
   const [editingReminders, setEditingReminders] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
@@ -110,6 +113,19 @@ export function ProfileScreen() {
           </Animated.View>
 
           <Animated.View entering={enter.rise(120)} style={styles.section}>
+            <SettingsGroup>
+              <SettingsRow icon="headset" tint="#1CB0F6" label={t('support.title')} onPress={() => router.push('/support' as Href)} />
+              <SettingsRow
+                iconNode={<TelegramLogo size={40} />}
+                label={t('telegram.title')}
+                hint={telegramUrl.replace(/^(https?:\/\/)?t\.me\//, '@')}
+                external
+                onPress={() => void Linking.openURL(telegramUrl).catch(() => undefined)}
+              />
+            </SettingsGroup>
+          </Animated.View>
+
+          <Animated.View entering={enter.rise(160)} style={styles.section}>
             <SettingsRow icon="log-out" tint={colors.danger} label={t('profile.logout')} destructive onPress={() => setConfirmingLogout(true)} />
             <AppText variant="caption" color={home.textMuted} style={styles.version}>
               {`MenTalk · v${Constants.expoConfig?.version ?? '1.0.0'}`}

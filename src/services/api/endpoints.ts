@@ -139,6 +139,28 @@ export interface ApiCalendar {
   totals: { active_days: number; minutes: number; xp: number; conversations: number };
 }
 
+export type SupportCategory = 'bug' | 'idea' | 'question' | 'other';
+export type SupportStatus = 'new' | 'in_progress' | 'resolved';
+
+export interface ApiSupportTicketInput {
+  category: SupportCategory;
+  message: string;
+  contact?: string;
+  /** Filled in by the app, so a bug report says which build and phone it came from. */
+  app_version?: string;
+  platform?: 'ios' | 'android' | 'web';
+  os_version?: string;
+  ui_language?: 'uz' | 'ru' | 'en';
+}
+
+export interface ApiSupportTicket {
+  id: number;
+  category: SupportCategory;
+  message: string;
+  status: SupportStatus;
+  created_at: string;
+}
+
 export interface ApiHistoryItem {
   id: number;
   scenario_id: string;
@@ -385,6 +407,10 @@ export const endpoints = {
   issueCertificate: () => api<ApiCertificate>('POST', '/certificate', { idempotent: true }),
   certificateDocument: (serial: string) => api<{ html: string }>('GET', `/certificate/${serial}/document`),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
+  /** Links set by the admin (the Telegram channel); null when there is none. */
+  supportLinks: () => api<{ telegram_url: string | null }>('GET', '/support'),
+  supportTickets: () => api<ApiSupportTicket[]>('GET', '/support/tickets'),
+  sendSupportTicket: (ticket: ApiSupportTicketInput) => api<{ id: number; status: SupportStatus }>('POST', '/support/tickets', { body: ticket }),
   /** `month` is `YYYY-MM`; the current month when left out. */
   calendar: (month?: string) => api<ApiCalendar>('GET', month ? `/progress/calendar?month=${month}` : '/progress/calendar'),
   path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
