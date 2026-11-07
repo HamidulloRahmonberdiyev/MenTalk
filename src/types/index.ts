@@ -43,6 +43,17 @@ export interface AiMessage {
   streaming?: boolean;
   /** The text is final and its recording is on the way; the voice waits a moment for it. */
   audioPending?: boolean;
+  /**
+   * The recording in pieces, in order, as they arrive: the first sentence is ready long before the
+   * whole reply would be. Played one after another; while `audioPending`, more may still come.
+   */
+  clips?: VoiceClip[];
+}
+
+/** One piece of a line's recording; `uri` null when it failed, so the device voice reads `text`. */
+export interface VoiceClip {
+  uri: string | null;
+  text: string;
 }
 
 /** How the tutor talks: the same lesson, a different mood. */

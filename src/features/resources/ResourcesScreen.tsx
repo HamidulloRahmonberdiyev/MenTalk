@@ -14,6 +14,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { ActivityCard } from '../activity/ActivityCard';
 import { refreshMistakeSummary, useMistakesStore } from '../mistakes/mistakesStore';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { starterWords } from '../vocabulary/starterWords';
@@ -137,6 +138,7 @@ export function ResourcesScreen() {
         contentContainerStyle={[styles.list, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
+        <ActivityCard />
         {resources.map(({ key, ...resource }) => (
           <ResourceCard key={key} {...resource} />
         ))}

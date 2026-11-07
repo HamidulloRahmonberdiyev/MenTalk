@@ -115,6 +115,30 @@ export interface ApiStats {
   xp: number;
 }
 
+/** One day of `GET /progress/calendar`; only days with some practice are listed. */
+export interface ApiCalendarDay {
+  /** `YYYY-MM-DD` in the learner's time zone. */
+  date: string;
+  minutes: number;
+  xp: number;
+  conversations: number;
+  goal_met: boolean;
+}
+
+export interface ApiCalendar {
+  /** `YYYY-MM`. */
+  month: string;
+  /** The server's today in the learner's time zone, `YYYY-MM-DD`. */
+  today: string;
+  /** First day the learner ever practised; null before that. */
+  since: string | null;
+  goal_minutes: number;
+  streak: number;
+  best_streak: number;
+  days: ApiCalendarDay[];
+  totals: { active_days: number; minutes: number; xp: number; conversations: number };
+}
+
 export interface ApiHistoryItem {
   id: number;
   scenario_id: string;
@@ -322,7 +346,11 @@ export interface ApiNotification {
 /** Either the listed notifications or all of them (up to `before`, when given). */
 export type ApiNotificationSelection = { ids: string[] } | { all: true; before?: string };
 
-export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & { tone?: TutorTone };
+export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & {
+  tone?: TutorTone;
+  /** Streamed turns: the voice may come as several `audio` events (with `text` and `last`). */
+  clips?: boolean;
+};
 
 /**
  * Events of `POST /conversations/{id}/turns/stream`, in the order they arrive:
@@ -333,7 +361,8 @@ export type TurnStreamEvent =
   | { event: 'transcript'; data: { text: string } }
   | { event: 'delta'; data: { text: string } }
   | { event: 'reply'; data: { id?: number | null; reply: string; emotion: string } }
-  | { event: 'audio'; data: { url: string; ms: number | null } }
+  /** With `clips`: one per piece, `url` null for a piece that failed. Without: once, for the whole reply. */
+  | { event: 'audio'; data: { url: string | null; ms: number | null; text?: string; last?: boolean } }
   | { event: 'error'; data: { type?: string; status?: number } }
   | { event: 'done'; data: unknown };
 
@@ -356,6 +385,8 @@ export const endpoints = {
   issueCertificate: () => api<ApiCertificate>('POST', '/certificate', { idempotent: true }),
   certificateDocument: (serial: string) => api<{ html: string }>('GET', `/certificate/${serial}/document`),
   history: () => api<ApiHistoryItem[]>('GET', '/history'),
+  /** `month` is `YYYY-MM`; the current month when left out. */
+  calendar: (month?: string) => api<ApiCalendar>('GET', month ? `/progress/calendar?month=${month}` : '/progress/calendar'),
   path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
 
   startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, signal?: AbortSignal) =>

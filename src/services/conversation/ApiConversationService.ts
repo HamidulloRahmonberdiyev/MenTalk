@@ -209,7 +209,8 @@ class ApiSession implements ConversationSession {
     const messageId = `${this.scenario.id}-live-${id}`;
     let message: AiMessage | null = null;
     let final = false;
-    let voiced = false;
+    let voicedMs = 0;
+    let voiceStart: number | null = null;
 
     const show = (next: AiMessage) => {
       message = next;
@@ -234,23 +235,34 @@ class ApiSession implements ConversationSession {
           this.setState('speaking');
           this.holdSpeaking(id, event.data.reply.length * SPEAKING_MS_PER_CHAR);
           break;
-        case 'audio':
+        case 'audio': {
           if (!message || !final) break;
-          voiced = true;
-          show({ ...message, audioPending: false, audioUri: event.data.url });
-          if (event.data.ms) this.holdSpeaking(id, event.data.ms);
+          const { url, ms, text, last } = event.data;
+          if (text === undefined) {
+            show({ ...message, audioPending: false, audioUri: url ?? undefined });
+            if (ms) this.holdSpeaking(id, ms);
+            break;
+          }
+          // One piece of the voice: the tutor starts talking on the first, the rest queue behind it.
+          const current: AiMessage = message;
+          show({ ...current, audioPending: !last, clips: [...(current.clips ?? []), { uri: url, text }] });
+          // The pieces play back to back from the first one's arrival, so the turn ends when they all have.
+          voiceStart ??= Date.now();
+          voicedMs += ms ?? text.length * SPEAKING_MS_PER_CHAR;
+          this.holdSpeaking(id, voiceStart + voicedMs - Date.now());
           break;
+        }
         case 'error':
           throw new StreamFailed(noticeFor(new ApiError(event.data.status ?? 500, event.data.type)));
       }
     };
 
-    await endpoints.streamTurn(this.requireId(), body, onEvent, signal);
+    await endpoints.streamTurn(this.requireId(), { ...body, clips: true }, onEvent, signal);
     if (this.isStale(id)) return;
     if (!final) throw new StreamFailed('turnFailed');
-    // No recording came (the voice failed on the server): stop waiting, so the device voice reads the line now.
+    // The stream ended with the voice missing or cut short: stop waiting, so the device voice reads what is left now.
     const last = message as AiMessage | null;
-    if (!voiced && last) show({ ...last, audioPending: false });
+    if (last?.audioPending) show({ ...last, audioPending: false });
   }
 
   private publish(id: number, turn: ApiTurn): void {

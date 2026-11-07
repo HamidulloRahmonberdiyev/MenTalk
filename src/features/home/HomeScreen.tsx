@@ -19,6 +19,7 @@ import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { MAX_LEVEL, levelOf } from '../vocabulary/srs';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
+import { ActivityCard } from '../activity/ActivityCard';
 import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
@@ -144,6 +145,8 @@ export function HomeScreen() {
               ]}
               onPress={() => router.navigate('/words')}
             />
+
+            <ActivityCard />
 
             <PathCard
               stages={stages}
