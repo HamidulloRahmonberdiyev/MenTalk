@@ -6,7 +6,7 @@ import Svg, { Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Stop, Text
  * every solid is a gradient face over a darker extruded side, with a gloss on top and a soft
  * shadow under it. All art is drawn on a 100×100 canvas.
  */
-export type ShortcutArtName = 'topics' | 'chat' | 'book' | 'game' | 'translate' | 'play' | 'dice' | 'profile' | 'mic';
+export type ShortcutArtName = 'topics' | 'chat' | 'book' | 'game' | 'translate' | 'play' | 'dice' | 'profile' | 'mic' | 'mistakes';
 
 type Tone = 'blue' | 'paper' | 'pink';
 
@@ -185,6 +185,20 @@ function Profile() {
   );
 }
 
+/** The mistakes notebook: a ruled page with a pink "×" badge pinned to its corner. */
+function Mistakes() {
+  return (
+    <>
+      <Shadow cy={92} rx={34} />
+      <Clay d={roundRect(14, 12, 58, 74, 12)} depth={5} />
+      <Clay d={roundRect(22, 16, 46, 64, 9)} tone="paper" depth={2} />
+      <Path d="M31 32H59M31 42H59M31 52H52M31 62H56" stroke="#7FB2EA" strokeWidth={3.5} strokeLinecap="round" />
+      <Clay d={circle(72, 70, 16)} tone="pink" depth={4} />
+      <Path d="M66 64L78 76M78 64L66 76" stroke="#FFFFFF" strokeWidth={5} strokeLinecap="round" />
+    </>
+  );
+}
+
 function Mic() {
   return (
     <>
@@ -209,6 +223,7 @@ const ART: Record<ShortcutArtName, () => ReactNode> = {
   dice: Dice,
   profile: Profile,
   mic: Mic,
+  mistakes: Mistakes,
 };
 
 export function ShortcutArt({ name, size }: { name: ShortcutArtName; size: number }) {

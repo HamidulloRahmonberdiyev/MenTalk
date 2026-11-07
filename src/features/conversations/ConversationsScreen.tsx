@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Fragment } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,12 +10,53 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import type { HistoryEntry } from '@/types';
 
+import { FeatureCard } from '../home/FeatureCard';
+import { usePath } from '../path/usePath';
+import { openConversation } from '../scenarios/navigation';
 import { HistoryRow } from './HistoryRow';
 import { TopicStrip } from './TopicStrip';
+
+const LOCALES = { uz: 'uz-UZ', ru: 'ru-RU', en: 'en-GB' } as const;
+const DAY = 24 * 60 * 60 * 1000;
+
+const startOfDay = (time: number) => {
+  const date = new Date(time);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+};
+
+/** History split into days, newest first, each under "Today", "Yesterday" or its date. */
+function useDays(history: HistoryEntry[]) {
+  const t = useT();
+  const language = useSettingsStore((state) => state.language);
+  // Taken once per mount: the tab remounts often enough for "Today" to stay right.
+  const [today] = useState(() => startOfDay(Date.now()));
+  return useMemo(() => {
+    const days: { key: number; label: string; entries: HistoryEntry[] }[] = [];
+    for (const entry of [...history].sort((a, b) => b.date - a.date)) {
+      const key = startOfDay(entry.date);
+      let day = days[days.length - 1];
+      if (day?.key !== key) {
+        const label =
+          key === today
+            ? t('conversations.today')
+            : key === today - DAY
+              ? t('conversations.yesterday')
+              : new Date(key).toLocaleDateString(LOCALES[language], { day: 'numeric', month: 'long' });
+        day = { key, label, entries: [] };
+        days.push(day);
+      }
+      day.entries.push(entry);
+    }
+    return days;
+  }, [history, language, t, today]);
+}
 
 export function ConversationsScreen() {
   const t = useT();
@@ -24,6 +65,18 @@ export function ConversationsScreen() {
   const insets = useSafeAreaInsets();
   const { refreshControl, version } = useRefreshControl();
   const history = useUserStore((state) => state.history);
+  const days = useDays(history);
+
+  const average = history.length ? history.reduce((sum, entry) => sum + entry.score, 0) / history.length : 0;
+  const minutes = Math.round(history.reduce((sum, entry) => sum + entry.durationSec, 0) / 60);
+  const lastScenarioId = useUserStore((state) => state.lastScenarioId);
+  const stages = usePath();
+  // Same as "Continue" on home: the open stage of the path, or the last talk once it is all passed.
+  const startNext = () => {
+    const next = stages.find((stage) => stage.status === 'open')?.scenario.id ?? lastScenarioId ?? stages[0]?.scenario.id;
+    if (next) openConversation(next);
+    else router.push('/scenarios');
+  };
 
   return (
     <View style={styles.root}>
@@ -40,9 +93,42 @@ export function ConversationsScreen() {
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
+          <FeatureCard
+            title={t('home.talk.title')}
+            icon="mic"
+            gradient={['#6FA8E8', '#2F6DBF']}
+            edge="#24508F"
+            stats={[
+              { label: t('home.talk.sessions'), value: history.length },
+              { label: t('home.talk.average'), value: history.length ? average.toFixed(1) : 0 },
+              { label: t('conversations.stat.minutes'), value: minutes },
+            ]}
+            onPress={startNext}
+          />
+
           <TopicStrip />
+
           {history.length ? (
-            history.map((entry) => <HistoryRow key={entry.id} entry={entry} />)
+            <View style={styles.section}>
+              <AppText variant="heading" color={home.text} accessibilityRole="header">
+                {t('conversations.history')}
+              </AppText>
+              {days.map((day) => (
+                <View key={day.key} style={styles.day}>
+                  <AppText variant="captionStrong" color={home.textMuted} style={styles.dayLabel}>
+                    {day.label}
+                  </AppText>
+                  <View style={styles.group}>
+                    {day.entries.map((entry, index) => (
+                      <Fragment key={entry.id}>
+                        {index ? <View style={styles.divider} /> : null}
+                        <HistoryRow entry={entry} />
+                      </Fragment>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </View>
           ) : (
             <View style={styles.empty}>
               <View style={styles.badge}>
@@ -63,6 +149,15 @@ export function ConversationsScreen() {
   );
 }
 
+const panel = (home: Palette) => ({
+  borderRadius: radii.lg,
+  borderWidth: 2,
+  borderBottomWidth: 5,
+  borderColor: home.rim,
+  borderBottomColor: home.rimBottom,
+  backgroundColor: home.panel,
+});
+
 const createStyles = (home: Palette) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: home.background },
@@ -74,17 +169,20 @@ const createStyles = (home: Palette) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: home.divider,
     },
-    content: { gap: spacing.md, padding: spacing.xl },
+    content: { gap: spacing.xxl, padding: spacing.xl },
+    section: { gap: spacing.md },
+    day: { gap: spacing.sm },
+    dayLabel: { paddingHorizontal: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 12 },
+    // One card per day with hairlines between talks reads calmer than a stack of outlined boxes.
+    group: { ...panel(home), overflow: 'hidden' },
+    divider: { height: StyleSheet.hairlineWidth, marginLeft: 76, backgroundColor: home.divider },
     empty: {
+      ...panel(home),
       alignItems: 'center',
       gap: spacing.sm,
       padding: spacing.xxl,
       borderRadius: radii.xl,
-      borderWidth: 2,
       borderBottomWidth: 6,
-      borderColor: home.rim,
-      borderBottomColor: home.rimBottom,
-      backgroundColor: home.panel,
     },
     badge: {
       width: 76,

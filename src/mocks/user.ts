@@ -13,6 +13,7 @@ export const INITIAL_USER: UserProfile = {
   levelSource: null,
   placementScore: null,
   experience: null,
+  nativeLanguage: null,
   goals: [],
   focus: [],
   dailyGoalMinutes: 5,

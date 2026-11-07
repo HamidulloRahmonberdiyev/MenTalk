@@ -4,6 +4,10 @@ export type PhraseLevel = 'easy' | 'medium' | 'hard';
 export const PHRASE_LEVELS: readonly PhraseLevel[] = ['easy', 'medium', 'hard'];
 
 /**
+ * Built-in practice lines, used only without a server (offline, signed out, no API configured).
+ * The server serves the same lines as the start of a shared pool that grows with AI-written ones;
+ * keep them in step with `StarterPhrases` there.
+ *
  * Practice lines per language, picked to drill the sounds learners from Uzbek and Russian miss most:
  * English th / w–v / r / short–long vowels; Russian ы / soft consonants / щ / unstressed о.
  */

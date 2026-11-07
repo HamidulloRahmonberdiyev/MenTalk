@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { AppText } from '@/components/ui/AppText';
@@ -64,7 +64,14 @@ export function PronunciationScreen() {
           </Pressable>
         </View>
 
-        <PhraseCard phrase={practice.phrase} language={studyLanguage} words={result?.words ?? null} scanning={phase === 'analyzing'} />
+        {practice.phrase ? (
+          <PhraseCard phrase={practice.phrase} language={studyLanguage} words={result?.words ?? null} scanning={phase === 'analyzing'} />
+        ) : (
+          // Only the very first lines of a level are ever waited for; later ones are fetched ahead.
+          <View style={styles.loading} accessibilityLabel={t('pron.read')}>
+            <ActivityIndicator color={home.accent} />
+          </View>
+        )}
 
         {phase === 'analyzing' ? <AnalyzingCard /> : null}
         {phase === 'result' && result ? <ResultPanel result={result} language={studyLanguage} saved={practice.saved} onUnsave={practice.unsave} /> : null}
@@ -114,6 +121,17 @@ const createStyles = (home: Palette) =>
       backgroundColor: home.panel,
     },
     levelSelected: { borderColor: colors.primary, borderBottomColor: '#1A84BF', backgroundColor: home.selected },
+    loading: {
+      minHeight: 168,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.lg,
+      borderWidth: 2,
+      borderBottomWidth: 6,
+      borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
+      backgroundColor: home.panel,
+    },
     shuffle: { marginLeft: 'auto', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: home.primarySoft },
     error: {
       flexDirection: 'row',

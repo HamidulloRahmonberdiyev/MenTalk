@@ -1,5 +1,6 @@
 import { AppState } from 'react-native';
 
+import { flushMistakeAnswers, useMistakesStore } from '@/features/mistakes/mistakesStore';
 import { useNotificationsStore } from '@/features/notifications/notificationsStore';
 import { useRemindersStore } from '@/features/reminders/remindersStore';
 import { cancelReminders } from '@/features/reminders/scheduler';
@@ -25,6 +26,7 @@ export { submitReviews } from './vocabularySync';
 export function endSession(): void {
   useUserStore.getState().reset();
   useVocabularyStore.getState().clear();
+  useMistakesStore.getState().clear();
   useNotificationsStore.getState().reset();
   usePathStore.getState().reset();
   // Reminders speak to one person by name; the next one to sign in starts fresh.
@@ -42,6 +44,8 @@ export function startSession(onSignedOut: () => void): () => void {
   if (!isApiConfigured) return () => undefined;
 
   void syncScenarios();
+  // Drill answers made offline last time.
+  void flushMistakeAnswers();
 
   const unsubscribers = [
     startPush(),
@@ -68,6 +72,7 @@ export function startSession(onSignedOut: () => void): () => void {
     if (status !== 'active') return;
     void syncScenarios();
     void syncVocabulary();
+    void flushMistakeAnswers();
     void syncNotifications();
     // Notifications may have just been allowed in the phone's settings.
     void registerPush();

@@ -45,7 +45,7 @@ export function CertificatePreview({ certificate }: { certificate: ApiCertificat
         {SCORES.map(({ key, label }) => (
           <View key={key} style={styles.score}>
             <AppText variant="subheading" color={key === 'overall' ? GOLD : IVORY}>
-              {certificate[key].toFixed(1)}
+              {certificate[key]?.toFixed(1) ?? '—'}
             </AppText>
             <AppText variant="caption" color={MUTED} numberOfLines={1}>
               {t(label)}

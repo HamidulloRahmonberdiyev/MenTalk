@@ -25,6 +25,7 @@ export default function RootLayout() {
         <Stack.Screen name="conversation/[scenarioId]" options={{ gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="practice" options={{ gestureEnabled: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="mistakes-practice" options={{ gestureEnabled: false, animation: 'slide_from_bottom' }} />
         {/* No swipe-back: unsaved edits are guarded by the screen's own discard sheet. */}
         <Stack.Screen name="profile-edit" options={{ gestureEnabled: false }} />
         <Stack.Screen name="face-lab" />

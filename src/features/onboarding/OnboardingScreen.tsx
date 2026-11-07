@@ -9,7 +9,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Pressable3D } from '@/components/ui/Pressable3D';
-import { useT } from '@/i18n';
+import { useT, type Language } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import type { StudyLanguage } from '@/services/learning';
 import { pushOnboarding } from '@/services/session';
@@ -17,13 +17,26 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, radii, spacing, typography } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
-import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, ReferralSource } from '@/types';
+import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, NativeLanguage, ReferralSource } from '@/types';
 
 import { BirthDateField, type BirthParts } from './BirthDateField';
 import { parseBirthDate } from './birthDate';
 import { CountryPicker } from './CountryPicker';
 import { OptionCard } from './OptionCard';
-import { DAILY, EXPERIENCES, FOCUS, GENDERS, GOALS, LEVELS, REFERRAL_SOURCES, STUDY_OPTIONS, levelLook } from './options';
+import {
+  DAILY,
+  EXPERIENCES,
+  FOCUS,
+  GENDERS,
+  GOALS,
+  INTERFACE_OPTIONS,
+  LEVELS,
+  NATIVE_OPTIONS,
+  REFERRAL_SOURCES,
+  STUDY_OPTIONS,
+  isInterfaceLanguage,
+  levelLook,
+} from './options';
 import type { PlacementResult } from './placement/placement';
 import { PlacementTest } from './placement/PlacementTest';
 import { ProgressSegments } from './ProgressSegments';
@@ -35,10 +48,11 @@ const SOURCE_ICON_SIZE = 26;
 /** Long enough to see the choice light up, short enough to feel instant. */
 const AUTO_ADVANCE_MS = 380;
 
-type StepId = 'study' | 'name' | 'gender' | 'country' | 'birth' | 'source' | 'experience' | 'level' | 'goals' | 'focus' | 'daily' | 'plan';
+type StepId = 'study' | 'native' | 'name' | 'gender' | 'country' | 'birth' | 'source' | 'experience' | 'level' | 'goals' | 'focus' | 'daily' | 'plan';
 
 const STEPS: readonly { id: StepId; emoji: string }[] = [
   { id: 'study', emoji: '💬' },
+  { id: 'native', emoji: '🏡' },
   { id: 'name', emoji: '👋' },
   { id: 'gender', emoji: '🙋' },
   { id: 'country', emoji: '🌍' },
@@ -60,10 +74,13 @@ export function OnboardingScreen() {
   const initialName = useUserStore((state) => state.name);
   const completeOnboarding = useUserStore((state) => state.completeOnboarding);
   const setStudyLanguage = useSettingsStore((state) => state.setStudyLanguage);
+  const uiLanguage = useSettingsStore((state) => state.language);
+  const setUiLanguage = useSettingsStore((state) => state.setLanguage);
 
   const [step, setStep] = useState(0);
   const [forward, setForward] = useState(true);
   const [study, setStudy] = useState<StudyLanguage | null>(null);
+  const [native, setNative] = useState<NativeLanguage | null>(null);
   const [name, setName] = useState(initialName);
   const [gender, setGender] = useState<Gender | null>(null);
   const [country, setCountry] = useState<CountryCode | null>(null);
@@ -89,6 +106,7 @@ export function OnboardingScreen() {
 
   const canContinue = {
     study: study !== null,
+    native: native !== null,
     name: name.trim().length >= 2,
     gender: gender !== null,
     country: country !== null,
@@ -152,10 +170,11 @@ export function OnboardingScreen() {
       advance();
       return;
     }
-    if (!study || !gender || !country || !level || !levelSource || !experience || !parsedBirth || !source) return;
+    if (!study || !native || !gender || !country || !level || !levelSource || !experience || !parsedBirth || !source) return;
     haptics.success();
     const answers = {
       studyLanguage: study,
+      nativeLanguage: native,
       name: name.trim(),
       gender,
       country,
@@ -176,9 +195,31 @@ export function OnboardingScreen() {
   // Applied at once, so the next steps already name the right tutor and language.
   const chooseStudy = (language: StudyLanguage) => {
     if (language !== study) setPlacement(null);
+    // Nobody learns their own mother tongue here: that answer no longer stands.
+    if (native === language) setNative(null);
     setStudy(language);
     setStudyLanguage(language);
     autoAdvance();
+  };
+
+  // The app switches to the mother tongue at once when it speaks it, so every following screen
+  // is already in that language. Otherwise the learner confirms which language explains things,
+  // preset to the one their speakers most often read.
+  const chooseNative = (value: NativeLanguage) => {
+    setNative(value);
+    if (isInterfaceLanguage(value)) {
+      setUiLanguage(value);
+      autoAdvance();
+      return;
+    }
+    cancelAutoAdvance();
+    const preset = NATIVE_OPTIONS.find(({ id }) => id === value)?.explainIn;
+    if (preset) setUiLanguage(preset);
+  };
+
+  const chooseExplainLanguage = (value: Language) => {
+    haptics.selection();
+    setUiLanguage(value);
   };
 
   const chooseExperience = (value: LearnerExperience) => {
@@ -303,6 +344,31 @@ export function OnboardingScreen() {
                     </Reveal>
                   ))
                 : null}
+
+              {current.id === 'native' ? (
+                <>
+                  <View style={styles.grid}>
+                    {NATIVE_OPTIONS.filter(({ id }) => id !== study).map(({ id, emoji, endonym }, index) => (
+                      <Reveal key={id} index={2 + index} style={styles.cell}>
+                        <OptionCard
+                          tile
+                          emoji={emoji}
+                          title={endonym ?? t('native.other')}
+                          // The name in the screen's language, unless it would only repeat the title.
+                          description={endonym && id !== uiLanguage ? t(`native.${id}`) : undefined}
+                          selected={native === id}
+                          onPress={() => chooseNative(id)}
+                        />
+                      </Reveal>
+                    ))}
+                  </View>
+                  {native && !isInterfaceLanguage(native) ? (
+                    <Reveal index={0}>
+                      <ExplainLanguagePicker value={uiLanguage} onChange={chooseExplainLanguage} />
+                    </Reveal>
+                  ) : null}
+                </>
+              ) : null}
 
               {current.id === 'name' ? (
                 <Reveal index={2}>
@@ -456,6 +522,9 @@ export function OnboardingScreen() {
                 <Reveal index={2}>
                   <View style={styles.plan}>
                     <PlanRow emoji={STUDY_OPTIONS.find(({ id }) => id === study)?.emoji ?? '🗣️'} label={t('onb.plan.language')} value={t(`study.${study}`)} />
+                    {native ? (
+                      <PlanRow emoji={NATIVE_OPTIONS.find(({ id }) => id === native)?.emoji ?? '🌐'} label={t('onb.plan.native')} value={t(`native.${native}`)} />
+                    ) : null}
                     <PlanRow
                       emoji={levelLook(level).emoji}
                       label={t('onb.plan.level')}
@@ -549,6 +618,48 @@ function PlacementBadge({ result, onRetry }: { result: PlacementResult; onRetry:
           {t('placement.retry')}
         </AppText>
       </PressableScale>
+    </View>
+  );
+}
+
+/**
+ * Shown when the mother tongue is not one the app speaks: which of its languages explains things.
+ * Switching it re-renders the whole screen in that language right away, which is the preview.
+ */
+function ExplainLanguagePicker({ value, onChange }: { value: Language; onChange: (value: Language) => void }) {
+  const t = useT();
+  const home = usePalette();
+  const styles = useThemedStyles(createStyles);
+  return (
+    <View style={styles.explain}>
+      <View style={styles.explainHead}>
+        <Ionicons name="chatbubble-ellipses" size={18} color={home.accent} />
+        <AppText variant="bodyStrong" color={home.text} style={styles.ctaTexts}>
+          {t('onb.native.explain')}
+        </AppText>
+      </View>
+      <View style={styles.segments} accessibilityRole="radiogroup">
+        {INTERFACE_OPTIONS.map(({ id, label }) => {
+          const active = value === id;
+          return (
+            <PressableScale
+              key={id}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active }}
+              accessibilityLabel={label}
+              onPress={() => onChange(id)}
+              style={[styles.segment, active && styles.segmentActive]}
+            >
+              <AppText variant="captionStrong" color={active ? colors.onPrimary : home.text}>
+                {label}
+              </AppText>
+            </PressableScale>
+          );
+        })}
+      </View>
+      <AppText variant="caption" color={home.textMuted}>
+        {t('onb.native.explain.hint')}
+      </AppText>
     </View>
   );
 }
@@ -672,4 +783,16 @@ const createStyles = (home: Palette) =>
     planEmoji: { fontSize: 22, lineHeight: 28 },
     planNote: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radii.pill },
     footer: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+    explain: {
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderRadius: radii.xl,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.panel,
+    },
+    explainHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    segments: { flexDirection: 'row', gap: spacing.xs, padding: spacing.xs, borderRadius: radii.md, backgroundColor: home.track },
+    segment: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radii.sm },
+    segmentActive: { backgroundColor: colors.primary },
   });

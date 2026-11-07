@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { isApiConfigured } from '@/services/api/config';
 import { useResultStore } from '@/store/resultStore';
 import { useT } from '@/i18n';
 import { useScenario } from '@/store/scenariosStore';
@@ -72,6 +73,10 @@ export function ResultScreen() {
             {result.mistakes.map((mistake) => (
               <MistakeCard key={mistake.id} mistake={mistake} />
             ))}
+            {/* Every correction of the chat is already in the notebook, ready to practise. */}
+            {isApiConfigured ? (
+              <Button title={t('mistakes.fromResult')} icon="flash" variant="soft" onPress={() => router.push('/mistakes-practice')} />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>

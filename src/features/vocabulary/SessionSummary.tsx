@@ -17,10 +17,12 @@ interface SessionSummaryProps {
   summary: RoundSummary;
   onAgain: () => void;
   onDone: () => void;
+  /** The way out; the word game goes back to the words, other games say where they return to. */
+  doneLabel?: string;
 }
 
 /** End of a round: a celebration, the points earned and the streak, then one tap to play again. */
-export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps) {
+export function SessionSummary({ summary, onAgain, onDone, doneLabel }: SessionSummaryProps) {
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const accuracy = summary.total === 0 ? 0 : Math.round((summary.correct / summary.total) * 100);
@@ -58,7 +60,7 @@ export function SessionSummary({ summary, onAgain, onDone }: SessionSummaryProps
 
       <View style={styles.footer}>
         <Button title={t('practice.done.again')} icon="refresh" onPress={onAgain} />
-        <Button title={t('practice.done.back')} variant="soft" onPress={onDone} />
+        <Button title={doneLabel ?? t('practice.done.back')} variant="soft" onPress={onDone} />
       </View>
     </View>
   );

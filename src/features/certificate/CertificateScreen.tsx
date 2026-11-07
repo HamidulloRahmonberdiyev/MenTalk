@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -20,7 +20,7 @@ import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import type { PlacementResult } from '../onboarding/placement/placement';
 import { PlacementTest } from '../onboarding/placement/PlacementTest';
-import { saveCertificate, shareCertificate } from './certificatePdf';
+import { certificateHtml, saveCertificate, shareCertificate } from './certificatePdf';
 import { CertificatePreview } from './CertificatePreview';
 
 type Busy = 'issue' | 'save' | 'share' | null;
@@ -51,6 +51,12 @@ export function CertificateScreen() {
     void load();
   }, [load]);
 
+  // Fetched ahead, so the certificate opens at once when tapped.
+  const serial = status?.certificate?.serial;
+  useEffect(() => {
+    if (serial) certificateHtml(serial).catch(() => undefined);
+  }, [serial]);
+
   /** Runs one button's work, with the spinner on that button and any failure said on screen. */
   const run = async (kind: Exclude<Busy, null>, work: () => Promise<TranslationKey | null>) => {
     setBusy(kind);
@@ -78,7 +84,20 @@ export function CertificateScreen() {
   }
 
   const certificate = status?.certificate ?? null;
-  const canIssue = status !== null && status.eligible && certificate?.level !== status.level;
+  const openViewer = (serial: string) => {
+    haptics.selection();
+    router.push({ pathname: '/certificate-view', params: { serial } });
+  };
+  // Any time: the server returns the current certificate when nothing changed, a new one otherwise.
+  const canIssue = status !== null && status.eligible;
+
+  const issue = () =>
+    run('issue', async () => {
+      const issued = await endpoints.issueCertificate();
+      haptics.success();
+      await load();
+      return issued.serial === certificate?.serial ? 'certificate.upToDate' : certificate ? 'certificate.updated' : null;
+    });
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
@@ -101,33 +120,41 @@ export function CertificateScreen() {
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xl }]} showsVerticalScrollIndicator={false}>
           {certificate ? (
             <>
-              <CertificatePreview certificate={certificate} />
-              <Button
-                title={t('certificate.download')}
-                icon="download"
-                loading={busy === 'save'}
-                disabled={busy !== null}
-                onPress={() =>
-                  void run('save', async () => {
-                    const saved = await saveCertificate(certificate);
-                    if (saved) haptics.success();
-                    return saved ? 'certificate.saved' : null;
-                  })
-                }
-              />
-              <Button
-                title={t('certificate.share')}
-                icon="share-social"
-                variant="soft"
-                loading={busy === 'share'}
-                disabled={busy !== null}
-                onPress={() =>
-                  void run('share', async () => {
-                    await shareCertificate(certificate);
-                    return null;
-                  })
-                }
-              />
+              <Pressable accessibilityRole="button" accessibilityLabel={t('certificate.view')} onPress={() => openViewer(certificate.serial)}>
+                <CertificatePreview certificate={certificate} />
+              </Pressable>
+              <Button title={t('certificate.view')} icon="document-text" disabled={busy !== null} onPress={() => openViewer(certificate.serial)} />
+              <View style={styles.row}>
+                <View style={styles.flex}>
+                  <Button
+                    title={t('certificate.download')}
+                    icon="download"
+                    variant="soft"
+                    loading={busy === 'save'}
+                    disabled={busy !== null}
+                    onPress={() =>
+                      void run('save', async () => {
+                        const saved = await saveCertificate(certificate.serial);
+                        if (saved) haptics.success();
+                        return saved ? 'certificate.saved' : null;
+                      })
+                    }
+                  />
+                </View>
+                <Button
+                  title={t('certificate.share')}
+                  icon="share-social"
+                  variant="soft"
+                  loading={busy === 'share'}
+                  disabled={busy !== null}
+                  onPress={() =>
+                    void run('share', async () => {
+                      await shareCertificate(certificate.serial);
+                      return null;
+                    })
+                  }
+                />
+              </View>
             </>
           ) : (
             <View style={styles.intro}>
@@ -142,46 +169,45 @@ export function CertificateScreen() {
           )}
 
           {notice ? (
-            <AppText variant="caption" color={notice === 'certificate.saved' ? home.successInk : home.textSecondary} style={styles.center}>
+            <AppText variant="caption" color={notice === 'certificate.saved' || notice === 'certificate.updated' ? home.successInk : home.textSecondary} style={styles.center}>
               {t(notice)}
             </AppText>
           ) : null}
 
           {canIssue ? (
-            <Button
-              title={certificate ? t('certificate.issueNew', { level: status.cefr ?? '' }) : t('certificate.issue')}
-              icon="ribbon"
-              variant={certificate ? 'soft' : 'primary'}
-              loading={busy === 'issue'}
-              disabled={busy !== null}
-              onPress={() =>
-                void run('issue', async () => {
-                  await endpoints.issueCertificate();
-                  haptics.success();
-                  await load();
-                  return null;
-                })
-              }
-            />
-          ) : null}
-
-          {!status.eligible ? (
-            <View style={styles.steps}>
-              <Requirement done={status.placed} title={t('certificate.req.placement')}>
-                {status.placed ? null : <Button title={t('certificate.req.placement.action')} variant="soft" disabled={busy !== null} onPress={() => setPlacing(true)} />}
-              </Requirement>
-              <Requirement
-                done={status.conversations >= status.required_conversations}
-                title={t('certificate.req.talks', { n: Math.min(status.conversations, status.required_conversations), total: status.required_conversations })}
-              >
-                {status.conversations >= status.required_conversations ? null : (
-                  <>
-                    <ProgressBar value={status.conversations / status.required_conversations} />
-                    <Button title={t('certificate.req.talks.action')} variant="soft" onPress={() => router.push('/scenarios')} />
-                  </>
-                )}
-              </Requirement>
+            <View style={styles.standing}>
+              <AppText variant="bodyStrong" color={home.text} style={styles.center}>
+                {t('certificate.current', { level: status.cefr ?? '' })}
+              </AppText>
+              <AppText variant="caption" color={home.textSecondary} style={styles.center}>
+                {t('certificate.basis', { parts: basisOf(status, t) })}
+              </AppText>
+              <Button
+                title={certificate ? t('certificate.refresh') : t('certificate.issue')}
+                icon={certificate ? 'refresh' : 'ribbon'}
+                variant={certificate ? 'soft' : 'primary'}
+                loading={busy === 'issue'}
+                disabled={busy !== null}
+                onPress={() => void issue()}
+              />
             </View>
+          ) : (
+            <Requirement done={false} title={t('certificate.req.start')}>
+              <Button title={t('certificate.req.words.action')} variant="soft" onPress={() => router.navigate('/words')} />
+              <Button title={t('certificate.req.talks.action')} variant="soft" onPress={() => router.push('/scenarios')} />
+              <Button title={t('certificate.req.placement.action')} variant="soft" disabled={busy !== null} onPress={() => setPlacing(true)} />
+            </Requirement>
+          )}
+
+          {/* How to climb: conversations are what the higher levels rest on. */}
+          {canIssue && status.conversations < status.required_conversations ? (
+            <Requirement done={false} title={t('certificate.raise', { n: status.required_conversations })}>
+              <ProgressBar value={status.conversations / status.required_conversations} />
+              <Button title={t('certificate.req.talks.action')} variant="soft" onPress={() => router.push('/scenarios')} />
+              {status.placed ? null : (
+                <Button title={t('certificate.req.placement.action')} variant="soft" disabled={busy !== null} onPress={() => setPlacing(true)} />
+              )}
+            </Requirement>
           ) : null}
 
           <AppText variant="caption" color={home.textMuted} style={styles.center}>
@@ -191,6 +217,17 @@ export function CertificateScreen() {
       )}
     </View>
   );
+}
+
+/** "level test · 3 conversations · 40 words": what the level on the next certificate rests on. */
+function basisOf(status: ApiCertificateStatus, t: ReturnType<typeof useT>): string {
+  return [
+    status.placed ? t('certificate.basis.placement') : null,
+    status.conversations > 0 ? t('certificate.basis.talks', { n: status.conversations }) : null,
+    status.words ? t('certificate.basis.words', { n: status.words }) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function Requirement({ done, title, children }: { done: boolean; title: string; children: React.ReactNode }) {
@@ -217,7 +254,9 @@ const createStyles = (home: Palette) =>
     intro: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
     emblem: { fontSize: 56, lineHeight: 68 },
     center: { textAlign: 'center' },
-    steps: { gap: spacing.md },
+    standing: { gap: spacing.sm },
+    row: { flexDirection: 'row', gap: spacing.sm },
+    flex: { flex: 1 },
     step: {
       gap: spacing.md,
       padding: spacing.lg,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 
 import { useVoiceCapture } from '@/features/conversation/useVoiceCapture';
@@ -12,7 +12,8 @@ import type { WordSuggestion } from '@/types';
 import { useRemindersStore } from '../reminders/remindersStore';
 import { isUntouched } from '../vocabulary/srs';
 import { findCard, useVocabularyStore } from '../vocabulary/vocabularyStore';
-import { phrasesFor, type PhraseLevel } from './phrases';
+import { queueKey, refillPhrases, usePhraseQueue } from './phraseQueue';
+import type { PhraseLevel } from './phrases';
 
 export type PracticePhase = 'ready' | 'recording' | 'analyzing' | 'result' | 'error';
 export type PracticeError = 'denied' | 'noSpeech' | 'failed';
@@ -20,7 +21,8 @@ export type PracticeError = 'denied' | 'noSpeech' | 'failed';
 export interface Pronunciation {
   phase: PracticePhase;
   error: PracticeError | null;
-  phrase: string;
+  /** Null only while the very first lines of a level are loading. */
+  phrase: string | null;
   level: PhraseLevel;
   result: PronunciationResult | null;
   /** Words from this attempt that were new to the word list and have just been added to it. */
@@ -45,15 +47,20 @@ export function usePronunciation(): Pronunciation {
   const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const uiLanguage = useSettingsStore((state) => state.language);
   const [level, setLevelState] = useState<PhraseLevel>('easy');
-  const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<PracticePhase>('ready');
   const [error, setError] = useState<PracticeError | null>(null);
   const [result, setResult] = useState<PronunciationResult | null>(null);
   const [saved, setSaved] = useState<WordSuggestion[]>([]);
   const attempt = useRef<AbortController | null>(null);
 
-  const phrases = useMemo(() => phrasesFor(studyLanguage, level), [studyLanguage, level]);
-  const phrase = phrases[index % phrases.length];
+  // The head of the queue stays on screen (also across visits) until the learner moves on.
+  const key = queueKey(studyLanguage, level);
+  const queued = usePhraseQueue((state) => state.queues[key]?.length ?? 0);
+  const phrase = usePhraseQueue((state) => state.queues[key]?.[0]?.text ?? null);
+
+  useEffect(() => {
+    void refillPhrases(studyLanguage, level);
+  }, [studyLanguage, level, queued]);
 
   const cancelAttempt = () => {
     attempt.current?.abort();
@@ -62,6 +69,7 @@ export function usePronunciation(): Pronunciation {
 
   const onSpeechEnd = useCallback(
     (audio: RecordedAudio) => {
+      if (!phrase) return;
       cancelAttempt();
       const controller = new AbortController();
       attempt.current = controller;
@@ -98,7 +106,7 @@ export function usePronunciation(): Pronunciation {
   const capture = useVoiceCapture({ onSpeechEnd, onNoSpeech });
 
   const toggleRecording = useCallback(() => {
-    if (phase === 'analyzing') return;
+    if (phase === 'analyzing' || !phrase) return;
     if (phase === 'recording') {
       void capture.stop();
       return;
@@ -114,7 +122,7 @@ export function usePronunciation(): Pronunciation {
       setError(started === 'denied' ? 'denied' : 'failed');
       setPhase('error');
     });
-  }, [phase, capture]);
+  }, [phase, phrase, capture]);
 
   const reset = useCallback(() => {
     cancelAttempt();
@@ -126,16 +134,16 @@ export function usePronunciation(): Pronunciation {
     setPhase('ready');
   }, [capture]);
 
+  // The line just left is gone for good: the server never hands it out again while new ones exist.
   const next = useCallback(() => {
     reset();
-    setIndex((current) => current + 1);
-  }, [reset]);
+    usePhraseQueue.getState().advance(key);
+  }, [reset, key]);
 
   const setLevel = useCallback(
     (value: PhraseLevel) => {
       reset();
       setLevelState(value);
-      setIndex(0);
     },
     [reset],
   );

@@ -1,17 +1,20 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
+import { isApiConfigured } from '@/services/api/config';
+import type { ApiMistakeSummary } from '@/services/api/endpoints';
 import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
 import { spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { refreshMistakeSummary, useMistakesStore } from '../mistakes/mistakesStore';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { starterWords } from '../vocabulary/starterWords';
 import { countDue, useStudyCards, useVocabularyStore } from '../vocabulary/vocabularyStore';
@@ -28,6 +31,12 @@ export function ResourcesScreen() {
   const language = useSettingsStore((state) => state.language);
   const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const [picking, setPicking] = useState(false);
+  const mistakes = useMistakesStore((state) => state.summaries[studyLanguage]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshMistakeSummary(studyLanguage);
+    }, [studyLanguage]),
+  );
 
   const due = countDue(cards);
   const empty = cards.length === 0;
@@ -43,6 +52,20 @@ export function ResourcesScreen() {
       // With nothing saved there is nothing to play; the list explains how to get words.
       onPress: () => (empty ? router.push('/word-list') : setPicking(true)),
     },
+    // The notebook lives on the server; without one there is nothing in it.
+    ...(isApiConfigured
+      ? [
+          {
+            key: 'mistakes',
+            title: t('mistakes.title'),
+            hint: mistakeHint(mistakes, t),
+            icon: 'flash' as const,
+            gradient: ['#FFA36B', '#F0522E'] as const,
+            edge: '#C2391A',
+            onPress: () => router.push('/mistakes'),
+          },
+        ]
+      : []),
     {
       key: 'words',
       title: t('words.title'),
@@ -121,6 +144,13 @@ export function ResourcesScreen() {
       <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
     </View>
   );
+}
+
+/** "3 to practise now", else how many are in the notebook, else what it is for. */
+function mistakeHint(summary: ApiMistakeSummary | undefined, t: ReturnType<typeof useT>): string {
+  if (summary && summary.due > 0) return t('mistakes.due', { n: summary.due });
+  if (summary && summary.total > 0) return t('res.mistakes.count', { n: summary.total });
+  return t('res.mistakes.hint');
 }
 
 const createStyles = (home: Palette) => StyleSheet.create({

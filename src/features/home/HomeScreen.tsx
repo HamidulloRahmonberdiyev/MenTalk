@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_BAR_SPACE } from '@/components/navigation/FloatingTabBar';
 import { useRefreshControl } from '@/components/ui/useRefreshControl';
 import { useT } from '@/i18n';
+import { isApiConfigured } from '@/services/api/config';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
@@ -81,15 +82,18 @@ export function HomeScreen() {
           if (next) openConversation(next);
         },
       },
-      {
-        key: 'random',
-        label: t('home.menu.random'),
-        art: 'dice',
-        onPress: () => {
-          const stage = unlocked[Math.floor(Math.random() * unlocked.length)];
-          if (stage) openConversation(stage.scenario.id);
-        },
-      },
+      // The mistakes notebook lives on the server, so without one the slot stays a random topic.
+      isApiConfigured
+        ? { key: 'mistakes', label: t('home.menu.mistakes'), art: 'mistakes', onPress: () => router.push('/mistakes') }
+        : {
+            key: 'random',
+            label: t('home.menu.random'),
+            art: 'dice',
+            onPress: () => {
+              const stage = unlocked[Math.floor(Math.random() * unlocked.length)];
+              if (stage) openConversation(stage.scenario.id);
+            },
+          },
       // Profile already has its own tab, so its slot went to pronunciation practice.
       { key: 'pronunciation', label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],

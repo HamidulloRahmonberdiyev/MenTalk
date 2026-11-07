@@ -4,10 +4,11 @@ import { INITIAL_USER } from '@/mocks/user';
 import { usePathStore } from '@/store/pathStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { StudyLanguage } from '@/services/learning';
-import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, ScenarioId, UserProfile } from '@/types';
+import type { CountryCode, Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, LevelSource, NativeLanguage, ScenarioId, UserProfile } from '@/types';
 
 export interface OnboardingData {
   studyLanguage: StudyLanguage;
+  nativeLanguage: NativeLanguage;
   name: string;
   gender: Gender;
   country: CountryCode;

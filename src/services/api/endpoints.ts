@@ -1,5 +1,5 @@
 import type { StudyLanguage } from '@/services/learning';
-import type { LearnerExperience, LevelSource, LocalizedText, ReferralSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
+import type { LearnerExperience, LevelSource, LocalizedText, NativeLanguage, ReferralSource, ReviewRating, TutorCharacter, TutorTone, WordSource, WordStatus } from '@/types';
 
 import { AI_TIMEOUT_MS, UPLOAD_TIMEOUT_MS, api, apiBody, apiPage } from './http';
 import { streamEvents } from './stream';
@@ -19,6 +19,8 @@ export interface ApiUser {
   placement_score?: number | null;
   experience?: LearnerExperience | null;
   referral_source?: ReferralSource | null;
+  /** Missing on servers that predate the question. */
+  native_language?: NativeLanguage | null;
   goals: string[];
   focus?: string[];
   ui_language: 'uz' | 'ru' | 'en' | null;
@@ -45,6 +47,7 @@ export type ApiProfilePatch = Partial<
     | 'placement_score'
     | 'experience'
     | 'referral_source'
+    | 'native_language'
     | 'goals'
     | 'focus'
     | 'ui_language'
@@ -74,22 +77,31 @@ export interface ApiCertificate {
   level: string;
   cefr: string;
   holder_name: string;
-  speaking: number;
-  vocabulary: number;
-  grammar: number;
+  /** Null when no activity measured the skill (no conversation yet); never shown as a zero. */
+  speaking: number | null;
+  vocabulary: number | null;
+  grammar: number | null;
   overall: number;
   issued_at: string;
   verify_url: string;
+  /** What the level rests on. Missing on servers from before any-activity certificates. */
+  placement_score?: number | null;
+  conversations?: number;
+  words?: number;
 }
 
 export interface ApiCertificateStatus {
   language: string;
   level: string | null;
   cefr: string | null;
-  /** Whether the level was measured by the placement test; a hand-picked one earns no certificate. */
+  /** Whether the placement test was taken; a hand-picked level counts for nothing. */
   placed: boolean;
   conversations: number;
+  /** Rated conversations the top level (B2+) needs. */
   required_conversations: number;
+  /** Words on the learner's list in this language. */
+  words?: number;
+  /** Any activity at all (a saved word, a rated chat, the test); `level` is what it supports. */
   eligible: boolean;
   /** The latest one issued in this language, which may be for an earlier level. */
   certificate: ApiCertificate | null;
@@ -204,6 +216,58 @@ export interface ApiReviewAnswer {
   duration_ms: number | null;
 }
 
+export type MistakeCategory =
+  | 'verb_form'
+  | 'case_ending'
+  | 'agreement'
+  | 'word_order'
+  | 'preposition'
+  | 'article'
+  | 'pronoun'
+  | 'word_choice'
+  | 'spelling'
+  | 'other';
+
+/** One entry of the mistakes notebook: a correction the tutor made, merged each time it is made again. */
+export interface ApiNotebookMistake {
+  id: string;
+  language: StudyLanguage;
+  said: string;
+  correct: string;
+  note: string | null;
+  note_language: 'uz' | 'ru' | 'en' | null;
+  category: MistakeCategory;
+  occurrences: number;
+  status: 'new' | 'learning' | 'known';
+  repetitions: number;
+  lapses: number;
+  due_at: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  last_reviewed_at: string | null;
+  conversation_id: string | null;
+}
+
+export interface ApiMistakeSummary {
+  total: number;
+  due: number;
+  learning: number;
+  mastered: number;
+  next_due_at: string | null;
+  /** Count per category, largest first. */
+  categories: Partial<Record<MistakeCategory, number>>;
+}
+
+export type MistakeExercise = 'choice' | 'spot' | 'build';
+
+export interface ApiMistakeAnswer {
+  id: string;
+  correct: boolean;
+  exercise: MistakeExercise;
+  answered_at: string;
+  duration_ms: number | null;
+}
+
 /** `POST /pronunciation/assess`. `error_type` follows Azure: None, Mispronunciation, Omission, Insertion. */
 export interface ApiPronunciation {
   score: number;
@@ -233,6 +297,13 @@ export interface ApiTranslationQuery {
   target: string;
   ui_language: 'uz' | 'ru' | 'en';
   uz_script: 'latin' | 'cyrillic';
+}
+
+/** A read-aloud line from the server's shared pool. */
+export interface ApiPhrase {
+  id: number;
+  text: string;
+  level: 'easy' | 'medium' | 'hard';
 }
 
 /** A notification already put into words by the server, in the language asked for. */
@@ -323,10 +394,31 @@ export const endpoints = {
   /** Stored answers come back at once; the server only asks the AI (and charges the quota) for new text. */
   translate: (query: ApiTranslationQuery, signal?: AbortSignal) =>
     api<ApiTranslation>('POST', '/translations', { body: query, timeoutMs: AI_TIMEOUT_MS, idempotent: true, signal }),
+  /**
+   * Lines to read aloud that this learner was never given (repeats only once the pool is exhausted
+   * and the AI may not write more). Handing them out marks them seen, so never retried blindly.
+   */
+  nextPhrases: (language: StudyLanguage, level: 'easy' | 'medium' | 'hard', limit: number) =>
+    api<ApiPhrase[]>('POST', '/pronunciation/phrases/next', { body: { language, level, limit }, timeoutMs: AI_TIMEOUT_MS }),
   syncWords: (cursor: string | null, changes: ApiUserWordChange[]) =>
     api<{ words: ApiUserWord[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
   /** The server ignores answers it has already logged, so a round is safe to resend. */
   reviewWords: (answers: ApiReviewAnswer[]) => api<{ xp: number }>('POST', '/vocabulary/reviews', { body: { answers }, idempotent: true }),
+
+  mistakes: (language: StudyLanguage, options: { category?: MistakeCategory; cursor?: string | null } = {}) => {
+    const query = new URLSearchParams({ language });
+    if (options.category) query.set('category', options.category);
+    if (options.cursor) query.set('cursor', options.cursor);
+    return apiPage<ApiNotebookMistake>(`/mistakes?${query.toString()}`);
+  },
+  mistakeSummary: (language: StudyLanguage) => api<ApiMistakeSummary>('GET', `/mistakes/summary?language=${language}`),
+  /** Due mistakes first, topped up with the ones not mastered yet. Reading it changes nothing. */
+  mistakePractice: (language: StudyLanguage, limit = 10) => api<ApiNotebookMistake[]>('GET', `/mistakes/practice?language=${language}&limit=${limit}`),
+  /** The server ignores answers it has already logged, so a round is safe to resend. */
+  reviewMistakes: (answers: ApiMistakeAnswer[]) => api<{ xp: number }>('POST', '/mistakes/reviews', { body: { answers }, idempotent: true }),
+  /** "Not a mistake": hidden for good, also when made again. Idempotent. */
+  dismissMistake: (id: string) => api<void>('DELETE', `/mistakes/${id}`),
+  restoreMistake: (id: string) => api<ApiNotebookMistake>('POST', `/mistakes/${id}/restore`, { idempotent: true }),
 
   notifications: (language: 'uz' | 'ru' | 'en', limit = 50) =>
     apiPage<ApiNotification, { unread_count: number }>(`/notifications?limit=${limit}&lang=${language}`),

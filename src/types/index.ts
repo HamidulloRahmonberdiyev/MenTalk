@@ -101,6 +101,9 @@ export type LearnerExperience = 'none' | 'school' | 'self_taught' | 'courses' | 
 /** A skill the learner finds hard and wants the tutor to work on. */
 export type LearningFocus = 'speaking' | 'listening' | 'vocabulary' | 'grammar' | 'pronunciation' | 'confidence';
 /** Where the learner first heard of the app. */
+/** The learner's mother tongue. Wider than the interface languages: it tells the tutor which mistakes to expect. */
+export type NativeLanguage = 'uz' | 'ru' | 'en' | 'kk' | 'ky' | 'tg' | 'tk' | 'kaa' | 'az' | 'tr' | 'other';
+
 export type ReferralSource = 'instagram' | 'telegram' | 'tiktok' | 'youtube' | 'friend' | 'search' | 'store' | 'other';
 /** 'placement': measured by the onboarding test; 'self': picked by hand. */
 export type LevelSource = 'placement' | 'self';
@@ -141,6 +144,7 @@ export interface UserProfile {
   /** Share of placement questions answered right, 0–100; null when the level was picked by hand. */
   placementScore: number | null;
   experience: LearnerExperience | null;
+  nativeLanguage: NativeLanguage | null;
   goals: LearningGoal[];
   focus: LearningFocus[];
   dailyGoalMinutes: number;

@@ -8,7 +8,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useUserStore, type OnboardingData } from '@/store/userStore';
 import type { PlacementResult } from '@/features/onboarding/placement/placement';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
-import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type ReferralSource, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
+import { TUTOR_CHARACTERS, TUTOR_TONES, type HistoryEntry, type LearnerExperience, type LearningFocus, type LearningGoal, type NativeLanguage, type ReferralSource, type TutorCharacter, type TutorTone, type UserProfile } from '@/types';
 
 import { syncNotifications } from './notificationsSync';
 import { syncPath } from './pathSync';
@@ -19,6 +19,7 @@ import { syncVocabulary } from './vocabularySync';
 const GOALS: readonly LearningGoal[] = ['travel', 'work', 'study', 'relocation', 'family', 'fun'];
 const FOCUS: readonly LearningFocus[] = ['speaking', 'listening', 'vocabulary', 'grammar', 'pronunciation', 'confidence'];
 const EXPERIENCES: readonly LearnerExperience[] = ['none', 'school', 'self_taught', 'courses', 'immersion'];
+const NATIVE_LANGUAGES: readonly NativeLanguage[] = ['uz', 'ru', 'en', 'kk', 'ky', 'tg', 'tk', 'kaa', 'az', 'tr', 'other'];
 
 /** Keeps only values this build knows, so a newer server cannot put unknown options on screen. */
 const known = <T extends string>(allowed: readonly T[], values: readonly string[] = []): T[] =>
@@ -49,6 +50,7 @@ function applyUser(user: ApiUser): void {
     levelSource: user.level_source ?? null,
     placementScore: user.placement_score ?? null,
     experience: known(EXPERIENCES, user.experience ? [user.experience] : [])[0] ?? null,
+    nativeLanguage: known(NATIVE_LANGUAGES, user.native_language ? [user.native_language] : [])[0] ?? null,
     goals: known(GOALS, user.goals),
     focus: known(FOCUS, user.focus),
     dailyGoalMinutes: user.daily_goal_minutes,
@@ -115,6 +117,7 @@ export async function pushOnboarding(data: OnboardingData, referralSource: Refer
       ...(data.levelSource === 'placement' ? { placement_score: data.placementScore } : {}),
       experience: data.experience,
       referral_source: referralSource,
+      native_language: data.nativeLanguage,
       goals: data.goals,
       focus: data.focus,
       daily_goal_minutes: data.dailyGoalMinutes,

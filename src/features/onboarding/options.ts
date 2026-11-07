@@ -1,13 +1,49 @@
 import type { FontAwesome6 } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
+import type { Language } from '@/i18n';
 import type { StudyLanguage } from '@/services/learning';
-import type { Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, ReferralSource } from '@/types';
+import type { Gender, LearnerExperience, LearnerLevel, LearningFocus, LearningGoal, NativeLanguage, ReferralSource } from '@/types';
 
 export const STUDY_OPTIONS: readonly { id: StudyLanguage; emoji: string }[] = [
   { id: 'ru', emoji: '🇷🇺' },
   { id: 'en', emoji: '🇬🇧' },
 ];
+
+export interface NativeOption {
+  id: NativeLanguage;
+  emoji: string;
+  /** The language's name in itself, so a speaker finds theirs whatever the screen's language. */
+  endonym: string | null;
+  /**
+   * The interface language explanations default to: the language itself where the app has it,
+   * otherwise the one its speakers most often read (Russian across most of Central Asia).
+   */
+  explainIn: Language | null;
+}
+
+export const NATIVE_OPTIONS: readonly NativeOption[] = [
+  { id: 'uz', emoji: '🇺🇿', endonym: 'O‘zbekcha', explainIn: 'uz' },
+  { id: 'ru', emoji: '🇷🇺', endonym: 'Русский', explainIn: 'ru' },
+  { id: 'en', emoji: '🇬🇧', endonym: 'English', explainIn: 'en' },
+  { id: 'kk', emoji: '🇰🇿', endonym: 'Қазақша', explainIn: 'ru' },
+  { id: 'ky', emoji: '🇰🇬', endonym: 'Кыргызча', explainIn: 'ru' },
+  { id: 'tg', emoji: '🇹🇯', endonym: 'Тоҷикӣ', explainIn: 'ru' },
+  { id: 'tk', emoji: '🇹🇲', endonym: 'Türkmençe', explainIn: 'ru' },
+  { id: 'kaa', emoji: '🏜️', endonym: 'Qaraqalpaqsha', explainIn: 'uz' },
+  { id: 'az', emoji: '🇦🇿', endonym: 'Azərbaycanca', explainIn: null },
+  { id: 'tr', emoji: '🇹🇷', endonym: 'Türkçe', explainIn: null },
+  { id: 'other', emoji: '🌐', endonym: null, explainIn: null },
+];
+
+/** The languages the app itself speaks, each named in itself. */
+export const INTERFACE_OPTIONS: readonly { id: Language; label: string }[] = [
+  { id: 'uz', label: 'O‘zbekcha' },
+  { id: 'ru', label: 'Русский' },
+  { id: 'en', label: 'English' },
+];
+
+export const isInterfaceLanguage = (value: NativeLanguage): value is Language => INTERFACE_OPTIONS.some(({ id }) => id === value);
 
 export const GENDERS: readonly { id: Gender; emoji: string }[] = [
   { id: 'male', emoji: '👨' },
