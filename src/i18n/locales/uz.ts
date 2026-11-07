@@ -459,6 +459,8 @@ export const uz: Dictionary = {
   'home.vocab.total': 'So‘zlar:',
   'home.vocab.due': 'Takror:',
   'home.vocab.streak': 'Seriya:',
+  'home.vocab.empty': 'Hali so‘zlar yo‘q',
+  'home.vocab.count': '{n} ta so‘z · {due} takror',
   'res.title': 'Resurslar',
   'res.starter': 'Boshlang‘ich so‘zlar',
   'tutor.title': 'Suhbatdosh',

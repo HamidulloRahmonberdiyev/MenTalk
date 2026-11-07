@@ -25,6 +25,7 @@ import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { SkillBars, type SkillBar } from './SkillBars';
 import { PathCard } from './PathCard';
+import { VocabCard } from './VocabCard';
 
 /** Average of the latest conversation scores (out of 10). */
 const RECENT_SCORES = 10;
@@ -132,19 +133,7 @@ export function HomeScreen() {
               ]}
               onPress={() => router.push('/scenarios')}
             />
-            <FeatureCard
-              title={t('home.vocab.title')}
-              icon="library"
-              gradient={['#B79BFF', '#7B4FE0']}
-              edge="#5A35B8"
-              compact
-              stats={[
-                { label: t('home.vocab.total'), value: cards.length },
-                { label: t('home.vocab.due'), value: due },
-                { label: t('home.vocab.streak'), value: streak },
-              ]}
-              onPress={() => router.navigate('/words')}
-            />
+            <VocabCard cards={cards} due={due} onPress={() => router.navigate('/words')} />
 
             <ActivityCard />
 

@@ -457,6 +457,8 @@ export const en = {
   'home.vocab.total': 'Words:',
   'home.vocab.due': 'Review:',
   'home.vocab.streak': 'Streak:',
+  'home.vocab.empty': 'No words yet',
+  'home.vocab.count': '{n} words · {due} to review',
   'res.title': 'Resources',
   'res.starter': 'Starter words',
   'tutor.title': 'Conversation partner',

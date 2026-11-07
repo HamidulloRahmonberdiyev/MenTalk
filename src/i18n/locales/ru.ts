@@ -459,6 +459,8 @@ export const ru: Dictionary = {
   'home.vocab.total': 'Слов:',
   'home.vocab.due': 'Повтор:',
   'home.vocab.streak': 'Серия:',
+  'home.vocab.empty': 'Пока нет слов',
+  'home.vocab.count': 'Слов: {n} · повтор: {due}',
   'res.title': 'Ресурсы',
   'res.starter': 'Первые слова',
   'tutor.title': 'Собеседник',

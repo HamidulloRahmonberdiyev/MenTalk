@@ -25,11 +25,13 @@ import type { PathStage } from '../path/path';
 const RADIUS = 34;
 const DOT = 34;
 const DOT_OPEN = 44;
-/** Teal, between the blue talk card and the purple vocabulary card, at the same lightness. */
-const FACE = ['#72D4E2', '#1F8FBA'] as const;
-const EDGE = '#166C8E';
-const DEEP = '#1F8FBA';
-const INK = '#16324A';
+/** Soft lavender, as on Englify's "Zoom events" card: deeper top-left, paler bottom-right. */
+const FACE = ['#A396DE', '#C9C3EE'] as const;
+const EDGE = '#8576D4';
+const DEEP = '#7462CF';
+const INK = '#2B1E5C';
+/** Dark tint for the empty road and locked dots, in the card's own purple. */
+const SHADE = 'rgba(52, 34, 130, 0.2)';
 
 interface PathCardProps {
   stages: readonly PathStage[];
@@ -65,8 +67,8 @@ export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
     >
       <LinearGradient colors={FACE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
         <View style={styles.art} pointerEvents="none">
-          <Ionicons name="trail-sign" size={150} color="rgba(8, 45, 70, 0.2)" style={styles.artShadow} />
-          <Ionicons name="trail-sign" size={150} color="rgba(255, 255, 255, 0.3)" />
+          <Ionicons name="trail-sign" size={150} color="rgba(52, 34, 130, 0.18)" style={styles.artShadow} />
+          <Ionicons name="trail-sign" size={150} color="rgba(255, 255, 255, 0.45)" />
         </View>
 
         <View style={styles.head}>
@@ -74,12 +76,12 @@ export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
             <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.title}>
               {t('path.title')}
             </AppText>
-            <AppText color="rgba(255,255,255,0.92)" style={styles.subtitle}>
+            <AppText color="rgba(43,30,92,0.75)" style={styles.subtitle}>
               {t('path.progress', { done: passed, total: stages.length })}
             </AppText>
           </View>
           <View style={styles.arrow}>
-            <Ionicons name="arrow-up" size={20} color={INK} style={styles.arrowIcon} />
+            <Ionicons name="arrow-up" size={26} color={INK} style={styles.arrowIcon} />
           </View>
         </View>
 
@@ -178,7 +180,7 @@ function OpenDot({ stage }: { stage: PathStage }) {
   return (
     <View style={styles.openBox}>
       <Animated.View style={[styles.openRing, ring]} />
-      <View style={[styles.openDot, { boxShadow: '0 4px 10px rgba(8, 45, 70, 0.3)' }]}>
+      <View style={[styles.openDot, { boxShadow: '0 4px 10px rgba(52, 34, 130, 0.3)' }]}>
         <Ionicons name={stage.scenario.icon} size={20} color={DEEP} />
       </View>
     </View>
@@ -205,11 +207,11 @@ const styles = StyleSheet.create({
   },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   headTexts: { flex: 1, gap: 2 },
-  title: { fontSize: 28, lineHeight: 36, fontWeight: '900', letterSpacing: -0.5 },
+  title: { fontSize: 44, lineHeight: 54, fontWeight: '900', letterSpacing: -1 },
   subtitle: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
   arrow: {
-    width: 40,
-    height: 40,
+    width: 52,
+    height: 52,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
     right: DOT / 2,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(8, 45, 70, 0.22)',
+    backgroundColor: SHADE,
     overflow: 'hidden',
   },
   lineFill: { height: '100%', borderRadius: 3, backgroundColor: '#FFFFFF' },
@@ -243,10 +245,10 @@ const styles = StyleSheet.create({
   dotPassed: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 3,
-    borderBottomColor: 'rgba(8, 45, 70, 0.25)',
+    borderBottomColor: 'rgba(52, 34, 130, 0.25)',
   },
   dotLocked: {
-    backgroundColor: 'rgba(8, 45, 70, 0.22)',
+    backgroundColor: SHADE,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.35)',
   },
