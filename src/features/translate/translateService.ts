@@ -1,6 +1,8 @@
+import { isApiConfigured } from '@/services/api/config';
+import { endpoints } from '@/services/api/endpoints';
 import { readBase64 } from '@/services/gemini/audioFiles';
 import { generateJson, type Part, type Schema } from '@/services/gemini/client';
-import { geminiConfig } from '@/services/gemini/config';
+import { geminiConfig, isGeminiConfigured } from '@/services/gemini/config';
 import { TranslatorError, machineTranslate } from '@/services/translator/azure';
 import type { LanguageCode, Register, TranslationResult, UzbekScript } from '@/types';
 
@@ -117,8 +119,48 @@ function plausibleCorrection(original: string, corrected: string): boolean {
   return editDistance(original.toLowerCase(), corrected.toLowerCase()) / Math.max(original.length, 1) <= 0.25;
 }
 
-/** Translates typed or spoken input with Gemini. */
-export async function translate(request: TranslateRequest): Promise<TranslationResult> {
+/** Whether a full translation (meanings, alternatives, note) can be had at all. */
+export const canTranslateFully = isApiConfigured || isGeminiConfigured;
+
+/**
+ * The full translation of typed or spoken input. Typed text goes to our server, which answers from
+ * its store when anyone translated the same text before and asks the AI (then stores it) otherwise.
+ * Speech, and builds without a server, use Gemini directly.
+ */
+export function translate(request: TranslateRequest): Promise<TranslationResult> {
+  return isApiConfigured && !request.audioUri ? translateOnServer(request) : translateWithGemini(request);
+}
+
+const isRegister = (value: string): value is Register => (REGISTERS as string[]).includes(value);
+
+async function translateOnServer(request: TranslateRequest): Promise<TranslationResult> {
+  const raw = await endpoints.translate(
+    { text: request.text, source: request.source, target: request.target, ui_language: request.uiLanguage, uz_script: request.uzScript },
+    request.signal,
+  );
+  // Never trust a server answer to name a language this app build knows.
+  const sourceLanguage = isLanguageCode(raw.source_language) ? raw.source_language : request.source === 'auto' ? request.target : request.source;
+  const targetLanguage = isLanguageCode(raw.target_language) ? raw.target_language : request.target;
+
+  return {
+    sourceLanguage,
+    targetLanguage,
+    sourceText: request.text,
+    translation: raw.translation,
+    reading: raw.reading,
+    stressed: raw.stressed,
+    correctedInput: raw.corrected_input,
+    meanings: raw.meanings.map((item) => ({
+      translation: item.translation,
+      partOfSpeech: item.part_of_speech,
+      example: item.example ?? undefined,
+    })),
+    alternatives: raw.alternatives.map((item) => ({ text: item.text, register: isRegister(item.register) ? item.register : 'neutral' })),
+    note: raw.note,
+  };
+}
+
+async function translateWithGemini(request: TranslateRequest): Promise<TranslationResult> {
   const parts: Part[] = request.audioUri
     ? [
         { text: 'Transcribe this speech exactly, then translate it.' },
@@ -194,12 +236,11 @@ export async function translateFast({ text, source, target, uzScript, signal }: 
 }
 
 /**
- * Adds Gemini's meanings, alternatives, notes and reading to an instant translation. The instant
- * wording stays so the text on screen does not jump; Gemini's wording becomes an alternative when
- * it differs. A typo in the input is the exception: then the instant one translated the typo.
+ * Puts the full translation's meanings, alternatives, notes and reading onto an instant translation
+ * already on screen. The instant wording stays so the text does not jump; the full wording becomes
+ * an alternative when it differs. A typo in the input is the exception: the instant one translated the typo.
  */
-export async function enrich(request: TranslateRequest, base: TranslationResult): Promise<TranslationResult> {
-  const detailed = await translate(request);
+export function mergeDetails(base: TranslationResult, detailed: TranslationResult): TranslationResult {
   if (detailed.correctedInput || detailed.targetLanguage !== base.targetLanguage) return detailed;
 
   const differs = detailed.translation.trim().toLowerCase() !== base.translation.trim().toLowerCase();

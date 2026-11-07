@@ -6,21 +6,28 @@ import { useT } from '@/i18n';
 import { useVoiceCapture } from '@/features/conversation/useVoiceCapture';
 import { isUntouched } from '@/features/vocabulary/srs';
 import { useVocabularyStore } from '@/features/vocabulary/vocabularyStore';
+import { ApiError } from '@/services/api/http';
 import { GeminiError } from '@/services/gemini/client';
-import { isGeminiConfigured } from '@/services/gemini/config';
 import { haptics } from '@/services/haptics';
 import { speakText, stopSpeaking } from '@/services/speech';
 import { TranslatorError, isAzureTranslatorConfigured } from '@/services/translator/azure';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { LanguageCode, SavedTranslation, TranslationResult } from '@/types';
 
-import { enrich, translate, translateFast, type SourceLanguage, type TranslateRequest } from './translateService';
+import {
+  canTranslateFully,
+  mergeDetails,
+  translate,
+  translateFast,
+  type SourceLanguage,
+  type TranslateRequest,
+} from './translateService';
 import { isFavorite, useTranslatorStore } from './translatorStore';
 import { vocabularyWordOf } from './vocabularyWord';
 
 /** Pause after the last keystroke before a translation is requested. */
 const DEBOUNCE_MS = isAzureTranslatorConfigured ? 400 : 600;
-const configured = isAzureTranslatorConfigured || isGeminiConfigured;
+const configured = isAzureTranslatorConfigured || canTranslateFully;
 
 export type TranslateErrorCode = 'network' | 'quota' | 'failed';
 
@@ -34,21 +41,52 @@ const cacheKey = (text: string, source: SourceLanguage, target: LanguageCode, sc
   `${source}|${target}|${script}|${text.trim().toLowerCase()}`;
 
 function errorCode(error: unknown): TranslateErrorCode {
-  if (error instanceof GeminiError || error instanceof TranslatorError) return error.status === 429 ? 'quota' : 'failed';
+  if (error instanceof GeminiError || error instanceof TranslatorError || error instanceof ApiError) {
+    return error.status === 429 ? 'quota' : 'failed';
+  }
   return 'network';
 }
 
 const isAbort = (error: unknown) => error instanceof Error && error.name === 'AbortError';
 
-/** The instant machine translation, or null when it is unavailable and Gemini can stand in. */
-async function instant(request: TranslateRequest) {
-  if (!isAzureTranslatorConfigured) return null;
+/**
+ * Translates in up to two steps, calling `show` for each. The full translation (our server, which
+ * answers stored text at once, or Gemini) and Azure's instant one start together. When the instant one
+ * wins, as it does while the server is still asking the AI, it is shown first and the full one is
+ * merged onto it. `complete` says the details are in. Throws only when nothing could be shown.
+ */
+async function translateInStages(request: TranslateRequest, show: (result: TranslationResult, complete: boolean) => void) {
+  let complete = false;
+  let instantResult: TranslationResult | null = null;
+
+  const instant = isAzureTranslatorConfigured
+    ? translateFast(request).then(
+        (result) => {
+          if (complete) return;
+          instantResult = result;
+          show(result, !canTranslateFully);
+        },
+        (error: unknown) => {
+          if (!canTranslateFully) throw error;
+          if (__DEV__ && !request.signal?.aborted) console.warn('Instant translation failed:', error);
+        },
+      )
+    : null;
+
+  if (!canTranslateFully) {
+    await instant;
+    return;
+  }
+
   try {
-    return await translateFast(request);
+    const detailed = await translate(request);
+    complete = true;
+    show(instantResult ? mergeDetails(instantResult, detailed) : detailed, true);
   } catch (error) {
-    if (request.signal?.aborted || !isGeminiConfigured) throw error;
-    if (__DEV__) console.warn('Instant translation failed, using Gemini:', error);
-    return null;
+    // The instant translation may still be on its way, and is better than an error.
+    await instant;
+    if (!instantResult || request.signal?.aborted) throw error;
+    if (__DEV__) console.warn('Translation details failed:', error);
   }
 }
 
@@ -68,7 +106,7 @@ export function useTranslator() {
   const [speaking, setSpeaking] = useState(false);
   const [copied, setCopied] = useState(false);
   const cache = useRef(new Map<string, TranslationResult>());
-  /** Cache keys whose entry already has Gemini's details, not just the instant translation. */
+  /** Cache keys whose entry already has the full translation's details, not just the instant one. */
   const detailed = useRef(new Set<string>());
   const retryTick = useRef(0);
   const [retry, setRetry] = useState(0);
@@ -83,45 +121,36 @@ export function useTranslator() {
     const controller = new AbortController();
     const translateRequest: TranslateRequest = { text: trimmed, source, target, uzScript, uiLanguage, signal: controller.signal };
 
-    // Meanings, alternatives and notes arrive after the instant translation, without holding it up.
-    const addDetails = (base: TranslationResult) => {
-      if (!isGeminiConfigured || detailed.current.has(key)) return;
-      enrich(translateRequest, base)
-        .then((full) => {
-          if (controller.signal.aborted) return;
-          cache.current.set(key, full);
-          detailed.current.add(key);
-          setRequest({ status: 'done', result: full });
-        })
-        .catch((error: unknown) => {
-          if (__DEV__ && !controller.signal.aborted) console.warn('Translation details failed:', error);
-        });
-    };
-
     const timer = setTimeout(
       async () => {
-        if (cached) {
+        if (cached && detailed.current.has(key)) {
           setRequest({ status: 'done', result: cached });
-          addDetails(cached);
           return;
         }
-        setRequest((previous) => ({ status: 'loading', result: 'result' in previous ? previous.result : undefined }));
+        // An instant translation from earlier stays on screen while its details are fetched.
+        setRequest((previous) =>
+          cached ? { status: 'done', result: cached } : { status: 'loading', result: 'result' in previous ? previous.result : undefined },
+        );
+        let inHistory = Boolean(cached);
         try {
-          const fast = await instant(translateRequest);
-          const result = fast ?? (await translate(translateRequest));
-          cache.current.set(key, result);
-          if (fast) addDetails(fast);
-          else detailed.current.add(key);
-          setRequest({ status: 'done', result });
-          if (trimmed.length > 1) {
-            addHistory({
-              sourceLanguage: result.sourceLanguage,
-              targetLanguage: result.targetLanguage,
-              sourceText: trimmed,
-              translation: result.translation,
-            });
-          }
+          await translateInStages(translateRequest, (result, complete) => {
+            if (controller.signal.aborted) return;
+            cache.current.set(key, result);
+            if (complete) detailed.current.add(key);
+            setRequest({ status: 'done', result });
+            if (!inHistory && trimmed.length > 1) {
+              inHistory = true;
+              addHistory({
+                sourceLanguage: result.sourceLanguage,
+                targetLanguage: result.targetLanguage,
+                sourceText: trimmed,
+                translation: result.translation,
+              });
+            }
+          });
         } catch (error) {
+          // A detail fetch for something already on screen fails quietly.
+          if (cached) return;
           if (isAbort(error) && controller.signal.aborted) return;
           setRequest((previous) => ({
             status: 'error',

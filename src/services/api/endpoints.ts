@@ -213,6 +213,28 @@ export interface ApiPronunciation {
   new_words?: { word: string; form: string | null; translation: string }[];
 }
 
+/** `POST /translations`: a translator answer, from the server's store when anyone asked it before. */
+export interface ApiTranslation {
+  source_language: string;
+  target_language: string;
+  translation: string;
+  reading: string;
+  stressed: string;
+  corrected_input: string;
+  meanings: { translation: string; part_of_speech: string; example: { source: string; target: string } | null }[];
+  alternatives: { text: string; register: string }[];
+  note: string;
+}
+
+export interface ApiTranslationQuery {
+  text: string;
+  /** A language code, or 'auto' to have it detected. */
+  source: string;
+  target: string;
+  ui_language: 'uz' | 'ru' | 'en';
+  uz_script: 'latin' | 'cyrillic';
+}
+
 /** A notification already put into words by the server, in the language asked for. */
 export interface ApiNotification {
   id: string;
@@ -298,6 +320,9 @@ export const endpoints = {
       idempotent: true,
       signal,
     }),
+  /** Stored answers come back at once; the server only asks the AI (and charges the quota) for new text. */
+  translate: (query: ApiTranslationQuery, signal?: AbortSignal) =>
+    api<ApiTranslation>('POST', '/translations', { body: query, timeoutMs: AI_TIMEOUT_MS, idempotent: true, signal }),
   syncWords: (cursor: string | null, changes: ApiUserWordChange[]) =>
     api<{ words: ApiUserWord[]; cursor: string }>('POST', '/vocabulary/sync', { body: { cursor, changes } }),
   /** The server ignores answers it has already logged, so a round is safe to resend. */
