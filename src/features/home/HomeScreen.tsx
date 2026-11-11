@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -10,30 +11,27 @@ import { useT } from '@/i18n';
 import { isApiConfigured } from '@/services/api/config';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
-import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { ReminderPrompt } from '../reminders/ReminderPrompt';
 import { useReminderRoute } from '../reminders/useReminderRoute';
 import { usePath } from '../path/usePath';
 import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
-import { MAX_LEVEL, levelOf } from '../vocabulary/srs';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
-import { ActivityCard } from '../activity/ActivityCard';
 import { FeatureCard } from './FeatureCard';
+import { GoalPanel, type HeroStat } from './GoalPanel';
+import { HERO } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
-import { SkillBars, type SkillBar } from './SkillBars';
 import { PathCard } from './PathCard';
 import { VocabCard } from './VocabCard';
+import { WeekStrip } from './WeekStrip';
 
 /** Average of the latest conversation scores (out of 10). */
 const RECENT_SCORES = 10;
-/** A week of daily rounds fills the streak bar. */
-const STREAK_TARGET = 7;
 
 export function HomeScreen() {
-  const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const insets = useSafeAreaInsets();
@@ -56,15 +54,13 @@ export function HomeScreen() {
   const passedStages = stages.filter((stage) => stage.status === 'passed').length;
   const openStage = stages.find((stage) => stage.status === 'open');
   const unlocked = stages.filter((stage) => stage.status !== 'locked');
-  const learned = cards.length ? cards.reduce((sum, card) => sum + levelOf(card), 0) / (cards.length * MAX_LEVEL) : 0;
   const minutes = Math.floor(minutesToday);
 
-  const bars: SkillBar[] = [
-    { key: 'goal', icon: 'flag', tint: '#58CC02', label: t('home.stats.goal'), value: `${minutes}/${goalMinutes}`, progress: minutesToday / goalMinutes },
-    { key: 'score', icon: 'star', tint: '#E5A100', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–', progress: average / 10 },
-    { key: 'words', icon: 'book', tint: '#CE82FF', label: t('home.stats.words'), value: String(cards.length), progress: learned },
-    { key: 'streak', icon: 'flame', tint: '#FF9600', label: t('home.stats.streak'), value: String(streak), progress: streak / STREAK_TARGET },
-    { key: 'topics', icon: 'compass', tint: '#1CB0F6', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}`, progress: stages.length ? passedStages / stages.length : 0 },
+  const stats: HeroStat[] = [
+    { key: 'score', icon: 'star', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–' },
+    { key: 'words', icon: 'book', label: t('home.stats.words'), value: String(cards.length) },
+    { key: 'streak', icon: 'flame', label: t('home.stats.streak'), value: String(streak) },
+    { key: 'topics', icon: 'compass', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}` },
   ];
 
   const shortcuts = useMemo<Shortcut[]>(
@@ -104,18 +100,22 @@ export function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Only this tab is dark, so the status bar flips back once another screen takes over. */}
-      <StatusBar style={home.statusBar} />
+      {/* The hero is navy in both themes, so the status bar is light here and flips back on other screens. */}
+      <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.md }]}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
-          <View style={styles.top}>
+          <LinearGradient colors={HERO.gradient} style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
+            {/* Quiet light shapes for depth behind the hero. */}
+            <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
+            <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
             <HomeHeader name={name} />
-            <SkillBars bars={bars} />
-          </View>
+            <WeekStrip />
+            <GoalPanel minutes={minutes} goalMinutes={goalMinutes} stats={stats} />
+          </LinearGradient>
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
             <View style={styles.handle} />
@@ -135,8 +135,6 @@ export function HomeScreen() {
             />
             <VocabCard cards={cards} due={due} onPress={() => router.navigate('/words')} />
 
-            <ActivityCard />
-
             <PathCard
               stages={stages}
               onOpenPath={() => router.push('/scenarios')}
@@ -152,13 +150,19 @@ export function HomeScreen() {
 }
 
 const createStyles = (home: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: home.background },
+  root: { flex: 1, backgroundColor: HERO.deep },
   content: { flexGrow: 1 },
   top: {
     gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    // Runs on under the sheet's rounded corners.
+    paddingBottom: spacing.lg + 28,
+    marginBottom: -28,
+    overflow: 'hidden',
   },
+  orb: { position: 'absolute', borderRadius: 999 },
+  orbA: { width: 260, height: 260, top: -90, right: -110, backgroundColor: 'rgba(42,171,238,0.16)' },
+  orbB: { width: 180, height: 180, top: 210, left: -100, backgroundColor: 'rgba(42,171,238,0.08)' },
   sheet: {
     flexGrow: 1,
     gap: spacing.xl,

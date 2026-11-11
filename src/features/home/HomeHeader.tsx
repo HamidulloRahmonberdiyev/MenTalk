@@ -11,10 +11,11 @@ import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
 import type { IconName } from '@/types';
-import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { countUnread, useNotificationsStore } from '../notifications/notificationsStore';
 import { countDue, useStudyCards } from '../vocabulary/vocabularyStore';
+import { HERO } from './heroColors';
 
 interface HeaderButtonProps {
   icon: IconName;
@@ -24,7 +25,6 @@ interface HeaderButtonProps {
 }
 
 function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
-  const home = usePalette();
   const styles = useThemedStyles(createStyles);
   return (
     <PressableScale
@@ -37,7 +37,7 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
       }}
       style={styles.iconButton}
     >
-      <Ionicons name={icon} size={28} color={home.text} />
+      <Ionicons name={icon} size={24} color="#FFFFFF" />
       {badge > 0 ? (
         <View style={styles.badge}>
           <AppText color="#FFFFFF" style={styles.badgeText}>
@@ -50,7 +50,6 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
 }
 
 export function HomeHeader({ name }: { name: string }) {
-  const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const t = useT();
   const avatarUrl = useUserStore((state) => state.avatarUrl);
@@ -69,9 +68,9 @@ export function HomeHeader({ name }: { name: string }) {
         onPress={() => router.navigate('/profile')}
         style={styles.avatar}
       >
-        <Avatar name={name} uri={avatarUrl} size={48} />
+        <Avatar name={name} uri={avatarUrl} size={44} />
       </PressableScale>
-      <AppText variant="heading" color={home.text} accessibilityRole="header" numberOfLines={1} style={styles.title}>
+      <AppText variant="heading" color="#FFFFFF" accessibilityRole="header" numberOfLines={1} style={styles.title}>
         {t('home.greetingName', { name })}
       </AppText>
       <HeaderButton icon="notifications-outline" label={t('notif.title')} href="/notifications" badge={unread} />
@@ -90,7 +89,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     padding: 3,
     borderRadius: radii.pill,
     borderWidth: 2,
-    borderColor: '#8D929C',
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   title: {
     flex: 1,
@@ -99,10 +98,14 @@ const createStyles = (home: Palette) => StyleSheet.create({
     fontWeight: '800',
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   badge: {
     position: 'absolute',
@@ -116,7 +119,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: home.badge,
     borderWidth: 2,
-    borderColor: home.background,
+    borderColor: HERO.deep,
   },
   badgeText: {
     fontSize: 11,

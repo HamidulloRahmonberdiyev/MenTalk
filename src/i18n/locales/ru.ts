@@ -36,6 +36,7 @@ export const ru: Dictionary = {
   'home.goalTitle': 'Сегодняшняя цель',
   'home.goalText': '{n} минут разговора',
   'home.goalDone': 'Цель выполнена!',
+  'home.min': 'мин',
   'home.unit': 'МИН',
   'home.start': 'Начать разговор',
   'home.continue': 'Продолжить',

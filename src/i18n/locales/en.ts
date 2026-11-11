@@ -34,6 +34,7 @@ export const en = {
   'home.goalTitle': "Today's goal",
   'home.goalText': '{n} minutes of speaking',
   'home.goalDone': 'Goal reached!',
+  'home.min': 'min',
   'home.unit': 'MIN',
   'home.start': 'Start conversation',
   'home.continue': 'Continue',

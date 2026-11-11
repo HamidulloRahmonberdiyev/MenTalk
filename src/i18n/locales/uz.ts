@@ -36,6 +36,7 @@ export const uz: Dictionary = {
   'home.goalTitle': 'Bugungi maqsad',
   'home.goalText': '{n} daqiqa suhbat',
   'home.goalDone': 'Maqsad bajarildi!',
+  'home.min': 'daqiqa',
   'home.unit': 'DAQ',
   'home.start': 'Suhbatni boshlash',
   'home.continue': 'Davom etish',
