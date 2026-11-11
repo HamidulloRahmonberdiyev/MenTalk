@@ -20,7 +20,7 @@ import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
-import { GoalPanel, type HeroStat } from './GoalPanel';
+import { GoalPanel } from './GoalPanel';
 import { HERO } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
@@ -56,12 +56,6 @@ export function HomeScreen() {
   const unlocked = stages.filter((stage) => stage.status !== 'locked');
   const minutes = Math.floor(minutesToday);
 
-  const stats: HeroStat[] = [
-    { key: 'score', icon: 'star', label: t('home.stats.score'), value: recent.length ? average.toFixed(1) : '–' },
-    { key: 'words', icon: 'book', label: t('home.stats.words'), value: String(cards.length) },
-    { key: 'streak', icon: 'flame', label: t('home.stats.streak'), value: String(streak) },
-    { key: 'topics', icon: 'compass', label: t('home.stats.topics'), value: `${passedStages}/${stages.length}` },
-  ];
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
@@ -114,11 +108,10 @@ export function HomeScreen() {
             <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
             <HomeHeader name={name} />
             <WeekStrip />
-            <GoalPanel minutes={minutes} goalMinutes={goalMinutes} stats={stats} />
+            <GoalPanel minutes={minutes} goalMinutes={goalMinutes} />
           </LinearGradient>
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
-            <View style={styles.handle} />
             {/* Small shortcuts sit between the goal card and the talk card, so big cards never stack; vocabulary is the compact one. */}
             <ShortcutGrid items={shortcuts} />
             <FeatureCard
@@ -156,7 +149,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     gap: spacing.lg,
     paddingHorizontal: spacing.xl,
     // Runs on under the sheet's rounded corners.
-    paddingBottom: spacing.lg + 28,
+    paddingBottom: spacing.md + 28,
     marginBottom: -28,
     overflow: 'hidden',
   },
@@ -165,20 +158,12 @@ const createStyles = (home: Palette) => StyleSheet.create({
   orbB: { width: 180, height: 180, top: 210, left: -100, backgroundColor: 'rgba(42,171,238,0.08)' },
   sheet: {
     flexGrow: 1,
-    gap: spacing.xl,
+    gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     backgroundColor: home.sheet,
     boxShadow: home.sheetShadow,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 48,
-    height: 5,
-    marginBottom: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: home.handle,
   },
 });

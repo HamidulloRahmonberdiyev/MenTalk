@@ -16,8 +16,8 @@ export interface Shortcut {
   onPress: () => void;
 }
 
-const TILE = 62;
-const ART = 74;
+const TILE = 54;
+const ART = 64;
 /** Slate tile, a touch lighter at the top, like a recessed slot the illustration sits in. */
 const TILE_COLORS = {
   dark: ['#46516E', '#353E57'],
@@ -77,7 +77,7 @@ const createStyles = (home: Palette) =>
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      rowGap: spacing.lg,
+      rowGap: spacing.md,
     },
     item: {
       width: '25%',
@@ -85,8 +85,8 @@ const createStyles = (home: Palette) =>
       gap: spacing.sm,
     },
     tileArea: {
-      width: TILE + 22,
-      height: TILE + 16,
+      width: TILE + 20,
+      height: TILE + 10,
       justifyContent: 'flex-end',
       alignItems: 'center',
     },

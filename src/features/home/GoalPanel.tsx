@@ -9,27 +9,18 @@ import { CircularProgress } from '@/components/ui/CircularProgress';
 import { useT } from '@/i18n';
 import { radii, spacing } from '@/theme';
 import { easing } from '@/theme/motion';
-import type { IconName } from '@/types';
 
 import { HERO } from './heroColors';
-
-export interface HeroStat {
-  key: string;
-  icon: IconName;
-  label: string;
-  value: string;
-}
 
 interface GoalPanelProps {
   minutes: number;
   goalMinutes: number;
-  stats: HeroStat[];
 }
 
 const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
 
-/** Today's goal on the hero: a ring and a bar of the minutes spoken, and the other numbers in a row beneath. */
-export function GoalPanel({ minutes, goalMinutes, stats }: GoalPanelProps) {
+/** Today's goal on the hero: a ring and a bar of the minutes spoken. */
+export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
   const t = useT();
   const progress = clamp(goalMinutes > 0 ? minutes / goalMinutes : 0);
   const done = progress >= 1;
@@ -82,23 +73,6 @@ export function GoalPanel({ minutes, goalMinutes, stats }: GoalPanelProps) {
         </View>
       </View>
 
-      <View style={styles.divider} />
-
-      <View style={styles.stats}>
-        {stats.map((stat) => (
-          <View key={stat.key} style={styles.stat} accessible accessibilityLabel={`${stat.label}: ${stat.value}`}>
-            <View style={styles.statHead}>
-              <Ionicons name={stat.icon} size={13} color={HERO.accentSoft} />
-              <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.statValue}>
-                {stat.value}
-              </AppText>
-            </View>
-            <AppText color={HERO.muted} numberOfLines={1} adjustsFontSizeToFit style={styles.statLabel}>
-              {stat.label}
-            </AppText>
-          </View>
-        ))}
-      </View>
     </View>
   );
 }
@@ -124,10 +98,4 @@ const styles = StyleSheet.create({
   track: { height: 6, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.pill, overflow: 'hidden' },
   hint: { flexShrink: 1, fontSize: 11, lineHeight: 13, fontWeight: '700' },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.14)' },
-  stats: { flexDirection: 'row', gap: spacing.sm },
-  stat: { flex: 1, alignItems: 'center', gap: 1 },
-  statHead: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statValue: { fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  statLabel: { fontSize: 11, lineHeight: 14, fontWeight: '600' },
 });
