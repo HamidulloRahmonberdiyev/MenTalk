@@ -1,9 +1,9 @@
 /** Geometry of the winding path, shared by the road, the nodes and the auto-scroll. */
-export const NODE = 78;
+export const NODE = 88;
 /** Vertical distance between two stage centres. */
-export const ROW = 156;
+export const ROW = 172;
 /** Room above the first node for the "you are here" bubble. */
-export const TOP_PAD = 64;
+export const TOP_PAD = 72;
 /** Space under the last stage for the finish cup. */
 export const FINISH_ROW = 190;
 export const GUTTER = 16;

@@ -12,6 +12,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { ACCENT, shade } from './color';
 import { PASS_SCORE, type PathStage } from './path';
 import { StarRow } from './StarRow';
 
@@ -36,15 +37,27 @@ export function StageSheet({ stage, previous, visible, onClose, onClosed, onStar
     <BottomSheet visible={visible} onClose={onClose} onClosed={onClosed} closeLabel={t('common.close')}>
       {stage ? (
         <View style={styles.body}>
-          <View style={[styles.cover, { backgroundColor: stage.scenario.tint }]}>
-            <Image source={stage.scenario.image} contentFit="cover" transition={200} style={StyleSheet.absoluteFill} />
+          <View style={[styles.cover, { backgroundColor: '#0B1F3A' }]}>
+            {stage.scenario.image ? (
+              <Image source={stage.scenario.image} contentFit="cover" transition={200} style={StyleSheet.absoluteFill} />
+            ) : (
+              // A topic added on the server may have no picture: its own icon, large and faint, stands in.
+              <LinearGradient
+                colors={[shade(ACCENT, -0.1), '#0B1F3A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[StyleSheet.absoluteFill, styles.coverArt]}
+              >
+                <Ionicons name={stage.scenario.icon} size={120} color="rgba(255,255,255,0.28)" />
+              </LinearGradient>
+            )}
             <LinearGradient
               colors={['rgba(8,24,40,0.05)', 'rgba(8,24,40,0.35)', 'rgba(8,24,40,0.88)']}
               locations={[0, 0.45, 1]}
               style={StyleSheet.absoluteFill}
             />
             {stage.status === 'locked' ? <View style={styles.coverLocked} /> : null}
-            <View style={[styles.stagePill, { backgroundColor: stage.scenario.tint }]}>
+            <View style={[styles.stagePill, { backgroundColor: ACCENT }]}>
               <AppText variant="captionStrong" color="#FFFFFF" style={styles.stageText}>
                 {t('path.stage', { n: stage.number }).toUpperCase()}
               </AppText>
@@ -91,7 +104,7 @@ export function StageSheet({ stage, previous, visible, onClose, onClosed, onStar
             <Ionicons
               name={stage.status === 'locked' ? 'lock-closed' : 'flag'}
               size={18}
-              color={stage.status === 'locked' ? home.textMuted : stage.scenario.tint}
+              color={stage.status === 'locked' ? home.textMuted : ACCENT}
             />
             <AppText variant="caption" color={home.textSecondary} style={styles.noteText}>
               {stage.status === 'locked' && previous
@@ -132,6 +145,7 @@ const createStyles = (home: Palette) =>
   StyleSheet.create({
     body: { gap: spacing.lg, paddingTop: spacing.sm },
     cover: { height: 190, borderRadius: radii.xl, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: home.primarySoft },
+    coverArt: { alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: spacing.md, paddingRight: spacing.lg },
     coverLocked: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(30,34,44,0.45)' },
     stagePill: {
       position: 'absolute',

@@ -41,6 +41,7 @@ export const en = {
   'home.all': 'All',
 
   'path.title': 'Learning path',
+  'path.overline': 'Roadmap',
   'path.progress': '{done} of {total} stages passed',
   'path.stage': 'Stage {n}',
   'path.current': 'You are here',

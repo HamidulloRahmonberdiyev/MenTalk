@@ -4,6 +4,7 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { usePalette } from '@/theme/appearance';
 
+import { ACCENT, ACCENT_DEEP, GOLD } from './color';
 import { nodeX, nodeY, ROW } from './layout';
 import type { PathStage } from './path';
 
@@ -33,8 +34,8 @@ export const PathRoad = memo(function PathRoad({ stages, width, height, finish }
   const segments = points.slice(0, -1).map((from, index) => {
     const to = points[index + 1];
     const walked = stages[index].status === 'passed';
-    const fromTint = stages[index].scenario.tint;
-    const toTint = stages[index + 1]?.scenario.tint ?? '#F5B524';
+    const fromTint = ACCENT;
+    const toTint = stages[index + 1] ? ACCENT_DEEP : GOLD;
     return { d: curve(from.x, from.y, to.x, to.y), walked, fromTint, toTint, top: from.y, bottom: to.y };
   });
 

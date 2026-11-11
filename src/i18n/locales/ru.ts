@@ -43,6 +43,7 @@ export const ru: Dictionary = {
   'home.all': 'Все',
 
   'path.title': 'Путь обучения',
+  'path.overline': 'Дорожная карта',
   'path.progress': 'Пройдено {done} из {total} этапов',
   'path.stage': 'Этап {n}',
   'path.current': 'Вы здесь',

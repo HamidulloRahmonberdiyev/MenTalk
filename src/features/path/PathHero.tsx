@@ -1,15 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
 import { radii, spacing } from '@/theme';
 import { easing, enter } from '@/theme/motion';
 
-import { GOLD } from './color';
+import { ACCENT, GOLD } from './color';
+
+const HERO = require('../../../assets/path/hero.jpg');
+const RING = 64;
+const STROKE = 6;
 
 interface PathHeroProps {
   passed: number;
@@ -17,7 +23,7 @@ interface PathHeroProps {
   stars: number;
 }
 
-/** The banner over the path: how far along the learner is, as a bar and a star count. */
+/** The banner over the path: a journey photo, how far along the learner is as a ring and a bar, and the star count. */
 export function PathHero({ passed, total, stars }: PathHeroProps) {
   const t = useT();
   const share = total ? passed / total : 0;
@@ -27,45 +33,79 @@ export function PathHero({ passed, total, stars }: PathHeroProps) {
     fill.set(withDelay(250, withTiming(share, { duration: 900, easing: easing.out })));
   }, [fill, share]);
 
-  const bar = useAnimatedStyle(() => ({ width: `${Math.max(fill.get(), 0.04) * 100}%` }));
+  const bar = useAnimatedStyle(() => ({ width: `${Math.max(fill.get(), 0.03) * 100}%` }));
+
+  const radius = (RING - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
 
   return (
     <Animated.View entering={enter.rise()} style={styles.wrap}>
-      <LinearGradient colors={['#4FB8F2', '#3A7BEA', '#6B4FE0']} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-        {/* Decorative orbs: depth without imagery. */}
-        <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
-        <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
-        <View pointerEvents="none" style={[styles.orb, styles.orbC]} />
+      <View style={styles.card}>
+        <Image source={HERO} contentFit="cover" contentPosition="right" style={StyleSheet.absoluteFill} />
+        {/* Deep navy wash from the text side, so the copy reads while the photo still shows through. */}
+        <LinearGradient
+          colors={['rgba(6,18,40,0.92)', 'rgba(6,18,40,0.62)', 'rgba(6,18,40,0.15)']}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <LinearGradient colors={['rgba(6,18,40,0)', 'rgba(6,18,40,0.7)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
 
         <View style={styles.top}>
           <View style={styles.texts}>
+            <View style={styles.overline}>
+              <Ionicons name="map" size={12} color={ACCENT} />
+              <AppText variant="captionStrong" color="rgba(255,255,255,0.75)" style={styles.overlineText}>
+                {t('path.overline').toUpperCase()}
+              </AppText>
+            </View>
             <AppText variant="title" color="#FFFFFF" numberOfLines={2} style={styles.title}>
               {t('path.title')}
             </AppText>
-            <AppText variant="captionStrong" color="rgba(255,255,255,0.88)">
+            <AppText variant="caption" color="rgba(255,255,255,0.8)">
               {t('path.progress', { done: passed, total })}
             </AppText>
           </View>
-          <View style={styles.trophy}>
-            <Ionicons name="trophy" size={30} color={GOLD} />
+
+          <View style={styles.ring}>
+            <Svg width={RING} height={RING}>
+              <Circle cx={RING / 2} cy={RING / 2} r={radius} stroke="rgba(255,255,255,0.18)" strokeWidth={STROKE} fill="rgba(6,18,40,0.45)" />
+              <Circle
+                cx={RING / 2}
+                cy={RING / 2}
+                r={radius}
+                stroke={ACCENT}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray={`${circumference} ${circumference}`}
+                strokeDashoffset={circumference * (1 - share)}
+                transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+              />
+            </Svg>
+            <View style={styles.ringLabel}>
+              <AppText variant="bodyStrong" color="#FFFFFF" style={styles.percent}>
+                {Math.round(share * 100)}%
+              </AppText>
+            </View>
           </View>
         </View>
 
         <View style={styles.bottom}>
           <View style={styles.track}>
             <Animated.View style={[styles.fill, bar]}>
-              <LinearGradient colors={['#FFE07A', GOLD]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
-              <View style={styles.fillShine} />
+              <LinearGradient colors={['#7FD3FA', ACCENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
             </Animated.View>
           </View>
           <View style={styles.starChip}>
-            <Ionicons name="star" size={14} color={GOLD} />
+            <Ionicons name="star" size={13} color={GOLD} />
             <AppText variant="captionStrong" color="#FFFFFF">
               {stars}/{total * 3}
             </AppText>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </Animated.View>
   );
 }
@@ -73,49 +113,46 @@ export function PathHero({ passed, total, stars }: PathHeroProps) {
 const styles = StyleSheet.create({
   wrap: {
     borderRadius: radii.xl,
-    boxShadow: '0 14px 30px rgba(58, 100, 234, 0.32)',
+    boxShadow: '0 14px 30px rgba(6, 18, 40, 0.28)',
   },
   card: {
+    minHeight: 196,
     borderRadius: radii.xl,
     overflow: 'hidden',
     padding: spacing.xl,
+    justifyContent: 'space-between',
     gap: spacing.lg,
+    backgroundColor: '#0B1F3A',
   },
-  orb: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' },
-  orbA: { width: 180, height: 180, top: -70, right: -50 },
-  orbB: { width: 90, height: 90, bottom: -36, left: 40, backgroundColor: 'rgba(255,255,255,0.08)' },
-  orbC: { width: 26, height: 26, top: 22, right: 120, backgroundColor: 'rgba(255,255,255,0.18)' },
-  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   texts: { flex: 1, gap: 4 },
-  title: { fontSize: 26, lineHeight: 31 },
-  trophy: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  overline: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    marginBottom: 2,
   },
+  overlineText: { fontSize: 10, lineHeight: 14, letterSpacing: 1.4, fontWeight: '800' },
+  title: { fontSize: 26, lineHeight: 31 },
+  ring: { width: RING, height: RING },
+  ringLabel: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  percent: { fontSize: 15, fontWeight: '800' },
   bottom: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   track: {
     flex: 1,
-    height: 14,
+    height: 8,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(8, 20, 60, 0.25)',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     overflow: 'hidden',
   },
   fill: { height: '100%', borderRadius: radii.pill, overflow: 'hidden' },
-  fillShine: {
-    position: 'absolute',
-    top: 3,
-    left: 6,
-    right: 6,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-  },
   starChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -123,6 +160,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(8, 20, 60, 0.25)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
 });

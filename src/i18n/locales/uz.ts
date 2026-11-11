@@ -43,6 +43,7 @@ export const uz: Dictionary = {
   'home.all': 'Barchasi',
 
   'path.title': 'Mavzular yo‘lagi',
+  'path.overline': 'Yo‘l xaritasi',
   'path.progress': '{total} bosqichdan {done} tasi o‘tildi',
   'path.stage': '{n}-bosqich',
   'path.current': 'Siz shu yerdasiz',

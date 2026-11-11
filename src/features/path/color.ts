@@ -12,5 +12,9 @@ export function shade(hex: string, amount: number): string {
   return `#${channel(16)}${channel(8)}${channel(0)}`;
 }
 
+/** The one colour of the path: every stage, the road and the progress share it. */
+export const ACCENT = '#2AABEE';
+export const ACCENT_DEEP = '#1680C2';
+
 export const GOLD = '#FFC233';
 export const GOLD_DEEP = '#F09A0C';
