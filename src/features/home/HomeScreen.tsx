@@ -94,7 +94,7 @@ export function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* The hero is navy in both themes, so the status bar is light here and flips back on other screens. */}
+      {/* The hero is bright blue in both themes, so the status bar is light here and flips back on other screens. */}
       <StatusBar style="light" />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -143,7 +143,7 @@ export function HomeScreen() {
 }
 
 const createStyles = (home: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: HERO.deep },
+  root: { flex: 1, backgroundColor: HERO.base },
   content: { flexGrow: 1 },
   top: {
     gap: spacing.lg,
@@ -154,8 +154,8 @@ const createStyles = (home: Palette) => StyleSheet.create({
     overflow: 'hidden',
   },
   orb: { position: 'absolute', borderRadius: 999 },
-  orbA: { width: 260, height: 260, top: -90, right: -110, backgroundColor: 'rgba(42,171,238,0.16)' },
-  orbB: { width: 180, height: 180, top: 210, left: -100, backgroundColor: 'rgba(42,171,238,0.08)' },
+  orbA: { width: 260, height: 260, top: -90, right: -110, backgroundColor: 'rgba(255,255,255,0.16)' },
+  orbB: { width: 180, height: 180, top: 210, left: -100, backgroundColor: 'rgba(255,255,255,0.1)' },
   sheet: {
     flexGrow: 1,
     gap: spacing.lg,

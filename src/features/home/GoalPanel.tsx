@@ -35,7 +35,7 @@ export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
   return (
     <View style={styles.panel}>
       <View style={styles.goal} accessible accessibilityLabel={`${t('home.goalTitle')}: ${minutes}/${goalMinutes}`}>
-        <CircularProgress value={progress} size={56} strokeWidth={6} color={done ? HERO.flame : HERO.accent} trackColor="rgba(255,255,255,0.12)">
+        <CircularProgress value={progress} size={56} strokeWidth={6} color={done ? HERO.flame : '#FFFFFF'} trackColor="rgba(255,255,255,0.25)">
           {done ? (
             <Ionicons name="checkmark" size={24} color={HERO.flame} />
           ) : (
@@ -48,7 +48,7 @@ export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
             <AppText color={HERO.muted} style={styles.overline} numberOfLines={1}>
               {t('home.goalTitle').toUpperCase()}
             </AppText>
-            <AppText color={done ? HERO.flame : HERO.muted} style={styles.hint} numberOfLines={1}>
+            <AppText color={done ? HERO.flameInk : HERO.muted} style={styles.hint} numberOfLines={1}>
               {done ? t('home.goalDone') : t('activity.day.goalLeft', { n: left })}
             </AppText>
           </View>
@@ -63,7 +63,7 @@ export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
           <View style={styles.track}>
             <Animated.View style={[styles.fill, bar]}>
               <LinearGradient
-                colors={done ? ['#FFD36B', HERO.flame] : [HERO.accentSoft, HERO.accent]}
+                colors={done ? ['#FFE58A', HERO.flame] : ['#FFFFFF', '#D8F1FF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={StyleSheet.absoluteFill}
@@ -83,9 +83,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.md,
     borderRadius: radii.xl,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.32)',
   },
   goal: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   percent: { fontSize: 13, lineHeight: 16, fontWeight: '900' },
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
   value: { fontSize: 24, lineHeight: 28, fontWeight: '900', letterSpacing: -0.5 },
   valueOf: { fontSize: 14, lineHeight: 18, fontWeight: '700' },
-  track: { height: 6, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' },
+  track: { height: 6, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.pill, overflow: 'hidden' },
   hint: { flexShrink: 1, fontSize: 11, lineHeight: 13, fontWeight: '700' },
 });

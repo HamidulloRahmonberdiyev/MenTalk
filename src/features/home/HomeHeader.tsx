@@ -89,7 +89,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     padding: 3,
     borderRadius: radii.pill,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(255,255,255,0.6)',
   },
   title: {
     flex: 1,
@@ -103,9 +103,9 @@ const createStyles = (home: Palette) => StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   badge: {
     position: 'absolute',
@@ -119,7 +119,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: home.badge,
     borderWidth: 2,
-    borderColor: HERO.deep,
+    borderColor: HERO.mid,
   },
   badgeText: {
     fontSize: 11,

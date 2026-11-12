@@ -51,12 +51,12 @@ export function WeekStrip() {
             {t(`activity.month.${month}` as TranslationKey)} {year}
           </AppText>
         </View>
-        <View style={styles.streak}>
+        <View style={[styles.streak, week.streak > 0 && styles.streakHot]}>
           <Ionicons name="flame" size={14} color={week.streak > 0 ? HERO.flame : HERO.faint} />
           <AppText color="#FFFFFF" style={styles.streakText}>
             {week.streak}
           </AppText>
-          <Ionicons name="chevron-forward" size={14} color={HERO.muted} />
+          <Ionicons name="chevron-forward" size={14} color="#FFFFFF" />
         </View>
       </View>
 
@@ -74,61 +74,70 @@ function DayTile({ day, weekday }: { day: WeekDay; weekday: string }) {
   const active = day.level > 0;
   const met = day.level === 4;
 
-  if (day.today) {
-    return (
-      <View style={styles.cell}>
-        <TodayGlow />
-        <View style={[styles.tile, styles.tileToday]}>
-          <AppText color={HERO.deep} style={[styles.weekday, styles.weekdayToday]}>
-            {weekday}
-          </AppText>
-          <AppText color={HERO.deep} style={styles.number}>
-            {number}
-          </AppText>
-          <Mark active={active} met={met} today />
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.cell}>
-      {active ? (
-        <LinearGradient
-          colors={met ? ['#3FB9F5', '#1E78C8'] : ['rgba(63,185,245,0.45)', 'rgba(30,120,200,0.35)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={[styles.tile, styles.tileActive]}
-        >
-          <AppText color="rgba(255,255,255,0.8)" style={styles.weekday}>
-            {weekday}
-          </AppText>
-          <AppText color="#FFFFFF" style={styles.number}>
-            {number}
-          </AppText>
-          <Mark active met={met} />
-        </LinearGradient>
-      ) : (
-        <View style={[styles.tile, day.future ? styles.tileFuture : styles.tileMissed]}>
-          <AppText color={day.future ? HERO.faint : HERO.muted} style={styles.weekday}>
-            {weekday}
-          </AppText>
-          <AppText color={day.future ? HERO.faint : 'rgba(255,255,255,0.75)'} style={styles.number}>
-            {number}
-          </AppText>
-          <Mark active={false} met={false} />
-        </View>
-      )}
+      <AppText
+        color={day.today ? '#FFFFFF' : day.future ? HERO.faint : HERO.muted}
+        style={[styles.weekday, day.today && styles.weekdayToday]}
+      >
+        {weekday}
+      </AppText>
+      <View style={styles.circleWrap}>
+        {day.today && <TodayGlow />}
+        <Circle number={number} active={active} met={met} today={day.today} future={day.future} />
+      </View>
+      <Mark active={active} met={met} today={day.today} />
     </View>
   );
 }
 
-/** The little sign under the date: a flame for a met goal, a dot for some practice, nothing otherwise. */
-function Mark({ active, met, today }: { active: boolean; met: boolean; today?: boolean }) {
-  if (met) return <Ionicons name="flame" size={13} color={HERO.flame} />;
-  if (active) return <View style={[styles.mark, { backgroundColor: today ? HERO.accent : '#FFFFFF' }]} />;
-  if (today) return <View style={[styles.mark, styles.markHollow]} />;
-  return <View style={styles.markSpace} />;
+/** The day's number in a circle: white for today, amber for a met goal, frosted for some practice. */
+function Circle({ number, active, met, today, future }: { number: number; active: boolean; met: boolean; today: boolean; future: boolean }) {
+  if (today) {
+    return (
+      <View style={[styles.circle, styles.circleToday, met ? styles.ringMet : active ? styles.ringActive : null]}>
+        <AppText color={HERO.deep} style={styles.number}>
+          {number}
+        </AppText>
+      </View>
+    );
+  }
+  if (active) {
+    return (
+      <LinearGradient
+        colors={met ? ['#FFD75E', '#FF9E1B'] : ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.25)']}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={[styles.circle, met ? styles.circleMet : styles.circleActive]}
+      >
+        <AppText color={met ? '#4A2300' : '#FFFFFF'} style={styles.number}>
+          {number}
+        </AppText>
+      </LinearGradient>
+    );
+  }
+  return (
+    <View style={[styles.circle, future ? styles.circleFuture : styles.circleMissed]}>
+      <AppText color={future ? HERO.faint : '#FFFFFF'} style={[styles.number, styles.numberQuiet]}>
+        {number}
+      </AppText>
+    </View>
+  );
+}
+
+/** The little sign under a day: a flame for a met goal, a dot for some practice, a ring for an empty today. */
+function Mark({ active, met, today }: { active: boolean; met: boolean; today: boolean }) {
+  return (
+    <View style={styles.markRow}>
+      {met ? (
+        <Ionicons name="flame" size={12} color={HERO.flame} />
+      ) : active ? (
+        <View style={[styles.mark, { backgroundColor: '#FFFFFF' }]} />
+      ) : today ? (
+        <View style={[styles.mark, styles.markHollow]} />
+      ) : null}
+    </View>
+  );
 }
 
 /** A soft ring breathing around today's tile. */
@@ -144,13 +153,14 @@ function TodayGlow() {
 
   const ring = useAnimatedStyle(() => ({
     opacity: 0.55 * (1 - pulse.get()),
-    transform: [{ scale: 1 + pulse.get() * 0.18 }],
+    transform: [{ scale: 1 + pulse.get() * 0.35 }],
   }));
 
   return <Animated.View pointerEvents="none" style={[styles.glow, ring]} />;
 }
 
-const TILE_RADIUS = 16;
+/** Seven of these fit a 320pt-wide phone with room between them. */
+const CIRCLE = 38;
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
@@ -165,33 +175,35 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     paddingVertical: 4,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
+  streakHot: { backgroundColor: 'rgba(255,170,20,0.35)', borderColor: 'rgba(255,220,120,0.8)' },
   streakText: { fontSize: 13, lineHeight: 17, fontWeight: '800' },
-  days: { flexDirection: 'row', gap: 6 },
-  cell: { flex: 1 },
-  tile: {
-    alignItems: 'center',
-    gap: 2,
-    paddingTop: 6,
-    paddingBottom: 7,
-    borderRadius: TILE_RADIUS,
-  },
-  tileToday: { backgroundColor: '#FFFFFF', boxShadow: '0 8px 20px rgba(42, 171, 238, 0.45)' },
-  tileActive: { borderWidth: 1, borderColor: 'rgba(140, 215, 255, 0.45)' },
-  tileMissed: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  tileFuture: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderStyle: 'dashed' },
+  days: { flexDirection: 'row' },
+  cell: { flex: 1, alignItems: 'center', gap: 5 },
   weekday: { fontSize: 11, lineHeight: 14, fontWeight: '700', letterSpacing: 0.3 },
-  weekdayToday: { fontWeight: '800' },
-  number: { fontSize: 16, lineHeight: 20, fontWeight: '800' },
-  mark: { width: 6, height: 6, borderRadius: 3, marginVertical: 3.5 },
-  markHollow: { borderWidth: 1.5, borderColor: HERO.accent },
-  markSpace: { height: 13 },
+  weekdayToday: { fontWeight: '900' },
+  circleWrap: { width: CIRCLE, height: CIRCLE, alignItems: 'center', justifyContent: 'center' },
+  circle: { width: CIRCLE, height: CIRCLE, borderRadius: CIRCLE / 2, alignItems: 'center', justifyContent: 'center' },
+  circleToday: { backgroundColor: '#FFFFFF', boxShadow: '0 6px 16px rgba(8, 70, 130, 0.35)' },
+  ringActive: { borderWidth: 2.5, borderColor: '#7FD4FF' },
+  ringMet: { borderWidth: 2.5, borderColor: '#FFB020' },
+  circleActive: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' },
+  circleMet: { borderWidth: 2, borderColor: '#FFE9A8', boxShadow: '0 5px 14px rgba(200, 110, 0, 0.4)' },
+  circleMissed: { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  circleFuture: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)', borderStyle: 'dashed' },
+  number: { fontSize: 15, lineHeight: 19, fontWeight: '900' },
+  numberQuiet: { fontWeight: '700' },
+  markRow: { height: 12, alignItems: 'center', justifyContent: 'center' },
+  mark: { width: 6, height: 6, borderRadius: 3 },
+  markHollow: { borderWidth: 1.5, borderColor: '#FFFFFF' },
   glow: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: TILE_RADIUS,
+    position: 'absolute',
+    width: CIRCLE,
+    height: CIRCLE,
+    borderRadius: CIRCLE / 2,
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
