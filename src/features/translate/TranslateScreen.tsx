@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { StatusBar } from 'expo-status-bar';
 import { Fragment } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +15,7 @@ import { useT } from '@/i18n';
 import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
+import { ScanEntryCard } from '../scan/ScanEntryCard';
 import { HistoryPanel } from './HistoryPanel';
 import { LanguageBar } from './LanguageBar';
 import { ResultCard } from './ResultCard';
@@ -134,7 +135,11 @@ export function TranslateScreen() {
               {result && !translator.stale ? <ResultDetails result={result} onPick={(value) => void translator.copy(value)} /> : null}
             </>
           ) : (
-            <HistoryPanel onPick={translator.reuse} />
+            <>
+              {/* Words from a photo needs a camera, so it is offered on phones only. */}
+              {Platform.OS !== 'web' ? <ScanEntryCard /> : null}
+              <HistoryPanel onPick={translator.reuse} />
+            </>
           )}
         </Fragment>
       </ScrollView>

@@ -29,6 +29,8 @@ export default function RootLayout() {
         {/* No swipe-back: unsaved edits are guarded by the screen's own discard sheet. */}
         <Stack.Screen name="profile-edit" options={{ gestureEnabled: false }} />
         <Stack.Screen name="face-lab" />
+        {/* Camera-style screen: rises from the bottom, closed with its own button. */}
+        <Stack.Screen name="scan" options={{ gestureEnabled: false, animation: 'slide_from_bottom', contentStyle: { backgroundColor: '#0B0C10' } }} />
         <Stack.Screen name="result" options={{ gestureEnabled: false, animation: 'fade' }} />
       </Stack>
     </>
