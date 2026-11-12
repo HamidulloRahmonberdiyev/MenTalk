@@ -13,9 +13,13 @@ export interface WeekDay {
   future: boolean;
 }
 
-/** This Monday-to-Sunday week, day by day, with the streak and the week's totals. */
-export function useWeek() {
-  const week = weekOf(dateKey(new Date()));
+/**
+ * A Monday-to-Sunday week, day by day, with the streak and the week's totals: this week by default,
+ * or `weeksBack` weeks before it.
+ */
+export function useWeek(weeksBack = 0) {
+  const now = new Date();
+  const week = weekOf(dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - weeksBack * 7)));
   // A week that starts in last month needs that month's days too; the same month twice is one request.
   const first = useCalendar(week[0].slice(0, 7));
   const last = useCalendar(week[6].slice(0, 7));
@@ -32,9 +36,9 @@ export function useWeek() {
       today: date === today,
       future: date > today,
     }));
-    // `week` is derived from today's date, which `today` already tracks.
+    // `week` is derived from today's date and `weeksBack`; `today` tracks the date, `week[0]` the offset.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [first.calendar, last.calendar, goal, today]);
+  }, [first.calendar, last.calendar, goal, today, week[0]]);
 
   return {
     days,

@@ -643,6 +643,8 @@ export const en = {
   'activity.open': 'Open calendar',
   'activity.prev': 'Previous month',
   'activity.next': 'Next month',
+  'activity.prevWeek': 'Previous week',
+  'activity.nextWeek': 'Next week',
   'activity.loadFailed': 'Could not load the calendar. Check your connection.',
   'activity.date': '{month} {day}',
   'activity.month.1': 'January',
