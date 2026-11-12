@@ -645,8 +645,6 @@ export const ru: Dictionary = {
   'activity.open': 'Открыть календарь',
   'activity.prev': 'Предыдущий месяц',
   'activity.next': 'Следующий месяц',
-  'activity.prevWeek': 'Предыдущая неделя',
-  'activity.nextWeek': 'Следующая неделя',
   'activity.loadFailed': 'Не удалось загрузить календарь. Проверьте подключение.',
   'activity.date': '{day} {month}',
   'activity.month.1': 'Январь',

@@ -15,7 +15,7 @@ import { useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { countUnread, useNotificationsStore } from '../notifications/notificationsStore';
 import { countDue, useStudyCards } from '../vocabulary/vocabularyStore';
-import { HERO } from './heroColors';
+import { HERO_TONES } from './heroColors';
 
 interface HeaderButtonProps {
   icon: IconName;
@@ -119,7 +119,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: home.badge,
     borderWidth: 2,
-    borderColor: HERO.mid,
+    borderColor: HERO_TONES[home.appearance].mid,
   },
   badgeText: {
     fontSize: 11,

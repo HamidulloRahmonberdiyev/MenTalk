@@ -645,8 +645,6 @@ export const uz: Dictionary = {
   'activity.open': 'Kalendarni ochish',
   'activity.prev': 'Oldingi oy',
   'activity.next': 'Keyingi oy',
-  'activity.prevWeek': 'Oldingi hafta',
-  'activity.nextWeek': 'Keyingi hafta',
   'activity.loadFailed': 'Kalendarni yuklab bo‘lmadi. Internetni tekshiring.',
   'activity.date': '{day}-{month}',
   'activity.month.1': 'Yanvar',

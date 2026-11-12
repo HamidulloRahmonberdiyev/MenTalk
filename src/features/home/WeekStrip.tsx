@@ -20,11 +20,10 @@ import { useT, type TranslationKey } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { radii, spacing } from '@/theme';
 import { easing } from '@/theme/motion';
-import type { IconName } from '@/types';
 
 import { dateKey, weekOf } from '../activity/calendar';
 import { useWeek, type WeekDay } from '../activity/useWeek';
-import { HERO } from './heroColors';
+import { HERO, useHeroTone } from './heroColors';
 
 /** How many weeks back the strip can be swiped. */
 const WEEKS = 12;
@@ -46,7 +45,7 @@ function weekMonth(weeksBack: number) {
 
 /**
  * The practice week on the home hero: seven day circles that swipe sideways, a week per page, back
- * through the last few weeks. Arrows step a week, "Today" jumps home, the month and streak open the calendar.
+ * through the last few weeks. "Today" jumps home, the month and streak open the calendar.
  */
 export function WeekStrip() {
   const t = useT();
@@ -56,6 +55,7 @@ export function WeekStrip() {
   const [page, setPage] = useState(LAST);
   const { month, year } = weekMonth(PAGES[page]);
   const hot = current.streak > 0;
+  const hero = useHeroTone();
 
   const goTo = useCallback((index: number) => {
     const target = Math.min(Math.max(index, 0), LAST);
@@ -77,7 +77,6 @@ export function WeekStrip() {
     <View style={styles.wrap}>
       <View style={styles.head}>
         <View style={styles.nav}>
-          <NavButton icon="chevron-back" label={t('activity.prevWeek')} disabled={page === 0} onPress={() => goTo(page - 1)} />
           <PressableScale
             accessibilityRole="button"
             accessibilityLabel={`${t('activity.title')}. ${t('activity.open')}`}
@@ -89,14 +88,13 @@ export function WeekStrip() {
               {t(`activity.month.${month}` as TranslationKey)} {year}
             </AppText>
           </PressableScale>
-          <NavButton icon="chevron-forward" label={t('activity.nextWeek')} disabled={page === LAST} onPress={() => goTo(page + 1)} />
         </View>
 
         <View style={styles.headRight}>
           {page !== LAST && (
             <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(140)}>
               <PressableScale accessibilityRole="button" onPress={() => goTo(LAST)} style={styles.todayChip}>
-                <AppText color={HERO.deep} style={styles.todayText}>
+                <AppText color={hero.deep} style={styles.todayText}>
                   {t('activity.today')}
                 </AppText>
               </PressableScale>
@@ -137,23 +135,6 @@ export function WeekStrip() {
         )}
       </View>
     </View>
-  );
-}
-
-function NavButton({ icon, label, disabled, onPress }: { icon: IconName; label: string; disabled: boolean; onPress: () => void }) {
-  return (
-    <PressableScale
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      hitSlop={6}
-      scaleTo={0.9}
-      onPress={onPress}
-      style={[styles.navButton, disabled && styles.navDisabled]}
-    >
-      <Ionicons name={icon} size={15} color="#FFFFFF" />
-    </PressableScale>
   );
 }
 
@@ -200,10 +181,11 @@ function DayTile({ day, weekday }: { day: WeekDay; weekday: string }) {
 
 /** The day's number in a circle: white for today, amber for a met goal, frosted for some practice. */
 function Circle({ number, active, met, today, future }: { number: number; active: boolean; met: boolean; today: boolean; future: boolean }) {
+  const hero = useHeroTone();
   if (today) {
     return (
       <View style={[styles.circle, styles.circleToday, met ? styles.ringMet : active ? styles.ringActive : null]}>
-        <AppText color={HERO.deep} style={styles.number}>
+        <AppText color={hero.deep} style={styles.number}>
           {number}
         </AppText>
       </View>
@@ -273,18 +255,7 @@ const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   nav: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  navButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  navDisabled: { opacity: 0.35 },
-  monthRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
+  monthRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   month: { flexShrink: 1, fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: 0.2 },
   headRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   todayChip: {

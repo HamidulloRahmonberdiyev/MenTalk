@@ -21,7 +21,7 @@ import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
 import { GoalPanel } from './GoalPanel';
-import { HERO } from './heroColors';
+import { HERO_TONES, useHeroTone } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { PathCard } from './PathCard';
@@ -33,6 +33,7 @@ const RECENT_SCORES = 10;
 
 export function HomeScreen() {
   const styles = useThemedStyles(createStyles);
+  const hero = useHeroTone();
   const t = useT();
   const insets = useSafeAreaInsets();
   const { refreshControl, version } = useRefreshControl();
@@ -94,7 +95,7 @@ export function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* The hero is bright blue in both themes, so the status bar is light here and flips back on other screens. */}
+      {/* The hero is a saturated band in both themes (blue / indigo), so the status bar is light here and flips back on other screens. */}
       <StatusBar style="light" />
       <ScrollView
         contentContainerStyle={styles.content}
@@ -102,7 +103,7 @@ export function HomeScreen() {
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
-          <LinearGradient colors={HERO.gradient} style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
+          <LinearGradient colors={hero.gradient} style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
             {/* Quiet light shapes for depth behind the hero. */}
             <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
             <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
@@ -143,7 +144,7 @@ export function HomeScreen() {
 }
 
 const createStyles = (home: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: HERO.base },
+  root: { flex: 1, backgroundColor: HERO_TONES[home.appearance].base },
   content: { flexGrow: 1 },
   top: {
     gap: spacing.lg,
