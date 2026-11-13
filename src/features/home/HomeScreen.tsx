@@ -24,11 +24,17 @@ import { FeatureCard } from './FeatureCard';
 import { HERO_TONES, useHeroTone } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
+import { ShortcutRail } from './ShortcutRail';
 import { PathCard } from './PathCard';
 import { TodayPanel } from './TodayPanel';
 import { VocabCard } from './VocabCard';
 
 const MIC_ART = require('@/assets/icons3d/mikrafon-card.png');
+/**
+ * Trying a new look for the shortcuts: 'rail' is one sideways row of mini gradient cards, 'grid' the
+ * previous two-row grid of floating 3D objects. Flip back to 'grid' to restore it.
+ */
+const SHORTCUTS_LOOK: 'rail' | 'grid' = 'rail';
 /** 3D glass tiles cut from assets/icons3d/shortcuts/home-page-small-cards.png. */
 const SHORTCUT_ART = {
   topics: require('@/assets/icons3d/shortcuts/topics.png'),
@@ -128,7 +134,7 @@ export function HomeScreen() {
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
             {/* Small shortcuts sit between the goal card and the talk card, so big cards never stack; vocabulary is the compact one. */}
-            <ShortcutGrid items={shortcuts} />
+            {SHORTCUTS_LOOK === 'rail' ? <ShortcutRail items={shortcuts} /> : <ShortcutGrid items={shortcuts} />}
             <FeatureCard
               title={t('home.talk.title')}
               icon="mic"
