@@ -29,9 +29,21 @@ const ART = 64;
 const OBJECT = 66;
 const POP = 12;
 
+/**
+ * On white a crisp contact shadow reads as a line under the object, so light mode gets a faint,
+ * wide haze instead; the dark sheet can take the deeper, tighter shadow.
+ */
 const GLOW_THEME = {
-  light: { halo: 'rgba(80, 150, 240, 0.22)', floor: 'rgba(20, 60, 140, 0.22)' },
-  dark: { halo: 'rgba(110, 165, 255, 0.2)', floor: 'rgba(0, 0, 0, 0.5)' },
+  light: {
+    halo: 'rgba(80, 150, 240, 0.22)',
+    floor: 'rgba(30, 80, 170, 0.07)',
+    floorShadow: '0 0 12px 7px rgba(30, 80, 170, 0.09)',
+  },
+  dark: {
+    halo: 'rgba(110, 165, 255, 0.2)',
+    floor: 'rgba(0, 0, 0, 0.5)',
+    floorShadow: '0 0 8px 3px rgba(0, 0, 0, 0.5)',
+  },
 } as const;
 
 /**
@@ -157,7 +169,7 @@ const createStyles = (home: Palette) => {
       height: 6,
       borderRadius: 3,
       backgroundColor: GLOW_THEME[home.appearance].floor,
-      boxShadow: `0 0 8px 3px ${GLOW_THEME[home.appearance].floor}`,
+      boxShadow: GLOW_THEME[home.appearance].floorShadow,
     },
     tileBox: {
       width: TILE,

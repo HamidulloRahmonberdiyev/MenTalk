@@ -14,6 +14,7 @@ import Animated, {
 
 import { AppText } from '@/components/ui/AppText';
 import { CircularProgress } from '@/components/ui/CircularProgress';
+import { FireIcon } from '@/components/ui/FireIcon';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT, type TranslationKey } from '@/i18n';
 import { haptics } from '@/services/haptics';
@@ -33,6 +34,8 @@ interface TodayPanelProps {
 const RING = 58;
 const DOT = 28;
 const GOLD = ['#FFD75E', '#FF9E1B'] as const;
+/** Ember ink for the streak number beside the flame. */
+const FIRE_INK = '#E2480F';
 
 /**
  * The learner's day on the home hero, in one glass panel: today's goal ring, the streak, and this
@@ -118,13 +121,18 @@ function GoalRing({ progress, done }: { progress: number; done: boolean }) {
   );
 }
 
-/** Gold flame pill while the streak is alive, a quiet frosted one before it starts. */
+/**
+ * The streak: a real, flickering full-colour flame on a white pill while it is alive; before it
+ * starts, the same flame dimmed and still on frosted glass.
+ */
 function StreakBadge({ streak }: { streak: number }) {
   const hot = streak > 0;
   if (!hot) {
     return (
       <View style={[styles.streak, styles.streakCold]}>
-        <Ionicons name="flame-outline" size={20} color={HERO.faint} />
+        <View style={styles.fireDim}>
+          <FireIcon size={18} animated={false} />
+        </View>
         <AppText color={HERO.faint} style={styles.streakNumber}>
           0
         </AppText>
@@ -132,12 +140,12 @@ function StreakBadge({ streak }: { streak: number }) {
     );
   }
   return (
-    <LinearGradient colors={GOLD} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={[styles.streak, styles.streakHot]}>
-      <Ionicons name="flame" size={20} color="#FFFFFF" />
-      <AppText color="#FFFFFF" style={styles.streakNumber}>
+    <View style={[styles.streak, styles.streakHot]}>
+      <FireIcon size={18} />
+      <AppText color={FIRE_INK} style={styles.streakNumber}>
         {streak}
       </AppText>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -249,10 +257,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   streakHot: {
-    borderWidth: 1.5,
-    borderColor: '#FFE9A8',
-    boxShadow: '0 6px 14px rgba(200, 110, 0, 0.4)',
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0 6px 16px rgba(255, 110, 20, 0.45)',
   },
+  fireDim: { opacity: 0.6 },
   streakCold: {
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderWidth: 1,
