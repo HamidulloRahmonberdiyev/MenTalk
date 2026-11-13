@@ -25,9 +25,14 @@ const TILE_RADIUS = 18;
 const DEPTH = 4;
 /** The vector illustrations spill over the tile's top-right corner. */
 const ART = 64;
-/** The 3D objects sit centred on the tile and pop out of its top by POP. */
-const OBJECT = 64;
+/** The 3D objects float on a soft glow with a contact shadow, like the art on the big home cards. */
+const OBJECT = 66;
 const POP = 12;
+
+const GLOW_THEME = {
+  light: { halo: 'rgba(80, 150, 240, 0.22)', floor: 'rgba(20, 60, 140, 0.22)' },
+  dark: { halo: 'rgba(110, 165, 255, 0.2)', floor: 'rgba(0, 0, 0, 0.5)' },
+} as const;
 
 /**
  * Per look: the tile face (lighter at the top), its lip, a hairline highlight along the top edge and
@@ -65,19 +70,24 @@ function ShortcutTile({ label, art, image, onPress }: Omit<Shortcut, 'key'>) {
       }}
       style={themed.item}
     >
-      <View style={styles.area} pointerEvents="none">
-        <View style={[themed.tileBox, !image && styles.tileBoxShifted]}>
-          <View style={themed.lip} />
-          <LinearGradient colors={tone.face} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={themed.face} />
-        </View>
-        {image ? (
+      {image ? (
+        <View style={styles.area} pointerEvents="none">
+          <View style={themed.halo} />
+          <View style={themed.floor} />
           <Image source={image} style={styles.object} contentFit="contain" transition={150} />
-        ) : (
+        </View>
+      ) : (
+        // Vector fallback (e.g. the random topic) keeps the slate tile with the art spilling over it.
+        <View style={styles.area} pointerEvents="none">
+          <View style={[themed.tileBox, styles.tileBoxShifted]}>
+            <View style={themed.lip} />
+            <LinearGradient colors={tone.face} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={themed.face} />
+          </View>
           <View style={styles.art}>
             <ShortcutArt name={art} size={ART} />
           </View>
-        )}
-      </View>
+        </View>
+      )}
       <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={themed.label}>
         {label}
       </AppText>
@@ -112,7 +122,7 @@ const styles = StyleSheet.create({
   },
   object: {
     position: 'absolute',
-    bottom: DEPTH + 3,
+    bottom: 2,
     width: OBJECT,
     height: OBJECT,
   },
@@ -130,6 +140,24 @@ const createStyles = (home: Palette) => {
       width: '25%',
       alignItems: 'center',
       gap: 6,
+    },
+    halo: {
+      position: 'absolute',
+      top: 10,
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: GLOW_THEME[home.appearance].halo,
+      boxShadow: `0 0 22px 12px ${GLOW_THEME[home.appearance].halo}`,
+    },
+    floor: {
+      position: 'absolute',
+      bottom: 2,
+      width: 40,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: GLOW_THEME[home.appearance].floor,
+      boxShadow: `0 0 8px 3px ${GLOW_THEME[home.appearance].floor}`,
     },
     tileBox: {
       width: TILE,
