@@ -33,25 +33,25 @@ const RADIUS = 30;
 const RING = 60;
 const DOT = 32;
 const WHITE = '#FFFFFF';
-/** Deep blue ink for numbers on white chips. */
-const INK = '#0A7FE0';
+/** Deep violet ink for numbers on white chips. */
+const INK = '#5A4EC2';
 /** The streak keeps its ember ink, since it sits beside the flame. */
 const FIRE_INK = '#E2480F';
 
 /**
- * A bright blue card in the same family as the other big home cards (gradient face on a raised edge,
- * soft light orbs), matching the app's blue hero; the night look is a touch deeper so
+ * A soft lavender card in the same family as the other big home cards (gradient face on a raised edge,
+ * soft light orbs), like the Zoom events card; the night look is a touch deeper so
  * it does not glare on the dark page.
  */
 const TONES = {
   light: {
-    gradient: ['#3DB4FF', '#0A8CF2'] as const,
-    edge: '#066FC7',
-    shadow: '0 12px 26px rgba(10, 140, 242, 0.32)',
+    gradient: ['#A6A3DC', '#BFBCE7'] as const,
+    edge: '#837ED8',
+    shadow: '0 12px 26px rgba(131, 126, 216, 0.28)',
   },
   dark: {
-    gradient: ['#1F95EC', '#0A6FCC'] as const,
-    edge: '#07519A',
+    gradient: ['#8E86D6', '#6C62C2'] as const,
+    edge: '#4E45A0',
     shadow: '0 12px 26px rgba(0, 0, 0, 0.42)',
   },
 } as const;
@@ -239,7 +239,7 @@ function TodayPulse() {
 }
 
 const TEXT_SHADOW = {
-  textShadowColor: 'rgba(0, 60, 140, 0.25)',
+  textShadowColor: 'rgba(60, 50, 140, 0.3)',
   textShadowOffset: { width: 0, height: 1 },
   textShadowRadius: 3,
 } as const;
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radii.pill,
   },
-  streakHot: { backgroundColor: WHITE, boxShadow: '0 4px 12px rgba(0, 70, 150, 0.25)' },
+  streakHot: { backgroundColor: WHITE, boxShadow: '0 4px 12px rgba(70, 60, 160, 0.25)' },
   streakCold: { backgroundColor: 'rgba(255, 255, 255, 0.25)' },
   fireDim: { opacity: 0.55 },
   streakNumber: { fontSize: 18, lineHeight: 22, fontWeight: '900' },
@@ -293,8 +293,8 @@ const styles = StyleSheet.create({
   weekdayToday: { fontWeight: '900' },
   dotWrap: { width: DOT, height: DOT, alignItems: 'center', justifyContent: 'center' },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2, alignItems: 'center', justifyContent: 'center' },
-  dotMet: { backgroundColor: WHITE, boxShadow: '0 3px 8px rgba(0, 70, 150, 0.28)' },
-  dotToday: { backgroundColor: WHITE, boxShadow: '0 3px 10px rgba(0, 70, 150, 0.3)' },
+  dotMet: { backgroundColor: WHITE, boxShadow: '0 3px 8px rgba(70, 60, 160, 0.28)' },
+  dotToday: { backgroundColor: WHITE, boxShadow: '0 3px 10px rgba(70, 60, 160, 0.3)' },
   dotActive: { backgroundColor: 'rgba(255, 255, 255, 0.38)' },
   dotFuture: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255, 255, 255, 0.6)' },
   dotMissed: { backgroundColor: 'rgba(255, 255, 255, 0.16)' },
