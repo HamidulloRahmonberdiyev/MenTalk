@@ -20,15 +20,25 @@ import { openConversation } from '../scenarios/navigation';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
-import { GoalPanel } from './GoalPanel';
 import { HERO_TONES, useHeroTone } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { PathCard } from './PathCard';
+import { TodayPanel } from './TodayPanel';
 import { VocabCard } from './VocabCard';
-import { WeekStrip } from './WeekStrip';
 
 const MIC_ART = require('@/assets/icons3d/mikrafon-card.png');
+/** 3D glass tiles cut from assets/icons3d/shortcuts/home-page-small-cards.png. */
+const SHORTCUT_ART = {
+  topics: require('@/assets/icons3d/shortcuts/topics.png'),
+  history: require('@/assets/icons3d/shortcuts/history.png'),
+  words: require('@/assets/icons3d/shortcuts/words.png'),
+  game: require('@/assets/icons3d/shortcuts/game.png'),
+  translate: require('@/assets/icons3d/shortcuts/translate.png'),
+  continue: require('@/assets/icons3d/shortcuts/continue.png'),
+  mistakes: require('@/assets/icons3d/shortcuts/mistakes.png'),
+  pronunciation: require('@/assets/icons3d/shortcuts/pronunciation.png'),
+};
 
 /** Average of the latest conversation scores (out of 10). */
 const RECENT_SCORES = 10;
@@ -62,13 +72,14 @@ export function HomeScreen() {
 
   const shortcuts = useMemo<Shortcut[]>(
     () => [
-      { key: 'topics', label: t('home.menu.topics'), art: 'topics', onPress: () => router.push('/scenarios') },
-      { key: 'history', label: t('home.menu.history'), art: 'chat', onPress: () => router.navigate('/conversations') },
-      { key: 'words', label: t('home.menu.words'), art: 'book', onPress: () => router.navigate('/words') },
-      { key: 'game', label: t('home.menu.game'), art: 'game', onPress: () => setPicking(true) },
-      { key: 'translate', label: t('home.menu.translate'), art: 'translate', onPress: () => router.navigate('/translate') },
+      { key: 'topics', image: SHORTCUT_ART.topics, label: t('home.menu.topics'), art: 'topics', onPress: () => router.push('/scenarios') },
+      { key: 'history', image: SHORTCUT_ART.history, label: t('home.menu.history'), art: 'chat', onPress: () => router.navigate('/conversations') },
+      { key: 'words', image: SHORTCUT_ART.words, label: t('home.menu.words'), art: 'book', onPress: () => router.navigate('/words') },
+      { key: 'game', image: SHORTCUT_ART.game, label: t('home.menu.game'), art: 'game', onPress: () => setPicking(true) },
+      { key: 'translate', image: SHORTCUT_ART.translate, label: t('home.menu.translate'), art: 'translate', onPress: () => router.navigate('/translate') },
       {
         key: 'continue',
+        image: SHORTCUT_ART.continue,
         label: t('home.menu.continue'),
         art: 'play',
         // Carries on along the path; once it is all passed, back to the last chat.
@@ -79,7 +90,7 @@ export function HomeScreen() {
       },
       // The mistakes notebook lives on the server, so without one the slot stays a random topic.
       isApiConfigured
-        ? { key: 'mistakes', label: t('home.menu.mistakes'), art: 'mistakes', onPress: () => router.push('/mistakes') }
+        ? { key: 'mistakes', image: SHORTCUT_ART.mistakes, label: t('home.menu.mistakes'), art: 'mistakes', onPress: () => router.push('/mistakes') }
         : {
             key: 'random',
             label: t('home.menu.random'),
@@ -90,7 +101,7 @@ export function HomeScreen() {
             },
           },
       // Profile already has its own tab, so its slot went to pronunciation practice.
-      { key: 'pronunciation', label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
+      { key: 'pronunciation', image: SHORTCUT_ART.pronunciation, label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],
     [t, lastScenarioId, openStage, stages, unlocked],
   );
@@ -110,8 +121,8 @@ export function HomeScreen() {
             <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
             <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
             <HomeHeader name={name} />
-            <WeekStrip />
-            <GoalPanel minutes={minutes} goalMinutes={goalMinutes} />
+            {/* Goal, streak and this week in one glass panel; the full calendar opens from it. */}
+            <TodayPanel minutes={minutes} goalMinutes={goalMinutes} />
           </LinearGradient>
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
@@ -135,7 +146,6 @@ export function HomeScreen() {
             <PathCard
               stages={stages}
               onOpenPath={() => router.push('/scenarios')}
-              onStart={(stage) => openConversation(stage.scenario.id)}
             />
           </View>
         </Fragment>
@@ -150,10 +160,11 @@ const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: HERO_TONES[home.appearance].base },
   content: { flexGrow: 1 },
   top: {
-    gap: spacing.lg,
+    // Kept compact so the shortcuts and the talk card fit on the first screen without scrolling.
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
     // Runs on under the sheet's rounded corners.
-    paddingBottom: spacing.md + 28,
+    paddingBottom: spacing.sm + 28,
     marginBottom: -28,
     overflow: 'hidden',
   },
@@ -164,7 +175,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     flexGrow: 1,
     gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     backgroundColor: home.sheet,

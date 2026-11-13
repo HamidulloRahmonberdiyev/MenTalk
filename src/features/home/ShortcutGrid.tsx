@@ -1,3 +1,4 @@
+import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,20 +14,45 @@ export interface Shortcut {
   key: string;
   label: string;
   art: ShortcutArtName;
+  /** A 3D object on a transparent background; when set it replaces the vector illustration. */
+  image?: ImageSource | number;
   onPress: () => void;
 }
 
 const TILE = 54;
+const TILE_RADIUS = 18;
+/** The darker lip under the tile, so it reads as a raised key like the big home cards. */
+const DEPTH = 4;
+/** The vector illustrations spill over the tile's top-right corner. */
 const ART = 64;
-/** Slate tile, a touch lighter at the top, like a recessed slot the illustration sits in. */
-const TILE_COLORS = {
-  dark: ['#46516E', '#353E57'],
-  light: ['#E6EFFA', '#D2E1F4'],
+/** The 3D objects sit centred on the tile and pop out of its top by POP. */
+const OBJECT = 58;
+const POP = 12;
+
+/**
+ * Per look: the tile face (lighter at the top), its lip, a hairline highlight along the top edge and
+ * the drop shadow. Light is a soft sky tint on the white sheet; dark is a slate tile on the grey one.
+ */
+const TILE_THEME = {
+  light: {
+    face: ['#EEF5FF', '#D5E6FB'],
+    lip: '#B9D1F1',
+    rim: 'rgba(255, 255, 255, 1)',
+    shadow: '0 7px 14px rgba(42, 110, 200, 0.2)',
+  },
+  // A blue-tinted night tile, so the blue objects belong to it and it still lifts off the grey sheet.
+  dark: {
+    face: ['#43507A', '#323C5E'],
+    lip: '#252C45',
+    rim: 'rgba(150, 180, 255, 0.25)',
+    shadow: '0 7px 16px rgba(0, 0, 0, 0.45)',
+  },
 } as const;
 
-function ShortcutTile({ label, art, onPress }: Omit<Shortcut, 'key'>) {
+function ShortcutTile({ label, art, image, onPress }: Omit<Shortcut, 'key'>) {
   const home = usePalette();
   const themed = useThemedStyles(createStyles);
+  const tone = TILE_THEME[home.appearance];
 
   return (
     <PressableScale
@@ -39,12 +65,18 @@ function ShortcutTile({ label, art, onPress }: Omit<Shortcut, 'key'>) {
       }}
       style={themed.item}
     >
-      <View style={themed.tileArea}>
-        <LinearGradient colors={TILE_COLORS[home.appearance]} style={themed.tile} />
-        {/* The illustration is bigger than its tile and spills over the top-right corner, as in Englify. */}
-        <View style={styles.art} pointerEvents="none">
-          <ShortcutArt name={art} size={ART} />
+      <View style={styles.area} pointerEvents="none">
+        <View style={[themed.tileBox, !image && styles.tileBoxShifted]}>
+          <View style={themed.lip} />
+          <LinearGradient colors={tone.face} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={themed.face} />
         </View>
+        {image ? (
+          <Image source={image} style={styles.object} contentFit="contain" transition={150} />
+        ) : (
+          <View style={styles.art}>
+            <ShortcutArt name={art} size={ART} />
+          </View>
+        )}
       </View>
       <AppText variant="captionStrong" color={home.text} numberOfLines={1} style={themed.label}>
         {label}
@@ -65,15 +97,30 @@ export function ShortcutGrid({ items }: { items: Shortcut[] }) {
 }
 
 const styles = StyleSheet.create({
+  // Room for the tile plus the artwork rising out of it.
+  area: {
+    width: TILE + 20,
+    height: TILE + DEPTH + POP,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  tileBoxShifted: { marginRight: 10 },
   art: {
     position: 'absolute',
     top: 0,
     right: 0,
   },
+  object: {
+    position: 'absolute',
+    bottom: DEPTH + 3,
+    width: OBJECT,
+    height: OBJECT,
+  },
 });
 
-const createStyles = (home: Palette) =>
-  StyleSheet.create({
+const createStyles = (home: Palette) => {
+  const tone = TILE_THEME[home.appearance];
+  return StyleSheet.create({
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -82,24 +129,33 @@ const createStyles = (home: Palette) =>
     item: {
       width: '25%',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: 6,
     },
-    tileArea: {
-      width: TILE + 20,
-      height: TILE + 10,
-      justifyContent: 'flex-end',
-      alignItems: 'center',
+    tileBox: {
+      width: TILE,
+      height: TILE + DEPTH,
+      borderRadius: TILE_RADIUS,
+      boxShadow: tone.shadow,
     },
-    tile: {
+    lip: {
+      position: 'absolute',
+      top: DEPTH,
+      left: 0,
       width: TILE,
       height: TILE,
-      marginRight: 10,
-      borderRadius: 18,
+      borderRadius: TILE_RADIUS,
+      backgroundColor: tone.lip,
+    },
+    face: {
+      width: TILE,
+      height: TILE,
+      borderRadius: TILE_RADIUS,
       borderWidth: 1,
-      borderColor: home.appearance === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(47, 119, 225, 0.12)',
+      borderColor: tone.rim,
     },
     label: {
       paddingHorizontal: 2,
       fontSize: 12,
     },
   });
+};

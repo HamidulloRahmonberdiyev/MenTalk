@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -15,7 +16,6 @@ import { AppText } from '@/components/ui/AppText';
 import { Pressable3D } from '@/components/ui/Pressable3D';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
-import { useSettingsStore } from '@/store/settingsStore';
 import { radii, spacing } from '@/theme';
 import { easing } from '@/theme/motion';
 
@@ -29,34 +29,32 @@ const DOT_OPEN = 44;
 const FACE = ['#A396DE', '#C9C3EE'] as const;
 const EDGE = '#8576D4';
 const DEEP = '#7462CF';
-const INK = '#2B1E5C';
 /** Dark tint for the empty road and locked dots, in the card's own purple. */
 const SHADE = 'rgba(52, 34, 130, 0.2)';
+const SIGN_ART = require('@/assets/icons3d/road-sign-card.png');
+const SIGN = 124;
 
 interface PathCardProps {
   stages: readonly PathStage[];
   /** The card itself: opens the whole path. */
   onOpenPath: () => void;
-  /** The start button: straight into the open stage. */
-  onStart: (stage: PathStage) => void;
 }
 
 /**
- * The path on the home sheet, in the same chunky gradient style as the other home cards: a mini
- * road of every stage, and the stage that is open now with a button straight into it.
+ * The path on the home sheet, in the same chunky gradient style as the other home cards: a big
+ * title with a progress pill, the 3D signpost on the right and a mini road of every stage below.
  */
-export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
+export function PathCard({ stages, onOpenPath }: PathCardProps) {
   const t = useT();
-  const language = useSettingsStore((state) => state.language);
   const passed = stages.filter((stage) => stage.status === 'passed').length;
   const openIndex = stages.findIndex((stage) => stage.status === 'open');
-  const current = openIndex >= 0 ? stages[openIndex] : null;
-  const reach = stages.length > 1 ? (current ? openIndex : stages.length - 1) / (stages.length - 1) : 1;
+  const reach = stages.length > 1 ? (openIndex >= 0 ? openIndex : stages.length - 1) / (stages.length - 1) : 1;
+  const progress = t('path.progress', { done: passed, total: stages.length });
 
   return (
     <Pressable3D
       accessibilityRole="button"
-      accessibilityLabel={`${t('path.title')}. ${t('path.progress', { done: passed, total: stages.length })}`}
+      accessibilityLabel={`${t('path.title')}. ${progress}`}
       onPress={() => {
         haptics.light();
         onOpenPath();
@@ -66,68 +64,30 @@ export function PathCard({ stages, onOpenPath, onStart }: PathCardProps) {
       radius={RADIUS}
     >
       <LinearGradient colors={FACE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-        <View style={styles.art} pointerEvents="none">
-          <Ionicons name="trail-sign" size={150} color="rgba(52, 34, 130, 0.18)" style={styles.artShadow} />
-          <Ionicons name="trail-sign" size={150} color="rgba(255, 255, 255, 0.45)" />
+        {/* Quiet light shapes for depth, as behind the home hero. */}
+        <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
+        <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
+
+        {/* The 3D signpost, fully inside the card: a soft halo behind it, a shadow pooled under its base. */}
+        <View style={styles.sign} pointerEvents="none">
+          <View style={styles.signHalo} />
+          <View style={styles.signFloor} />
+          <Image source={SIGN_ART} style={styles.signImage} contentFit="contain" />
         </View>
 
         <View style={styles.head}>
-          <View style={styles.headTexts}>
-            <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.title}>
-              {t('path.title')}
+          <AppText color="#FFFFFF" numberOfLines={2} adjustsFontSizeToFit style={styles.title}>
+            {t('path.title')}
+          </AppText>
+          <View style={styles.pill}>
+            <Ionicons name="flag" size={13} color="#FFFFFF" />
+            <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.pillText}>
+              {progress}
             </AppText>
-            <AppText color="rgba(43,30,92,0.75)" style={styles.subtitle}>
-              {t('path.progress', { done: passed, total: stages.length })}
-            </AppText>
-          </View>
-          <View style={styles.arrow}>
-            <Ionicons name="arrow-up" size={26} color={INK} style={styles.arrowIcon} />
           </View>
         </View>
 
         <MiniRoad stages={stages} reach={reach} />
-
-        {current ? (
-          <View style={styles.panel}>
-            <LinearGradient colors={FACE} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.panelIcon}>
-              <Ionicons name={current.scenario.icon} size={22} color="#FFFFFF" />
-            </LinearGradient>
-            <View style={styles.panelTexts}>
-              <AppText color={DEEP} style={styles.panelStage} numberOfLines={1}>
-                {t('path.stage', { n: current.number }).toUpperCase()}
-              </AppText>
-              <AppText color={INK} style={styles.panelTitle} numberOfLines={1}>
-                {current.scenario.title[language]}
-              </AppText>
-            </View>
-            <Pressable3D
-              accessibilityRole="button"
-              accessibilityLabel={`${t('path.start')}: ${current.scenario.title[language]}`}
-              onPress={() => {
-                haptics.selection();
-                onStart(current);
-              }}
-              edgeColor={EDGE}
-              depth={4}
-              radius={radii.pill}
-              faceStyle={styles.go}
-            >
-              <AppText color="#FFFFFF" style={styles.goText} numberOfLines={1}>
-                {t('path.start')}
-              </AppText>
-              <Ionicons name="play" size={14} color="#FFFFFF" />
-            </Pressable3D>
-          </View>
-        ) : (
-          <View style={styles.panel}>
-            <View style={[styles.panelIcon, styles.cup]}>
-              <Ionicons name="trophy" size={22} color="#FFFFFF" />
-            </View>
-            <AppText color={INK} style={[styles.panelTitle, styles.panelTexts]} numberOfLines={2}>
-              {t('path.finish.done')}
-            </AppText>
-          </View>
-        )}
       </LinearGradient>
     </Pressable3D>
   );
@@ -189,38 +149,64 @@ function OpenDot({ stage }: { stage: PathStage }) {
 
 const styles = StyleSheet.create({
   card: {
+    // Same height as the other home cards.
+    minHeight: 196,
     padding: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md + 2,
+    justifyContent: 'space-between',
     borderRadius: RADIUS,
     overflow: 'hidden',
   },
-  art: {
-    position: 'absolute',
-    right: -26,
-    top: 40,
-    transform: [{ rotate: '-12deg' }],
-  },
-  artShadow: {
-    position: 'absolute',
-    transform: [{ translateX: 7 }, { translateY: 7 }],
-  },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  headTexts: { flex: 1, gap: 2 },
-  title: { fontSize: 44, lineHeight: 54, fontWeight: '900', letterSpacing: -1 },
-  subtitle: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
-  arrow: {
-    width: 52,
-    height: 52,
+  orb: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  orbA: { width: 180, height: 180, top: -70, right: -50 },
+  orbB: { width: 120, height: 120, bottom: -60, left: -40, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+  head: { marginRight: SIGN - spacing.md, gap: spacing.sm },
+  title: { fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -0.8 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
+    backgroundColor: DEEP,
+    boxShadow: '0 3px 8px rgba(52, 34, 130, 0.25)',
+  },
+  pillText: { flexShrink: 1, fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  sign: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.md,
+    width: SIGN,
+    height: SIGN,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    transform: [{ rotate: '6deg' }],
   },
-  arrowIcon: { transform: [{ rotate: '45deg' }] },
+  signHalo: {
+    position: 'absolute',
+    width: SIGN * 0.78,
+    height: SIGN * 0.78,
+    borderRadius: SIGN,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    boxShadow: '0 0 28px 10px rgba(255, 255, 255, 0.35)',
+  },
+  signFloor: {
+    position: 'absolute',
+    bottom: 2,
+    width: SIGN * 0.5,
+    height: 10,
+    borderRadius: SIGN,
+    backgroundColor: 'rgba(52, 34, 130, 0.22)',
+    boxShadow: '0 0 10px 4px rgba(52, 34, 130, 0.18)',
+  },
+  signImage: { width: SIGN, height: SIGN },
 
   road: {
-    height: DOT_OPEN + 8,
+    height: DOT_OPEN + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -271,34 +257,4 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.6)',
   },
-
-  panel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.sm,
-    paddingRight: spacing.sm,
-    borderRadius: radii.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  },
-  panelIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cup: { backgroundColor: GOLD },
-  panelTexts: { flex: 1 },
-  panelStage: { fontSize: 11, lineHeight: 15, fontWeight: '800', letterSpacing: 0.8 },
-  panelTitle: { fontSize: 17, lineHeight: 22, fontWeight: '800' },
-  go: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    backgroundColor: DEEP,
-  },
-  goText: { fontSize: 15, lineHeight: 20, fontWeight: '800' },
 });

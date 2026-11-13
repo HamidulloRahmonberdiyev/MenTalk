@@ -37,7 +37,7 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
       }}
       style={styles.iconButton}
     >
-      <Ionicons name={icon} size={24} color="#FFFFFF" />
+      <Ionicons name={icon} size={22} color="#FFFFFF" />
       {badge > 0 ? (
         <View style={styles.badge}>
           <AppText color="#FFFFFF" style={styles.badgeText}>
@@ -68,7 +68,7 @@ export function HomeHeader({ name }: { name: string }) {
         onPress={() => router.navigate('/profile')}
         style={styles.avatar}
       >
-        <Avatar name={name} uri={avatarUrl} size={44} />
+        <Avatar name={name} uri={avatarUrl} size={38} />
       </PressableScale>
       <AppText variant="heading" color="#FFFFFF" accessibilityRole="header" numberOfLines={1} style={styles.title}>
         {t('home.greetingName', { name })}
@@ -93,14 +93,14 @@ const createStyles = (home: Palette) => StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: '800',
   },
   iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',

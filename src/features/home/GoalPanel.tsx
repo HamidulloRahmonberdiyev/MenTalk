@@ -35,9 +35,9 @@ export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
   return (
     <View style={styles.panel}>
       <View style={styles.goal} accessible accessibilityLabel={`${t('home.goalTitle')}: ${minutes}/${goalMinutes}`}>
-        <CircularProgress value={progress} size={56} strokeWidth={6} color={done ? HERO.flame : '#FFFFFF'} trackColor="rgba(255,255,255,0.25)">
+        <CircularProgress value={progress} size={46} strokeWidth={5} color={done ? HERO.flame : '#FFFFFF'} trackColor="rgba(255,255,255,0.25)">
           {done ? (
-            <Ionicons name="checkmark" size={24} color={HERO.flame} />
+            <Ionicons name="checkmark" size={20} color={HERO.flame} />
           ) : (
             <AppText color="#FFFFFF" style={styles.percent}>{`${Math.round(progress * 100)}%`}</AppText>
           )}
@@ -80,7 +80,7 @@ export function GoalPanel({ minutes, goalMinutes }: GoalPanelProps) {
 const styles = StyleSheet.create({
   panel: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.md,
     borderRadius: radii.xl,
     backgroundColor: 'rgba(255,255,255,0.18)',
@@ -88,12 +88,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.32)',
   },
   goal: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  percent: { fontSize: 13, lineHeight: 16, fontWeight: '900' },
-  goalTexts: { flex: 1, gap: 3 },
+  percent: { fontSize: 12, lineHeight: 15, fontWeight: '900' },
+  goalTexts: { flex: 1, gap: 2 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   overline: { flexShrink: 1, fontSize: 10, lineHeight: 13, fontWeight: '800', letterSpacing: 1.1 },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  value: { fontSize: 24, lineHeight: 28, fontWeight: '900', letterSpacing: -0.5 },
+  value: { fontSize: 20, lineHeight: 24, fontWeight: '900', letterSpacing: -0.5 },
   valueOf: { fontSize: 14, lineHeight: 18, fontWeight: '700' },
   track: { height: 6, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: radii.pill, overflow: 'hidden' },

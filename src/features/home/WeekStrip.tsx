@@ -249,10 +249,10 @@ function TodayGlow() {
 }
 
 /** Seven of these fit a 320pt-wide phone with room between them. */
-const CIRCLE = 38;
+const CIRCLE = 34;
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.md },
+  wrap: { gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   nav: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   monthRow: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 4px 10px rgba(8, 70, 130, 0.25)',
   },
   todayText: { fontSize: 12, lineHeight: 16, fontWeight: '900' },
-  pager: { marginHorizontal: -spacing.xl, minHeight: 74 },
+  pager: { marginHorizontal: -spacing.xl, minHeight: 63 },
   streak: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   streakHot: { backgroundColor: 'rgba(255,170,20,0.35)', borderColor: 'rgba(255,220,120,0.8)' },
   streakText: { fontSize: 13, lineHeight: 17, fontWeight: '800' },
   days: { flexDirection: 'row', paddingHorizontal: spacing.xl },
-  cell: { flex: 1, alignItems: 'center', gap: 5 },
+  cell: { flex: 1, alignItems: 'center', gap: 3 },
   weekday: { fontSize: 11, lineHeight: 14, fontWeight: '700', letterSpacing: 0.3 },
   weekdayToday: { fontWeight: '900' },
   circleWrap: { width: CIRCLE, height: CIRCLE, alignItems: 'center', justifyContent: 'center' },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   circleMet: { borderWidth: 2, borderColor: '#FFE9A8', boxShadow: '0 5px 14px rgba(200, 110, 0, 0.4)' },
   circleMissed: { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   circleFuture: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)', borderStyle: 'dashed' },
-  number: { fontSize: 15, lineHeight: 19, fontWeight: '900' },
+  number: { fontSize: 14, lineHeight: 18, fontWeight: '900' },
   numberQuiet: { fontWeight: '700' },
   markRow: { height: 12, alignItems: 'center', justifyContent: 'center' },
   mark: { width: 6, height: 6, borderRadius: 3 },
