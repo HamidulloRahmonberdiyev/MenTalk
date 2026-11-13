@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
@@ -29,6 +30,8 @@ const EDGE = '#C8481E';
 const DEEP = '#F0642E';
 const INK = '#4A1D08';
 const MUTED = '#B9876A';
+const CALENDAR_ART = require('@/assets/icons3d/calendar-card.png');
+const ART = 92;
 
 /**
  * The practice calendar as a big home card, in the same chunky gradient family as the others:
@@ -52,10 +55,8 @@ export function ActivityCard() {
       radius={RADIUS}
     >
       <LinearGradient colors={FACE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-        <View style={styles.art} pointerEvents="none">
-          <Ionicons name="calendar" size={150} color="rgba(90, 25, 0, 0.18)" style={styles.artShadow} />
-          <Ionicons name="calendar" size={150} color="rgba(255, 255, 255, 0.28)" />
-        </View>
+        <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
+        <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
 
         <View style={styles.head}>
           <View style={styles.headTexts}>
@@ -69,8 +70,11 @@ export function ActivityCard() {
               </AppText>
             </View>
           </View>
-          <View style={styles.arrow}>
-            <Ionicons name="arrow-up" size={20} color={INK} style={styles.arrowIcon} />
+          {/* The 3D calendar in the corner, glowing on the ember face like the home cards' art. */}
+          <View style={styles.art} pointerEvents="none">
+            <View style={styles.halo} />
+            <View style={styles.floor} />
+            <Image source={CALENDAR_ART} style={styles.artImage} contentFit="contain" transition={150} />
           </View>
         </View>
 
@@ -163,22 +167,42 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS,
     overflow: 'hidden',
   },
-  art: { position: 'absolute', right: -22, top: 18, transform: [{ rotate: '-12deg' }] },
-  artShadow: { position: 'absolute', transform: [{ translateX: 7 }, { translateY: 7 }] },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  orb: { position: 'absolute', borderRadius: 999 },
+  orbA: { width: 190, height: 190, top: -90, right: -50, backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  orbB: { width: 120, height: 120, top: 40, left: -70, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headTexts: { flex: 1, gap: 2 },
   title: { fontSize: 28, lineHeight: 36, fontWeight: '900', letterSpacing: -0.5 },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   subtitle: { flexShrink: 1, fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  arrow: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.pill,
+  // Taller than the texts beside it; the negative margins keep the head from growing.
+  art: {
+    width: ART,
+    height: ART,
+    marginVertical: -spacing.md,
+    marginRight: -spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    transform: [{ rotate: '8deg' }],
   },
-  arrowIcon: { transform: [{ rotate: '45deg' }] },
+  halo: {
+    position: 'absolute',
+    width: ART * 0.76,
+    height: ART * 0.76,
+    borderRadius: ART,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    boxShadow: '0 0 26px 10px rgba(255, 240, 220, 0.4)',
+  },
+  floor: {
+    position: 'absolute',
+    bottom: 4,
+    width: ART * 0.56,
+    height: 9,
+    borderRadius: ART,
+    backgroundColor: 'rgba(90, 25, 0, 0.22)',
+    boxShadow: '0 0 10px 4px rgba(90, 25, 0, 0.16)',
+  },
+  artImage: { width: ART, height: ART },
 
   panel: {
     gap: spacing.sm,

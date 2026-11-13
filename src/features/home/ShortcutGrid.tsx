@@ -26,7 +26,7 @@ const DEPTH = 4;
 /** The vector illustrations spill over the tile's top-right corner. */
 const ART = 64;
 /** The 3D objects sit centred on the tile and pop out of its top by POP. */
-const OBJECT = 58;
+const OBJECT = 64;
 const POP = 12;
 
 /**

@@ -21,7 +21,21 @@ import { starterWords } from '../vocabulary/starterWords';
 import { countDue, useStudyCards, useVocabularyStore } from '../vocabulary/vocabularyStore';
 import { ResourceCard, type Resource } from './ResourceCard';
 
-/** The book tab: one big colourful card per thing to practise with, as on Englify's "Resurslar". */
+/** 3D objects shared with the home shortcuts. */
+const ART = {
+  game: require('@/assets/icons3d/shortcuts/game.png'),
+  mistakes: require('@/assets/icons3d/shortcuts/mistakes.png'),
+  words: require('@/assets/icons3d/shortcuts/words.png'),
+  topics: require('@/assets/icons3d/shortcuts/topics.png'),
+  pronunciation: require('@/assets/icons3d/shortcuts/pronunciation.png'),
+  translate: require('@/assets/icons3d/shortcuts/translate.png'),
+  history: require('@/assets/icons3d/shortcuts/history.png'),
+};
+
+/**
+ * The book tab: one big card per thing to practise with, in the home cards' style and their cool
+ * sky-blue-to-lavender family, so the blue 3D objects sit well on every one.
+ */
 export function ResourcesScreen() {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
@@ -48,8 +62,9 @@ export function ResourcesScreen() {
       title: t('words.round'),
       hint: empty ? t('words.empty.title') : due > 0 ? t('home.words.due', { n: due }) : undefined,
       icon: 'game-controller',
-      gradient: ['#FB7FE6', '#C03FD9'],
-      edge: '#A12BBC',
+      image: ART.game,
+      gradient: ['#3EC0FF', '#1A9DF2'],
+      edge: '#0E7FD0',
       // With nothing saved there is nothing to play; the list explains how to get words.
       onPress: () => (empty ? router.push('/word-list') : setPicking(true)),
     },
@@ -61,8 +76,9 @@ export function ResourcesScreen() {
             title: t('mistakes.title'),
             hint: mistakeHint(mistakes, t),
             icon: 'flash' as const,
-            gradient: ['#FFA36B', '#F0522E'] as const,
-            edge: '#C2391A',
+            image: ART.mistakes,
+            gradient: ['#9A9BF7', '#5F62E2'] as const,
+            edge: '#4A4CC4',
             onPress: () => router.push('/mistakes'),
           },
         ]
@@ -72,16 +88,18 @@ export function ResourcesScreen() {
       title: t('words.title'),
       hint: empty ? undefined : t('words.count', { n: cards.length }),
       icon: 'book',
-      gradient: ['#C4BCF8', '#8670F0'],
-      edge: '#6A4FE0',
+      image: ART.words,
+      gradient: ['#6FA8E8', '#2F6DBF'],
+      edge: '#24508F',
       onPress: () => router.push('/word-list'),
     },
     {
       key: 'topics',
       title: t('home.menu.topics'),
       icon: 'mic',
-      gradient: ['#5CC8FF', '#3B78F0'],
-      edge: '#2B5CCB',
+      image: ART.topics,
+      gradient: ['#B3A8EC', '#8C7BDD'],
+      edge: '#7462CF',
       onPress: () => router.push('/scenarios'),
     },
     {
@@ -89,24 +107,27 @@ export function ResourcesScreen() {
       title: t('pron.title'),
       hint: t('pron.hint'),
       icon: 'mic-circle',
-      gradient: ['#FFB86B', '#FF5F8A'],
-      edge: '#D93A6A',
+      image: ART.pronunciation,
+      gradient: ['#5FD3E6', '#1E9BCB'],
+      edge: '#147CA6',
       onPress: () => router.push('/pronunciation'),
     },
     {
       key: 'translate',
       title: t('home.menu.translate'),
       icon: 'language',
-      gradient: ['#DDFB4F', '#3EDE78'],
-      edge: '#2BB257',
+      image: ART.translate,
+      gradient: ['#86BCFF', '#4E86F0'],
+      edge: '#3A68CC',
       onPress: () => router.navigate('/translate'),
     },
     {
       key: 'history',
       title: t('home.menu.history'),
       icon: 'time',
-      gradient: ['#FF9C55', '#F04641'],
-      edge: '#C42B27',
+      image: ART.history,
+      gradient: ['#A3B0F7', '#6B78E2'],
+      edge: '#5560C6',
       onPress: () => router.navigate('/conversations'),
     },
   ];

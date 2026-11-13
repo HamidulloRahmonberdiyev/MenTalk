@@ -139,6 +139,26 @@ export interface ApiCalendar {
   totals: { active_days: number; minutes: number; xp: number; conversations: number };
 }
 
+export type LeaderboardPeriod = 'week' | 'all';
+
+/** One learner on `GET /leaderboard`. Other learners' surnames are cut to an initial by the server. */
+export interface ApiLeaderboardEntry {
+  rank: number;
+  name: string;
+  avatar_url: string | null;
+  xp: number;
+  is_me: boolean;
+}
+
+export interface ApiLeaderboard {
+  period: LeaderboardPeriod;
+  /** Monday the week started, `YYYY-MM-DD`; null for all time. */
+  since: string | null;
+  top: ApiLeaderboardEntry[];
+  /** `rank` is null until the learner has some XP in the period. */
+  me: { rank: number | null; xp: number };
+}
+
 export type SupportCategory = 'bug' | 'idea' | 'question' | 'other';
 export type SupportStatus = 'new' | 'in_progress' | 'resolved';
 
@@ -414,6 +434,7 @@ export const endpoints = {
   /** `month` is `YYYY-MM`; the current month when left out. */
   calendar: (month?: string) => api<ApiCalendar>('GET', month ? `/progress/calendar?month=${month}` : '/progress/calendar'),
   path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
+  leaderboard: (period: LeaderboardPeriod, limit: number) => api<ApiLeaderboard>('GET', `/leaderboard?period=${period}&limit=${limit}`),
 
   startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, signal?: AbortSignal) =>
     api<ApiOpening>('POST', '/conversations', {

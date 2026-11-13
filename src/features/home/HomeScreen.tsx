@@ -17,6 +17,7 @@ import { ReminderPrompt } from '../reminders/ReminderPrompt';
 import { useReminderRoute } from '../reminders/useReminderRoute';
 import { usePath } from '../path/usePath';
 import { openConversation } from '../scenarios/navigation';
+import { LeaderboardCard } from '../leaderboard/LeaderboardCard';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
@@ -147,6 +148,8 @@ export function HomeScreen() {
               stages={stages}
               onOpenPath={() => router.push('/scenarios')}
             />
+
+            <LeaderboardCard />
           </View>
         </Fragment>
       </ScrollView>
