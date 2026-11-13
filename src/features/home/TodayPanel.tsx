@@ -15,143 +15,147 @@ import Animated, {
 import { AppText } from '@/components/ui/AppText';
 import { CircularProgress } from '@/components/ui/CircularProgress';
 import { FireIcon } from '@/components/ui/FireIcon';
-import { PressableScale } from '@/components/ui/PressableScale';
+import { Pressable3D } from '@/components/ui/Pressable3D';
 import { useT, type TranslationKey } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { radii, spacing } from '@/theme';
+import { usePalette } from '@/theme/appearance';
 import { easing } from '@/theme/motion';
 
-import { usePalette } from '@/theme/appearance';
-
 import { useWeek, type WeekDay } from '../activity/useWeek';
-import { HERO, useHeroTone } from './heroColors';
 
 interface TodayPanelProps {
   minutes: number;
   goalMinutes: number;
 }
 
-const RING = 58;
-const DOT = 28;
-const GOLD = ['#FFD75E', '#FF9E1B'] as const;
-/** Ember ink for the streak number beside the flame. */
+const RADIUS = 30;
+const RING = 60;
+const DOT = 32;
+const WHITE = '#FFFFFF';
+/** Deep blue ink for numbers on white chips. */
+const INK = '#0A7FE0';
+/** The streak keeps its ember ink, since it sits beside the flame. */
 const FIRE_INK = '#E2480F';
 
 /**
- * The learner's day on the home hero, in one glass panel: today's goal ring, the streak, and this
- * week as seven dots. It answers "did I practise today, and is my streak safe?" at a glance; the
- * full calendar is one tap away.
+ * A bright blue card in the same family as the other big home cards (gradient face on a raised edge,
+ * soft light orbs), matching the app's blue hero; the night look is a touch deeper so
+ * it does not glare on the dark page.
+ */
+const TONES = {
+  light: {
+    gradient: ['#3DB4FF', '#0A8CF2'] as const,
+    edge: '#066FC7',
+    shadow: '0 12px 26px rgba(10, 140, 242, 0.32)',
+  },
+  dark: {
+    gradient: ['#1F95EC', '#0A6FCC'] as const,
+    edge: '#07519A',
+    shadow: '0 12px 26px rgba(0, 0, 0, 0.42)',
+  },
+} as const;
+
+/**
+ * The learner's day at the top of home: today's goal ring, the streak and this week as seven days.
+ * It answers "did I practise today, and is my streak safe?" at a glance; the full calendar is a tap away.
  */
 export function TodayPanel({ minutes, goalMinutes }: TodayPanelProps) {
   const t = useT();
   const week = useWeek();
+  const tone = TONES[usePalette().appearance];
   const progress = goalMinutes > 0 ? Math.min(minutes / goalMinutes, 1) : 0;
   const done = progress >= 1;
   const left = Math.max(goalMinutes - minutes, 0);
   const hot = week.streak > 0;
-  const dark = usePalette().appearance === 'dark';
 
   return (
-    <PressableScale
+    <Pressable3D
       accessibilityRole="button"
       accessibilityLabel={[
         `${t('home.goalTitle')}: ${minutes}/${goalMinutes} ${t('home.min')}`,
         hot ? t('activity.card.streak', { n: week.streak }) : t('activity.card.noStreak'),
         t('activity.open'),
       ].join('. ')}
-      scaleTo={0.98}
       onPress={() => {
         haptics.light();
         router.push('/activity');
       }}
-      style={[styles.panel, dark && styles.panelDark]}
+      edgeColor={tone.edge}
+      depth={6}
+      radius={RADIUS}
+      style={{ boxShadow: tone.shadow }}
     >
-      <View style={styles.top}>
-        <GoalRing progress={progress} done={done} />
+      <LinearGradient colors={tone.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.face}>
+        <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
+        <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
 
-        <View style={styles.texts}>
-          <AppText color={HERO.muted} style={styles.overline} numberOfLines={1}>
-            {t('home.goalTitle').toUpperCase()}
-          </AppText>
-          <View style={styles.valueRow}>
-            <AppText color="#FFFFFF" style={styles.value}>
-              {minutes}
+        <View style={styles.top}>
+          <CircularProgress
+            value={progress}
+            size={RING}
+            strokeWidth={6}
+            color={WHITE}
+            trackColor="rgba(255, 255, 255, 0.3)"
+          >
+            {done ? (
+              <Ionicons name="checkmark" size={28} color={WHITE} />
+            ) : (
+              <AppText color={WHITE} style={styles.percent}>{`${Math.round(progress * 100)}%`}</AppText>
+            )}
+          </CircularProgress>
+
+          <View style={styles.texts}>
+            <AppText color="rgba(255, 255, 255, 0.85)" style={styles.overline} numberOfLines={1}>
+              {t('home.goalTitle').toUpperCase()}
             </AppText>
-            <AppText color={HERO.muted} style={styles.valueOf} numberOfLines={1}>
-              / {goalMinutes} {t('home.min')}
+            <View style={styles.valueRow}>
+              <AppText color={WHITE} style={styles.value}>
+                {minutes}
+              </AppText>
+              <AppText color="rgba(255, 255, 255, 0.88)" style={styles.valueOf} numberOfLines={1}>
+                / {goalMinutes} {t('home.min')}
+              </AppText>
+            </View>
+            <AppText color="rgba(255, 255, 255, 0.88)" style={styles.hint} numberOfLines={1}>
+              {done ? t('home.goalDone') : t('activity.day.goalLeft', { n: left })}
             </AppText>
           </View>
-          <AppText color={done ? HERO.flameInk : HERO.muted} style={styles.hint} numberOfLines={1}>
-            {done ? t('home.goalDone') : t('activity.day.goalLeft', { n: left })}
-          </AppText>
+
+          <StreakBadge streak={week.streak} />
         </View>
 
-        <StreakBadge streak={week.streak} />
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.week}>
-        {week.days.map((day, index) => (
-          <DayDot key={day.date} day={day} weekday={t(`activity.wd.${index + 1}` as TranslationKey)} />
-        ))}
-      </View>
-    </PressableScale>
+        {/* This week on a frosted tray, so the seven days read as one strip. */}
+        <View style={styles.tray}>
+          {week.days.map((day, index) => (
+            <DayDot key={day.date} day={day} weekday={t(`activity.wd.${index + 1}` as TranslationKey)} />
+          ))}
+        </View>
+      </LinearGradient>
+    </Pressable3D>
   );
 }
 
-/** Today's minutes against the goal; a met goal turns the ring amber with a tick. */
-function GoalRing({ progress, done }: { progress: number; done: boolean }) {
-  return (
-    <View style={styles.ringWrap}>
-      <CircularProgress
-        value={progress}
-        size={RING}
-        strokeWidth={6}
-        color={done ? HERO.flame : '#FFFFFF'}
-        trackColor="rgba(255,255,255,0.22)"
-      >
-        {done ? (
-          <Ionicons name="checkmark" size={26} color={HERO.flame} />
-        ) : (
-          <AppText color="#FFFFFF" style={styles.percent}>{`${Math.round(progress * 100)}%`}</AppText>
-        )}
-      </CircularProgress>
-    </View>
-  );
-}
-
-/**
- * The streak: a real, flickering full-colour flame on a white pill while it is alive; before it
- * starts, the same flame dimmed and still on frosted glass.
- */
+/** The streak: a flickering full-colour flame on a white chip while alive; frosted and still before it starts. */
 function StreakBadge({ streak }: { streak: number }) {
   const hot = streak > 0;
-  if (!hot) {
-    return (
-      <View style={[styles.streak, styles.streakCold]}>
-        <View style={styles.fireDim}>
-          <FireIcon size={18} animated={false} />
-        </View>
-        <AppText color={HERO.faint} style={styles.streakNumber}>
-          0
-        </AppText>
-      </View>
-    );
-  }
   return (
-    <View style={[styles.streak, styles.streakHot]}>
-      <FireIcon size={18} />
-      <AppText color={FIRE_INK} style={styles.streakNumber}>
+    <View style={[styles.streak, hot ? styles.streakHot : styles.streakCold]}>
+      <View style={!hot && styles.fireDim}>
+        <FireIcon size={18} animated={hot} />
+      </View>
+      <AppText color={hot ? FIRE_INK : WHITE} style={styles.streakNumber}>
         {streak}
       </AppText>
     </View>
   );
 }
 
-/** One day of the week: amber with a flame for a met goal, frosted for some practice, white for today. */
+/**
+ * One day on the ember card: a white chip with a real flame for a met goal, frosted with a tick for
+ * some practice, white with the date for today, a dashed ring ahead and a faint chip for a missed day.
+ */
 function DayDot({ day, weekday }: { day: WeekDay; weekday: string }) {
-  const hero = useHeroTone();
   const number = Number(day.date.slice(8));
   const met = day.level === 4;
   const active = day.level > 0;
@@ -159,28 +163,40 @@ function DayDot({ day, weekday }: { day: WeekDay; weekday: string }) {
   let dot;
   if (met) {
     dot = (
-      <LinearGradient colors={GOLD} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={[styles.dot, styles.dotMet]}>
-        <Ionicons name="flame" size={14} color="#FFFFFF" />
-      </LinearGradient>
+      <View style={[styles.dot, styles.dotMet]}>
+        <FireIcon size={15} animated={false} />
+      </View>
     );
   } else if (day.today) {
     dot = (
-      <View style={[styles.dot, styles.dotToday, active && styles.dotTodayActive]}>
-        <AppText color={hero.deep} style={styles.dayNumber}>
-          {number}
-        </AppText>
+      <View style={[styles.dot, styles.dotToday]}>
+        {active ? (
+          <Ionicons name="checkmark" size={17} color={INK} />
+        ) : (
+          <AppText color={INK} style={styles.dayNumber}>
+            {number}
+          </AppText>
+        )}
       </View>
     );
   } else if (active) {
     dot = (
       <View style={[styles.dot, styles.dotActive]}>
-        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+        <Ionicons name="checkmark" size={16} color={WHITE} />
+      </View>
+    );
+  } else if (day.future) {
+    dot = (
+      <View style={[styles.dot, styles.dotFuture]}>
+        <AppText color="rgba(255, 255, 255, 0.85)" style={[styles.dayNumber, styles.dayNumberQuiet]}>
+          {number}
+        </AppText>
       </View>
     );
   } else {
     dot = (
-      <View style={[styles.dot, day.future ? styles.dotFuture : styles.dotMissed]}>
-        <AppText color={day.future ? HERO.faint : HERO.muted} style={[styles.dayNumber, styles.dayNumberQuiet]}>
+      <View style={[styles.dot, styles.dotMissed]}>
+        <AppText color="rgba(255, 255, 255, 0.75)" style={[styles.dayNumber, styles.dayNumberQuiet]}>
           {number}
         </AppText>
       </View>
@@ -189,7 +205,10 @@ function DayDot({ day, weekday }: { day: WeekDay; weekday: string }) {
 
   return (
     <View style={styles.day}>
-      <AppText color={day.today ? '#FFFFFF' : HERO.faint} style={[styles.weekday, day.today && styles.weekdayToday]}>
+      <AppText
+        color={day.today ? WHITE : 'rgba(255, 255, 255, 0.78)'}
+        style={[styles.weekday, day.today && styles.weekdayToday]}
+      >
         {weekday}
       </AppText>
       <View style={styles.dotWrap}>
@@ -200,7 +219,7 @@ function DayDot({ day, weekday }: { day: WeekDay; weekday: string }) {
   );
 }
 
-/** A soft ring breathing around today, so the eye finds it first. */
+/** A soft white ring breathing around today, so the eye finds it first. */
 function TodayPulse() {
   const reduceMotion = useReducedMotion();
   const pulse = useSharedValue(0);
@@ -212,77 +231,74 @@ function TodayPulse() {
   }, [pulse, reduceMotion]);
 
   const ring = useAnimatedStyle(() => ({
-    opacity: 0.6 * (1 - pulse.get()),
+    opacity: 0.7 * (1 - pulse.get()),
     transform: [{ scale: 1 + pulse.get() * 0.45 }],
   }));
 
   return <Animated.View pointerEvents="none" style={[styles.pulse, ring]} />;
 }
 
+const TEXT_SHADOW = {
+  textShadowColor: 'rgba(0, 60, 140, 0.25)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 3,
+} as const;
+
 const styles = StyleSheet.create({
-  panel: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+  face: {
+    padding: spacing.md,
+    paddingTop: spacing.lg,
     gap: spacing.md,
-    borderRadius: radii.xl,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.32)',
+    borderRadius: RADIUS,
+    overflow: 'hidden',
   },
-  // Thinner glass on the night band, so it reads as glass rather than a milky slab.
-  panelDark: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(160,200,255,0.25)',
-  },
-  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  ringWrap: {
-    borderRadius: RING,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  percent: { fontSize: 14, lineHeight: 17, fontWeight: '900' },
+  orb: { position: 'absolute', borderRadius: 999 },
+  orbA: { width: 210, height: 210, top: -100, right: -60, backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  orbB: { width: 130, height: 130, bottom: -70, left: -50, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+
+  top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xs },
+  percent: { fontSize: 14, lineHeight: 17, fontWeight: '900', ...TEXT_SHADOW },
   texts: { flex: 1, gap: 1 },
   overline: { fontSize: 10, lineHeight: 13, fontWeight: '800', letterSpacing: 1.1 },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  value: { fontSize: 24, lineHeight: 28, fontWeight: '900', letterSpacing: -0.5 },
-  valueOf: { flexShrink: 1, fontSize: 14, lineHeight: 18, fontWeight: '700' },
+  value: { fontSize: 28, lineHeight: 32, fontWeight: '900', letterSpacing: -0.6, ...TEXT_SHADOW },
+  valueOf: { flexShrink: 1, fontSize: 15, lineHeight: 19, fontWeight: '800' },
   hint: { fontSize: 12, lineHeight: 15, fontWeight: '700' },
 
   streak: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
     borderRadius: radii.pill,
   },
-  streakHot: {
-    backgroundColor: '#FFFFFF',
-    boxShadow: '0 6px 16px rgba(255, 110, 20, 0.45)',
-  },
-  fireDim: { opacity: 0.6 },
-  streakCold: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
-  },
+  streakHot: { backgroundColor: WHITE, boxShadow: '0 4px 12px rgba(0, 70, 150, 0.25)' },
+  streakCold: { backgroundColor: 'rgba(255, 255, 255, 0.25)' },
+  fireDim: { opacity: 0.55 },
   streakNumber: { fontSize: 18, lineHeight: 22, fontWeight: '900' },
 
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.22)' },
-
-  week: { flexDirection: 'row', justifyContent: 'space-between' },
-  day: { alignItems: 'center', gap: 4 },
+  tray: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  day: { alignItems: 'center', gap: 6 },
   weekday: { fontSize: 11, lineHeight: 13, fontWeight: '700', letterSpacing: 0.3 },
   weekdayToday: { fontWeight: '900' },
   dotWrap: { width: DOT, height: DOT, alignItems: 'center', justifyContent: 'center' },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2, alignItems: 'center', justifyContent: 'center' },
-  dotMet: { borderWidth: 1.5, borderColor: '#FFE9A8', boxShadow: '0 4px 10px rgba(200, 110, 0, 0.35)' },
-  dotToday: { backgroundColor: '#FFFFFF', boxShadow: '0 4px 12px rgba(8, 70, 130, 0.3)' },
-  dotTodayActive: { borderWidth: 2.5, borderColor: '#7FD4FF' },
-  dotActive: { backgroundColor: 'rgba(255,255,255,0.35)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.75)' },
-  dotMissed: { backgroundColor: 'rgba(255,255,255,0.12)' },
-  dotFuture: { borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.4)', borderStyle: 'dashed' },
-  dayNumber: { fontSize: 12, lineHeight: 15, fontWeight: '900' },
+  dotMet: { backgroundColor: WHITE, boxShadow: '0 3px 8px rgba(0, 70, 150, 0.28)' },
+  dotToday: { backgroundColor: WHITE, boxShadow: '0 3px 10px rgba(0, 70, 150, 0.3)' },
+  dotActive: { backgroundColor: 'rgba(255, 255, 255, 0.38)' },
+  dotFuture: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255, 255, 255, 0.6)' },
+  dotMissed: { backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  dayNumber: { fontSize: 13, lineHeight: 16, fontWeight: '900' },
   dayNumberQuiet: { fontWeight: '700' },
   pulse: {
     position: 'absolute',
@@ -290,6 +306,6 @@ const styles = StyleSheet.create({
     height: DOT,
     borderRadius: DOT / 2,
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: WHITE,
   },
 });

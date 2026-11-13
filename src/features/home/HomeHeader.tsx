@@ -15,7 +15,6 @@ import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { countUnread, useNotificationsStore } from '../notifications/notificationsStore';
 import { countDue, useStudyCards } from '../vocabulary/vocabularyStore';
-import { HERO_TONES } from './heroColors';
 
 interface HeaderButtonProps {
   icon: IconName;
@@ -26,7 +25,7 @@ interface HeaderButtonProps {
 
 function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
   const styles = useThemedStyles(createStyles);
-  const ink = HERO_TONES[usePalette().appearance].deep;
+  const ink = usePalette().text;
   return (
     <PressableScale
       accessibilityRole="button"
@@ -52,6 +51,7 @@ function HeaderButton({ icon, label, href, badge = 0 }: HeaderButtonProps) {
 
 export function HomeHeader({ name }: { name: string }) {
   const styles = useThemedStyles(createStyles);
+  const home = usePalette();
   const t = useT();
   const avatarUrl = useUserStore((state) => state.avatarUrl);
   const due = countDue(useStudyCards());
@@ -71,7 +71,7 @@ export function HomeHeader({ name }: { name: string }) {
       >
         <Avatar name={name} uri={avatarUrl} size={38} />
       </PressableScale>
-      <AppText variant="heading" color="#FFFFFF" accessibilityRole="header" numberOfLines={1} style={styles.title}>
+      <AppText variant="heading" color={home.text} accessibilityRole="header" numberOfLines={1} style={styles.title}>
         {t('home.greetingName', { name })}
       </AppText>
       <HeaderButton icon="notifications-outline" label={t('notif.title')} href="/notifications" badge={unread} />
@@ -80,61 +80,72 @@ export function HomeHeader({ name }: { name: string }) {
   );
 }
 
-/** Drop shadow under the white keys, tinted to the band. */
-const SHADOW = {
-  light: 'rgba(8, 70, 140, 0.28)',
-  dark: 'rgba(0, 10, 40, 0.45)',
+/** Quiet chips on the flat page: white with a hairline by day, frosted by night. */
+const CHIP = {
+  light: {
+    face: '#FFFFFF',
+    rim: '#E6EAF2',
+    shadow: '0 4px 12px rgba(16, 40, 90, 0.08)',
+  },
+  dark: {
+    face: 'rgba(255, 255, 255, 0.08)',
+    rim: 'rgba(255, 255, 255, 0.1)',
+    shadow: 'none',
+  },
 } as const;
 
-const createStyles = (home: Palette) => StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  // Solid white ring with a soft drop, so the avatar sits on the band instead of melting into it.
-  avatar: {
-    padding: 2,
-    borderRadius: radii.pill,
-    backgroundColor: '#FFFFFF',
-    boxShadow: `0 4px 12px ${SHADOW[home.appearance]}`,
-  },
-  title: {
-    flex: 1,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '800',
-    textShadowColor: 'rgba(0, 30, 80, 0.18)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  // Solid white keys with the band's deep ink: readable on the bright sky band and the night one alike.
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    boxShadow: `0 4px 12px ${SHADOW[home.appearance]}`,
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
-    borderRadius: radii.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: home.badge,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  badgeText: {
-    fontSize: 11,
-    lineHeight: 13,
-    fontWeight: '800',
-  },
-});
+const createStyles = (home: Palette) => {
+  const chip = CHIP[home.appearance];
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    avatar: {
+      padding: 2,
+      borderRadius: radii.pill,
+      backgroundColor: chip.face,
+      borderWidth: 1,
+      borderColor: chip.rim,
+      boxShadow: chip.shadow,
+    },
+    title: {
+      flex: 1,
+      fontSize: 22,
+      lineHeight: 28,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+    },
+    iconButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: chip.face,
+      borderWidth: 1,
+      borderColor: chip.rim,
+      boxShadow: chip.shadow,
+    },
+    badge: {
+      position: 'absolute',
+      top: -3,
+      right: -4,
+      minWidth: 20,
+      height: 20,
+      paddingHorizontal: 5,
+      borderRadius: radii.pill,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: home.badge,
+      borderWidth: 2,
+      borderColor: home.sheet,
+    },
+    badgeText: {
+      fontSize: 11,
+      lineHeight: 13,
+      fontWeight: '800',
+    },
+  });
+};

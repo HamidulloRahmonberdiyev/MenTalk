@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,7 +10,7 @@ import { useT } from '@/i18n';
 import { isApiConfigured } from '@/services/api/config';
 import { useUserStore } from '@/store/userStore';
 import { radii, spacing } from '@/theme';
-import { useThemedStyles, type Palette } from '@/theme/appearance';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { ReminderPrompt } from '../reminders/ReminderPrompt';
 import { useReminderRoute } from '../reminders/useReminderRoute';
@@ -21,7 +20,6 @@ import { LeaderboardCard } from '../leaderboard/LeaderboardCard';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
 import { FeatureCard } from './FeatureCard';
-import { HERO_TONES, useHeroTone } from './heroColors';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
 import { ShortcutRail } from './ShortcutRail';
@@ -52,7 +50,7 @@ const RECENT_SCORES = 10;
 
 export function HomeScreen() {
   const styles = useThemedStyles(createStyles);
-  const hero = useHeroTone();
+  const home = usePalette();
   const t = useT();
   const insets = useSafeAreaInsets();
   const { refreshControl, version } = useRefreshControl();
@@ -115,22 +113,19 @@ export function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* The hero is a saturated band in both themes (blue / indigo), so the status bar is light here and flips back on other screens. */}
-      <StatusBar style="light" />
+      {/* One flat page now: the status bar follows the theme like on the other screens. */}
+      <StatusBar style={home.statusBar} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
       >
         <Fragment key={version}>
-          <LinearGradient colors={hero.gradient} style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
-            {/* Quiet light shapes for depth behind the hero. */}
-            <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
-            <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
+          <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
             <HomeHeader name={name} />
-            {/* Goal, streak and this week in one glass panel; the full calendar opens from it. */}
+            {/* Goal, streak and this week on one ember card; the full calendar opens from it. */}
             <TodayPanel minutes={minutes} goalMinutes={goalMinutes} />
-          </LinearGradient>
+          </View>
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
             {/* Small shortcuts sit between the goal card and the talk card, so big cards never stack; vocabulary is the compact one. */}
@@ -166,41 +161,17 @@ export function HomeScreen() {
 }
 
 const createStyles = (home: Palette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: HERO_TONES[home.appearance].base },
+  // A single flat page: the header sits on the page itself and every block below is a card on it.
+  root: { flex: 1, backgroundColor: home.sheet },
   content: { flexGrow: 1 },
   top: {
-    // Kept compact so the shortcuts and the talk card fit on the first screen without scrolling.
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    // Runs on under the sheet's rounded corners.
-    paddingBottom: spacing.sm + 28,
-    marginBottom: -28,
-    overflow: 'hidden',
-  },
-  orb: { position: 'absolute', borderRadius: 999 },
-  // White light on the sky band; a soft blue glow on the night one, where white would look milky.
-  orbA: {
-    width: 260,
-    height: 260,
-    top: -90,
-    right: -110,
-    backgroundColor: home.appearance === 'dark' ? 'rgba(120,175,255,0.16)' : 'rgba(255,255,255,0.16)',
-  },
-  orbB: {
-    width: 180,
-    height: 180,
-    top: 210,
-    left: -100,
-    backgroundColor: home.appearance === 'dark' ? 'rgba(120,175,255,0.1)' : 'rgba(255,255,255,0.1)',
   },
   sheet: {
     flexGrow: 1,
     gap: spacing.lg,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    backgroundColor: home.sheet,
-    boxShadow: home.sheetShadow,
+    paddingTop: spacing.sm,
   },
 });
