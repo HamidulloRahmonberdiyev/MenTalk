@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
@@ -22,6 +23,8 @@ interface FeatureCardProps {
   edge: string;
   stats: FeatureStat[];
   onPress: () => void;
+  /** Optional 3D artwork (transparent PNG) shown tilted in the corner instead of the flat icon. */
+  image?: ImageSource | number;
   /** Shorter secondary card, so two big cards never stack on top of each other. */
   compact?: boolean;
 }
@@ -29,7 +32,7 @@ interface FeatureCardProps {
 const RADIUS = 34;
 
 /** Big tappable gradient card with an oversized decorative icon, as on Englify's home. */
-export function FeatureCard({ title, icon, gradient, edge, stats, onPress, compact = false }: FeatureCardProps) {
+export function FeatureCard({ title, icon, gradient, edge, stats, onPress, image, compact = false }: FeatureCardProps) {
   const artSize = compact ? 130 : 190;
 
   return (
@@ -45,10 +48,19 @@ export function FeatureCard({ title, icon, gradient, edge, stats, onPress, compa
       radius={RADIUS}
     >
       <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.card, compact && styles.cardCompact]}>
-        <View style={styles.art} pointerEvents="none">
-          <Ionicons name={icon} size={artSize} color="rgba(10, 20, 60, 0.22)" style={styles.artShadow} />
-          <Ionicons name={icon} size={artSize} color="rgba(255, 255, 255, 0.38)" />
-        </View>
+        {image ? (
+          <View style={[styles.photo, compact && styles.photoCompact]} pointerEvents="none">
+            {/* Soft light halo so the object glows out of the card rather than sitting flat on it. */}
+            <View style={styles.photoGlow} />
+            <View style={styles.photoFloor} />
+            <Image source={image} style={styles.photoImage} contentFit="contain" />
+          </View>
+        ) : (
+          <View style={styles.art} pointerEvents="none">
+            <Ionicons name={icon} size={artSize} color="rgba(10, 20, 60, 0.22)" style={styles.artShadow} />
+            <Ionicons name={icon} size={artSize} color="rgba(255, 255, 255, 0.38)" />
+          </View>
+        )}
 
         <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={[styles.title, compact && styles.titleCompact]}>
           {title}
@@ -95,6 +107,44 @@ const styles = StyleSheet.create({
     right: -18,
     bottom: -34,
     transform: [{ rotate: '-14deg' }],
+  },
+  photo: {
+    position: 'absolute',
+    right: 2,
+    bottom: -14,
+    width: 168,
+    height: 168,
+    transform: [{ rotate: '-16deg' }],
+  },
+  photoCompact: {
+    right: -4,
+    bottom: -18,
+    width: 120,
+    height: 120,
+  },
+  photoGlow: {
+    position: 'absolute',
+    top: '12%',
+    left: '12%',
+    width: '76%',
+    height: '76%',
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(170, 215, 255, 0.35)',
+    boxShadow: '0 0 40px 18px rgba(170, 215, 255, 0.45)',
+  },
+  photoFloor: {
+    position: 'absolute',
+    bottom: '4%',
+    left: '22%',
+    width: '56%',
+    height: '10%',
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(10, 30, 80, 0.28)',
+    boxShadow: '0 0 14px 6px rgba(10, 30, 80, 0.25)',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
   },
   artShadow: {
     position: 'absolute',

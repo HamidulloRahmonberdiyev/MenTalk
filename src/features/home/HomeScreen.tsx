@@ -28,6 +28,8 @@ import { PathCard } from './PathCard';
 import { VocabCard } from './VocabCard';
 import { WeekStrip } from './WeekStrip';
 
+const MIC_ART = require('@/assets/icons3d/mikrafon-card.png');
+
 /** Average of the latest conversation scores (out of 10). */
 const RECENT_SCORES = 10;
 
@@ -118,6 +120,7 @@ export function HomeScreen() {
             <FeatureCard
               title={t('home.talk.title')}
               icon="mic"
+              image={MIC_ART}
               gradient={['#6FA8E8', '#2F6DBF']}
               edge="#24508F"
               stats={[

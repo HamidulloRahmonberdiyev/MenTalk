@@ -57,6 +57,12 @@ export function VocabCard({ cards, due, onPress }: VocabCardProps) {
             </AppText>
           </View>
           <View style={[styles.flash, styles.flashFront]}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.85)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.4, y: 0.6 }}
+              style={styles.flashGloss}
+            />
             <View style={styles.flashHead}>
               <AppText color={INK} style={styles.flashNumber}>
                 {String(Math.max(cards.length, 1)).padStart(3, '0')}
@@ -155,27 +161,36 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.7)',
+    // Thicker bottom/right rim reads as the card's edge, giving it a slight 3D slab look.
+    borderBottomWidth: 5,
+    borderRightWidth: 3,
+    borderBottomColor: 'rgba(120, 175, 225, 0.95)',
+    borderRightColor: 'rgba(150, 195, 235, 0.95)',
+    overflow: 'hidden',
   },
+  flashGloss: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   flashBack: {
     right: -40,
     top: 30,
     alignItems: 'flex-end',
     backgroundColor: 'rgba(200, 230, 255, 0.55)',
-    transform: [{ rotate: '8deg' }],
+    boxShadow: '0 4px 10px rgba(10, 60, 120, 0.2)',
+    transform: [{ perspective: 600 }, { rotateY: '-14deg' }, { rotateX: '6deg' }, { rotate: '8deg' }],
   },
   flashMiddle: {
     left: 0,
     top: 34,
     backgroundColor: 'rgba(200, 230, 255, 0.6)',
-    transform: [{ rotate: '-10deg' }],
+    boxShadow: '0 4px 10px rgba(10, 60, 120, 0.2)',
+    transform: [{ perspective: 600 }, { rotateY: '12deg' }, { rotateX: '6deg' }, { rotate: '-10deg' }],
   },
   flashFront: {
     left: 40,
     top: 6,
     gap: 2,
     backgroundColor: 'rgba(214, 236, 255, 0.92)',
-    boxShadow: '0 6px 16px rgba(10, 60, 120, 0.25)',
-    transform: [{ rotate: '-4deg' }],
+    boxShadow: '0 10px 18px rgba(10, 60, 120, 0.35), 0 3px 4px rgba(10, 60, 120, 0.25)',
+    transform: [{ perspective: 600 }, { rotateY: '-10deg' }, { rotateX: '8deg' }, { rotate: '-4deg' }],
   },
   flashHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   flashNumber: { fontSize: 12, lineHeight: 16, fontWeight: '800', fontStyle: 'italic' },
@@ -187,6 +202,8 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.55)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(120, 175, 225, 0.5)',
   },
   flashExampleText: { fontSize: 8, lineHeight: 11, fontStyle: 'italic' },
 });
