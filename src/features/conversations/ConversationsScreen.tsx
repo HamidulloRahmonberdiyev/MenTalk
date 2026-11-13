@@ -22,6 +22,9 @@ import { openConversation } from '../scenarios/navigation';
 import { HistoryRow } from './HistoryRow';
 import { TopicStrip } from './TopicStrip';
 
+/** The same 3D microphone as the talk card on the home screen. */
+const MIC_ART = require('@/assets/icons3d/mikrafon-card.png');
+
 const LOCALES = { uz: 'uz-UZ', ru: 'ru-RU', en: 'en-GB' } as const;
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -96,6 +99,7 @@ export function ConversationsScreen() {
           <FeatureCard
             title={t('home.talk.title')}
             icon="mic"
+            image={MIC_ART}
             gradient={['#6FA8E8', '#2F6DBF']}
             edge="#24508F"
             stats={[

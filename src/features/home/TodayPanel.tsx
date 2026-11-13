@@ -20,6 +20,8 @@ import { haptics } from '@/services/haptics';
 import { radii, spacing } from '@/theme';
 import { easing } from '@/theme/motion';
 
+import { usePalette } from '@/theme/appearance';
+
 import { useWeek, type WeekDay } from '../activity/useWeek';
 import { HERO, useHeroTone } from './heroColors';
 
@@ -44,6 +46,7 @@ export function TodayPanel({ minutes, goalMinutes }: TodayPanelProps) {
   const done = progress >= 1;
   const left = Math.max(goalMinutes - minutes, 0);
   const hot = week.streak > 0;
+  const dark = usePalette().appearance === 'dark';
 
   return (
     <PressableScale
@@ -58,7 +61,7 @@ export function TodayPanel({ minutes, goalMinutes }: TodayPanelProps) {
         haptics.light();
         router.push('/activity');
       }}
-      style={styles.panel}
+      style={[styles.panel, dark && styles.panelDark]}
     >
       <View style={styles.top}>
         <GoalRing progress={progress} done={done} />
@@ -218,6 +221,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.32)',
+  },
+  // Thinner glass on the night band, so it reads as glass rather than a milky slab.
+  panelDark: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(160,200,255,0.25)',
   },
   top: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   ringWrap: {

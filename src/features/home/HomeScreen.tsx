@@ -172,8 +172,21 @@ const createStyles = (home: Palette) => StyleSheet.create({
     overflow: 'hidden',
   },
   orb: { position: 'absolute', borderRadius: 999 },
-  orbA: { width: 260, height: 260, top: -90, right: -110, backgroundColor: 'rgba(255,255,255,0.16)' },
-  orbB: { width: 180, height: 180, top: 210, left: -100, backgroundColor: 'rgba(255,255,255,0.1)' },
+  // White light on the sky band; a soft blue glow on the night one, where white would look milky.
+  orbA: {
+    width: 260,
+    height: 260,
+    top: -90,
+    right: -110,
+    backgroundColor: home.appearance === 'dark' ? 'rgba(120,175,255,0.16)' : 'rgba(255,255,255,0.16)',
+  },
+  orbB: {
+    width: 180,
+    height: 180,
+    top: 210,
+    left: -100,
+    backgroundColor: home.appearance === 'dark' ? 'rgba(120,175,255,0.1)' : 'rgba(255,255,255,0.1)',
+  },
   sheet: {
     flexGrow: 1,
     gap: spacing.lg,

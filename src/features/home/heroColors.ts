@@ -1,8 +1,8 @@
 import { usePalette, type Appearance } from '@/theme/appearance';
 
 /**
- * The home hero's band, per look: bright sky blue in light mode, a deep indigo-violet night in dark
- * mode. Everything drawn on it is white or amber, so only the band itself and its inks change.
+ * The home hero's band, per look: bright sky blue in light mode, a deep sapphire night in dark
+ * mode (the same blue family as the 3D icons and the dark shortcut tiles). Everything drawn on it is white or amber, so only the band itself and its inks change.
  */
 export const HERO_TONES = {
   light: {
@@ -16,10 +16,10 @@ export const HERO_TONES = {
     mid: '#2AABEE',
   },
   dark: {
-    gradient: ['#5B45D6', '#3F2FA3', '#2A2170'] as const,
-    base: '#5B45D6',
-    deep: '#2E2384',
-    mid: '#3F2FA3',
+    gradient: ['#2D5AA8', '#1F3F7A', '#152A52'] as const,
+    base: '#2D5AA8',
+    deep: '#16326A',
+    mid: '#1F3F7A',
   },
 } satisfies Record<Appearance, { gradient: readonly [string, string, string]; base: string; deep: string; mid: string }>;
 
