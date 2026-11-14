@@ -17,6 +17,7 @@ import Animated, {
 import Svg, { Defs, Path, RadialGradient, Stop } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
+import { useT } from '@/i18n';
 import { radii, spacing } from '@/theme';
 import { easing, enter } from '@/theme/motion';
 
@@ -29,6 +30,8 @@ const RADIUS = 34;
 const DEPTH = 6;
 /** Deep indigo for the topic pill. */
 const DEEP = '#3438B0';
+/** The "congratulations" line, in the cup's gold. */
+const GOLD = '#FFE066';
 const CUP_ART = require('@/assets/icons3d/cup.png');
 const CUP = 156;
 const STAGE = CUP + 28;
@@ -80,6 +83,7 @@ interface ResultHeroProps {
 
 /** The top of the result: the 3D cup on a slowly turning sunburst, confetti, the stars, the verdict and the topic. */
 export function ResultHero({ stars, title, subtitle, topic }: ResultHeroProps) {
+  const t = useT();
   return (
     <Animated.View entering={enter.rise()} style={styles.wrap}>
       {/* The darker edge peeking out under the face, as on the home cards. */}
@@ -120,6 +124,11 @@ export function ResultHero({ stars, title, subtitle, topic }: ResultHeroProps) {
           <StarRow count={stars} size={30} gap={8} emptyColor="rgba(255, 255, 255, 0.35)" />
         </Animated.View>
 
+        <Animated.View entering={ZoomIn.delay(420).duration(380).easing(easing.overshoot)}>
+          <AppText color={GOLD} style={[styles.congrats, LIFT]} numberOfLines={1} adjustsFontSizeToFit>
+            {t('result.congrats').toLocaleUpperCase()}
+          </AppText>
+        </Animated.View>
         <AppText color="#FFFFFF" style={[styles.title, LIFT]} numberOfLines={2} adjustsFontSizeToFit accessibilityRole="header">
           {title}
         </AppText>
@@ -241,6 +250,7 @@ const styles = StyleSheet.create({
   piece: { position: 'absolute' },
 
   stars: { marginTop: -spacing.xs, paddingTop: 10 },
+  congrats: { textAlign: 'center', fontSize: 14, lineHeight: 18, fontWeight: '900', letterSpacing: 1.6, marginTop: spacing.xs },
   title: { textAlign: 'center', fontSize: 30, lineHeight: 36, fontWeight: '900', letterSpacing: -0.6 },
   subtitle: { textAlign: 'center', fontSize: 15, lineHeight: 21, fontWeight: '700' },
   pill: {

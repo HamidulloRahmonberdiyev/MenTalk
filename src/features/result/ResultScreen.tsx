@@ -1,11 +1,13 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfettiBurst } from '@/components/ui/ConfettiBurst';
 import { Screen } from '@/components/ui/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { isApiConfigured } from '@/services/api/config';
@@ -32,19 +34,25 @@ const TILES = {
   words: { color: '#58CC02', ink: '#4CA302' },
 } as const;
 
+/** The confetti and the buzz go off together, as the cup lands. */
+const BURST_DELAY = 350;
+/** From the top of the screen to the middle of the cup: header, gap, card padding, half the cup stage. */
+const CUP_CENTER = 48 + spacing.md + spacing.sm + 92;
+
 export function ResultScreen() {
   const t = useT();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const language = useSettingsStore((state) => state.language);
   const result = useResultStore((state) => state.result);
   const scenario = useScenario(result?.scenarioId);
   const stars = result ? starsFor(result.overall) : 0;
 
-  // A little buzz as the cup lands, when there is something to celebrate.
+  // Every finished chat is celebrated: a "ta-da" on the phone as the confetti bursts.
   useEffect(() => {
-    if (stars === 0) return;
-    const timer = setTimeout(() => haptics.success(), 380);
+    const timer = setTimeout(() => haptics.celebrate(), BURST_DELAY);
     return () => clearTimeout(timer);
-  }, [stars]);
+  }, []);
 
   if (!result) return <Redirect href="/home" />;
 
@@ -118,6 +126,9 @@ export function ResultScreen() {
         <Button title={t('result.retry')} icon="refresh" onPress={retry} />
         <Button title={t('result.home')} icon="home" variant="soft" onPress={goHome} />
       </View>
+
+      {/* Over everything, taps pass through: bursts from the cup and scatters all over the screen. */}
+      <ConfettiBurst origin={{ x: width / 2, y: insets.top + CUP_CENTER }} delay={BURST_DELAY} />
     </Screen>
   );
 }

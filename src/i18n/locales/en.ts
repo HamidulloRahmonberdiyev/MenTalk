@@ -143,6 +143,7 @@ export const en = {
   'result.stat.time': 'Time',
   'result.stat.words': 'New words',
   'result.skills': 'Skills',
+  'result.congrats': 'Congratulations!',
   'note.past': '«вчера» (yesterday) needs the past tense',
   'note.present': 'Use the present tense',
 

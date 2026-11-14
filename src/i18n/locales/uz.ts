@@ -145,6 +145,7 @@ export const uz: Dictionary = {
   'result.stat.time': 'Vaqt',
   'result.stat.words': 'Yangi so‘z',
   'result.skills': 'Ko‘nikmalar',
+  'result.congrats': 'Tabriklaymiz!',
   'note.past': '«вчера» (kecha) — o‘tgan zamon',
   'note.present': 'Hozirgi zamondan foydalanish kerak',
 

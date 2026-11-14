@@ -145,6 +145,7 @@ export const ru: Dictionary = {
   'result.stat.time': 'Время',
   'result.stat.words': 'Новые слова',
   'result.skills': 'Навыки',
+  'result.congrats': 'Поздравляем!',
   'note.past': '«вчера» — прошедшее время',
   'note.present': 'Нужно использовать настоящее время',
 
