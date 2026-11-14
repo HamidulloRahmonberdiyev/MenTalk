@@ -4,18 +4,27 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
 
 import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
 import { radii, spacing } from '@/theme';
 import { easing, enter } from '@/theme/motion';
 
-import { ACCENT, GOLD } from './color';
+import { GOLD } from './color';
 
-const HERO = require('../../../assets/path/hero.jpg');
-const RING = 64;
-const STROKE = 6;
+/**
+ * The same face as the path card on home (soft lavender, raised on a darker edge, the 3D signpost),
+ * so the card the learner tapped opens onto a page that starts with it.
+ */
+const RADIUS = 34;
+const DEPTH = 6;
+const FACE = ['#A396DE', '#C9C3EE'] as const;
+const EDGE = '#8576D4';
+const DEEP = '#7462CF';
+/** Dark tint for the empty progress track, in the card's own purple. */
+const SHADE = 'rgba(52, 34, 130, 0.2)';
+const SIGN_ART = require('@/assets/icons3d/road-sign-card.png');
+const SIGN = 124;
 
 interface PathHeroProps {
   passed: number;
@@ -23,136 +32,151 @@ interface PathHeroProps {
   stars: number;
 }
 
-/** The banner over the path: a journey photo, how far along the learner is as a ring and a bar, and the star count. */
+/** The banner over the path: the title, how many stages are passed, a progress bar and the star count. */
 export function PathHero({ passed, total, stars }: PathHeroProps) {
   const t = useT();
   const share = total ? passed / total : 0;
+  const progress = t('path.progress', { done: passed, total });
   const fill = useSharedValue(0);
 
   useEffect(() => {
     fill.set(withDelay(250, withTiming(share, { duration: 900, easing: easing.out })));
   }, [fill, share]);
 
-  const bar = useAnimatedStyle(() => ({ width: `${Math.max(fill.get(), 0.03) * 100}%` }));
-
-  const radius = (RING - STROKE) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const bar = useAnimatedStyle(() => ({ width: `${Math.max(fill.get(), 0.04) * 100}%` }));
 
   return (
-    <Animated.View entering={enter.rise()} style={styles.wrap}>
-      <View style={styles.card}>
-        <Image source={HERO} contentFit="cover" contentPosition="right" style={StyleSheet.absoluteFill} />
-        {/* Deep navy wash from the text side, so the copy reads while the photo still shows through. */}
-        <LinearGradient
-          colors={['rgba(6,18,40,0.92)', 'rgba(6,18,40,0.62)', 'rgba(6,18,40,0.15)']}
-          locations={[0, 0.5, 1]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient colors={['rgba(6,18,40,0)', 'rgba(6,18,40,0.7)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+    <Animated.View
+      entering={enter.rise()}
+      accessible
+      accessibilityLabel={`${t('path.title')}. ${progress}. ${t('path.stars')}: ${stars}/${total * 3}`}
+      style={styles.wrap}
+    >
+      {/* The darker edge peeking out under the face, as on the home cards. */}
+      <View style={styles.edge} />
+      <LinearGradient colors={FACE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
+        {/* Quiet light shapes for depth. */}
+        <View pointerEvents="none" style={[styles.orb, styles.orbA]} />
+        <View pointerEvents="none" style={[styles.orb, styles.orbB]} />
 
-        <View style={styles.top}>
-          <View style={styles.texts}>
-            <View style={styles.overline}>
-              <Ionicons name="map" size={12} color={ACCENT} />
-              <AppText variant="captionStrong" color="rgba(255,255,255,0.75)" style={styles.overlineText}>
-                {t('path.overline').toUpperCase()}
-              </AppText>
-            </View>
-            <AppText variant="title" color="#FFFFFF" numberOfLines={2} style={styles.title}>
-              {t('path.title')}
-            </AppText>
-            <AppText variant="caption" color="rgba(255,255,255,0.8)">
-              {t('path.progress', { done: passed, total })}
-            </AppText>
-          </View>
+        {/* The 3D signpost: a soft halo behind it, a shadow pooled under its base. */}
+        <View style={styles.sign} pointerEvents="none">
+          <View style={styles.signHalo} />
+          <View style={styles.signFloor} />
+          <Image source={SIGN_ART} style={styles.signImage} contentFit="contain" />
+        </View>
 
-          <View style={styles.ring}>
-            <Svg width={RING} height={RING}>
-              <Circle cx={RING / 2} cy={RING / 2} r={radius} stroke="rgba(255,255,255,0.18)" strokeWidth={STROKE} fill="rgba(6,18,40,0.45)" />
-              <Circle
-                cx={RING / 2}
-                cy={RING / 2}
-                r={radius}
-                stroke={ACCENT}
-                strokeWidth={STROKE}
-                strokeLinecap="round"
-                fill="none"
-                strokeDasharray={`${circumference} ${circumference}`}
-                strokeDashoffset={circumference * (1 - share)}
-                transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-              />
-            </Svg>
-            <View style={styles.ringLabel}>
-              <AppText variant="bodyStrong" color="#FFFFFF" style={styles.percent}>
-                {Math.round(share * 100)}%
-              </AppText>
-            </View>
+        <View style={styles.head}>
+          <AppText color="#FFFFFF" numberOfLines={2} adjustsFontSizeToFit style={styles.title}>
+            {t('path.title')}
+          </AppText>
+          <View style={styles.pill}>
+            <Ionicons name="flag" size={13} color="#FFFFFF" />
+            <AppText color="#FFFFFF" numberOfLines={1} adjustsFontSizeToFit style={styles.pillText}>
+              {progress}
+            </AppText>
           </View>
         </View>
 
         <View style={styles.bottom}>
           <View style={styles.track}>
-            <Animated.View style={[styles.fill, bar]}>
-              <LinearGradient colors={['#7FD3FA', ACCENT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
-            </Animated.View>
+            <Animated.View style={[styles.fill, bar]} />
           </View>
+          <AppText color="#FFFFFF" style={styles.percent}>
+            {Math.round(share * 100)}%
+          </AppText>
           <View style={styles.starChip}>
-            <Ionicons name="star" size={13} color={GOLD} />
-            <AppText variant="captionStrong" color="#FFFFFF">
+            <Ionicons name="star" size={14} color={GOLD} />
+            <AppText color={DEEP} style={styles.starText}>
               {stars}/{total * 3}
             </AppText>
           </View>
         </View>
-      </View>
+      </LinearGradient>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    borderRadius: radii.xl,
-    boxShadow: '0 14px 30px rgba(6, 18, 40, 0.28)',
+  wrap: { paddingBottom: DEPTH, borderRadius: RADIUS },
+  edge: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: RADIUS,
+    backgroundColor: EDGE,
   },
   card: {
+    // Same height as the big home cards.
     minHeight: 196,
-    borderRadius: radii.xl,
-    overflow: 'hidden',
-    padding: spacing.xl,
+    padding: spacing.lg,
+    paddingBottom: spacing.lg + 2,
     justifyContent: 'space-between',
     gap: spacing.lg,
-    backgroundColor: '#0B1F3A',
+    borderRadius: RADIUS,
+    overflow: 'hidden',
   },
-  top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  texts: { flex: 1, gap: 4 },
-  overline: {
+  orb: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  orbA: { width: 180, height: 180, top: -70, right: -50 },
+  orbB: { width: 120, height: 120, bottom: -60, left: -40, backgroundColor: 'rgba(255, 255, 255, 0.1)' },
+
+  head: { marginRight: SIGN - spacing.md, gap: spacing.sm },
+  title: { fontSize: 32, lineHeight: 35, fontWeight: '900', letterSpacing: -0.8 },
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    maxWidth: '100%',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    marginBottom: 2,
+    backgroundColor: DEEP,
+    boxShadow: '0 3px 8px rgba(52, 34, 130, 0.25)',
   },
-  overlineText: { fontSize: 10, lineHeight: 14, letterSpacing: 1.4, fontWeight: '800' },
-  title: { fontSize: 26, lineHeight: 31 },
-  ring: { width: RING, height: RING },
-  ringLabel: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  percent: { fontSize: 15, fontWeight: '800' },
-  bottom: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  pillText: { flexShrink: 1, fontSize: 13, lineHeight: 18, fontWeight: '800' },
+
+  sign: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.md,
+    width: SIGN,
+    height: SIGN,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '6deg' }],
+  },
+  signHalo: {
+    position: 'absolute',
+    width: SIGN * 0.78,
+    height: SIGN * 0.78,
+    borderRadius: SIGN,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+    boxShadow: '0 0 28px 10px rgba(255, 255, 255, 0.35)',
+  },
+  signFloor: {
+    position: 'absolute',
+    bottom: 2,
+    width: SIGN * 0.5,
+    height: 10,
+    borderRadius: SIGN,
+    backgroundColor: 'rgba(52, 34, 130, 0.22)',
+    boxShadow: '0 0 10px 4px rgba(52, 34, 130, 0.18)',
+  },
+  signImage: { width: SIGN, height: SIGN },
+
+  bottom: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   track: {
     flex: 1,
-    height: 8,
+    height: 10,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: SHADE,
     overflow: 'hidden',
   },
-  fill: { height: '100%', borderRadius: radii.pill, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: radii.pill, backgroundColor: '#FFFFFF' },
+  percent: { fontSize: 15, lineHeight: 19, fontWeight: '900' },
   starChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -160,8 +184,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0 3px 8px rgba(52, 34, 130, 0.25)',
   },
+  starText: { fontSize: 13, lineHeight: 17, fontWeight: '900' },
 });
