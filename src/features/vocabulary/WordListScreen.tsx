@@ -1,17 +1,18 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { Pressable3D } from '@/components/ui/Pressable3D';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useT } from '@/i18n';
 import { useSettingsStore } from '@/store/settingsStore';
 import { haptics } from '@/services/haptics';
-import { colors, radii, shadows, spacing } from '@/theme';
+import { radii, spacing } from '@/theme';
+import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { GamePickerSheet } from './GamePickerSheet';
 import { masteryStyle } from './masteryStyle';
@@ -19,9 +20,12 @@ import { masteryOf, type Mastery } from './srs';
 import { starterWords } from './starterWords';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from './vocabularyStore';
 import { WordRow } from './WordRow';
-import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import { WordsHero } from './WordsHero';
 
 const ORDER: Mastery[] = ['new', 'learning', 'known', 'mastered'];
+/** The same 3D book as the "My words" card and shortcut. */
+const WORDS_ART = require('@/assets/icons3d/shortcuts/words.png');
+const EMPTY_ART = 132;
 
 export function WordListScreen() {
   const home = usePalette();
@@ -37,6 +41,7 @@ export function WordListScreen() {
   const [picking, setPicking] = useState(false);
 
   const due = countDue(cards);
+  const mastery = masteryStyle(home);
   const counts = useMemo(() => {
     const result: Record<Mastery, number> = { new: 0, learning: 0, known: 0, mastered: 0 };
     for (const card of cards) result[masteryOf(card)] += 1;
@@ -52,40 +57,15 @@ export function WordListScreen() {
     <Screen padded={false}>
       <ScreenHeader title={t('words.title')} onBack={() => router.back()} style={styles.header} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={[colors.primaryLight, home.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-          <View style={styles.heroTop}>
-            <View style={styles.heroTexts}>
-              <AppText variant="heading" color={colors.onPrimary}>
-                {t('words.round')}
-              </AppText>
-              <AppText color="rgba(255,255,255,0.9)">
-                {cards.length === 0 ? t('words.empty.title') : due > 0 ? t('words.due', { n: due }) : t('words.bonus')}
-              </AppText>
-            </View>
-            <AppText style={styles.heroEmoji}>🎮</AppText>
-          </View>
-          <View style={styles.chips}>
-            <Chip label={`🔥 ${t('words.streak', { n: streak })}`} />
-            <Chip label={`⚡ ${t('words.xp', { n: xp })}`} />
-          </View>
-          <Pressable3D
-            accessibilityRole="button"
-            accessibilityLabel={t('words.play')}
-            disabled={cards.length === 0}
-            onPress={play}
-            edgeColor="#BFE0F3"
-            style={[styles.play, cards.length === 0 && styles.playOff]}
-            faceStyle={styles.playFace}
-          >
-            <AppText variant="button" color={colors.primaryDark}>
-              {t('words.play')}
-            </AppText>
-          </Pressable3D>
-        </LinearGradient>
+        <WordsHero total={cards.length} due={due} streak={streak} xp={xp} onPlay={play} />
 
         {cards.length === 0 ? (
           <View style={styles.empty}>
-            <AppText style={styles.emptyIcon}>📖</AppText>
+            {/* The 3D book on a soft halo, like the art on the cards. */}
+            <View style={styles.emptyArt} pointerEvents="none">
+              <View style={styles.emptyHalo} />
+              <Image source={WORDS_ART} style={styles.emptyImage} contentFit="contain" transition={150} />
+            </View>
             <AppText variant="heading" style={styles.center}>
               {t('words.empty.title')}
             </AppText>
@@ -104,24 +84,36 @@ export function WordListScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.summary}>
-              <AppText variant="heading">{t('words.count', { n: cards.length })}</AppText>
+            {/* How the words are going, on one outlined card: the count, a split bar and a chip per step. */}
+            <Card style={styles.summary}>
+              <View style={styles.summaryHead}>
+                <View style={styles.summaryBadge}>
+                  <Image source={WORDS_ART} style={styles.summaryImage} contentFit="contain" />
+                </View>
+                <AppText variant="heading" style={styles.flex} numberOfLines={1}>
+                  {t('words.count', { n: cards.length })}
+                </AppText>
+              </View>
               <View style={styles.bar}>
                 {ORDER.filter((key) => counts[key] > 0).map((key) => (
-                  <View key={key} style={{ flex: counts[key], backgroundColor: masteryStyle(home)[key].color }} />
+                  <View key={key} style={[styles.segment, { flex: counts[key], backgroundColor: mastery[key].color }]} />
                 ))}
               </View>
               <View style={styles.legend}>
                 {ORDER.map((key) => (
-                  <View key={key} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: masteryStyle(home)[key].color }]} />
-                    <AppText variant="caption" color={home.textSecondary}>
-                      {t(masteryStyle(home)[key].label)} {counts[key]}
+                  <View key={key} style={[styles.legendItem, { backgroundColor: mastery[key].soft }]}>
+                    <View style={[styles.legendDot, { backgroundColor: mastery[key].color }]} />
+                    <AppText variant="caption" color={mastery[key].color} style={styles.legendLabel} numberOfLines={1}>
+                      {t(mastery[key].label)}
+                    </AppText>
+                    <AppText variant="captionStrong" color={mastery[key].color}>
+                      {counts[key]}
                     </AppText>
                   </View>
                 ))}
               </View>
-            </View>
+            </Card>
+
             <View style={styles.list}>
               {cards.map((card) => (
                 <WordRow key={card.id} card={card} onRemove={removeWord} />
@@ -135,38 +127,54 @@ export function WordListScreen() {
   );
 }
 
-function Chip({ label }: { label: string }) {
-  const styles = useThemedStyles(createStyles);
-  return (
-    <View style={styles.chip}>
-      <AppText variant="captionStrong" color={colors.onPrimary}>
-        {label}
-      </AppText>
-    </View>
-  );
-}
-
 const createStyles = (home: Palette) => StyleSheet.create({
   header: { paddingHorizontal: spacing.lg },
-  content: { gap: spacing.xl, padding: spacing.xl },
-  hero: { gap: spacing.lg, padding: spacing.xl, borderRadius: radii.xl, ...shadows.primary },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
-  heroTexts: { flex: 1, gap: spacing.xs },
-  heroEmoji: { fontSize: 44, lineHeight: 52 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radii.pill, backgroundColor: 'rgba(255,255,255,0.22)' },
-  play: { height: 58 },
-  // White on the blue card in both looks.
-  playFace: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-  playOff: { opacity: 0.55 },
-  empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxxl },
-  emptyIcon: { fontSize: 64, lineHeight: 76 },
+  content: { gap: spacing.lg, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xxxl },
+  flex: { flex: 1 },
   center: { textAlign: 'center' },
-  starter: { alignSelf: 'stretch', marginTop: spacing.md },
+
+  empty: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.xxl, paddingHorizontal: spacing.md },
+  emptyArt: { width: EMPTY_ART, height: EMPTY_ART, alignItems: 'center', justifyContent: 'center', transform: [{ rotate: '-6deg' }] },
+  emptyHalo: {
+    position: 'absolute',
+    width: EMPTY_ART * 0.82,
+    height: EMPTY_ART * 0.82,
+    borderRadius: EMPTY_ART,
+    backgroundColor: home.primarySoft,
+  },
+  emptyImage: { width: EMPTY_ART, height: EMPTY_ART },
+  starter: { alignSelf: 'stretch', marginTop: spacing.sm },
+
   summary: { gap: spacing.md },
-  bar: { flexDirection: 'row', height: 10, borderRadius: radii.pill, overflow: 'hidden', gap: 2 },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  summaryHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  summaryBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: home.primarySoft,
+  },
+  summaryImage: { width: 36, height: 36 },
+  bar: {
+    flexDirection: 'row',
+    height: 12,
+    gap: 3,
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+    backgroundColor: home.track,
+  },
+  segment: { height: '100%' },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+  },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { fontWeight: '700' },
   list: { gap: spacing.md },
 });

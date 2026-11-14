@@ -127,7 +127,7 @@ export function HomeScreen() {
         <Fragment key={version}>
           <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
             <HomeHeader name={name} />
-            {/* Goal, streak and this week on one lavender card; the full calendar opens from it. */}
+            {/* Goal, streak and this week on one lime card; the full calendar opens from it. */}
             <TodayPanel minutes={minutes} goalMinutes={goalMinutes} />
           </View>
 
