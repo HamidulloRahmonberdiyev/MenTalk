@@ -155,7 +155,10 @@ export interface ApiLeaderboard {
   /** Monday the week started, `YYYY-MM-DD`; null for all time. */
   since: string | null;
   top: ApiLeaderboardEntry[];
-  /** `rank` is null until the learner has some XP in the period. */
+  /**
+   * A learner with no XP in the period is placed right after everyone who has some. Older servers
+   * sent null for them instead.
+   */
   me: { rank: number | null; xp: number };
 }
 

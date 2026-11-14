@@ -21,12 +21,15 @@ const MINI = 50;
 /** Faces that fit beside the title on a phone. */
 const SHOWN = 4;
 
-/** Leaderboard on the home sheet: this week's top learners, then the learner's own row. Opens the full board. */
+/**
+ * Leaderboard on the home sheet: the all-time top learners, then the learner's own row. Opens the
+ * full board, which starts on all time too, so the numbers match.
+ */
 export function LeaderboardCard() {
   const t = useT();
   const name = useUserStore((state) => state.name);
   const avatarUrl = useUserStore((state) => state.avatarUrl);
-  const { board } = useLeaderboard('week', SHOWN);
+  const { board } = useLeaderboard('all', SHOWN);
   const top = board?.top ?? [];
   const xp = board?.me.xp ?? 0;
 

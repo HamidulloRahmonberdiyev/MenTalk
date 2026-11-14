@@ -37,11 +37,9 @@ const SHORTCUTS_LOOK: 'rail' | 'grid' = 'rail';
 /** 3D glass tiles cut from assets/icons3d/shortcuts/home-page-small-cards.png. */
 const SHORTCUT_ART = {
   topics: require('@/assets/icons3d/shortcuts/topics.png'),
-  history: require('@/assets/icons3d/shortcuts/history.png'),
   words: require('@/assets/icons3d/shortcuts/words.png'),
   game: require('@/assets/icons3d/shortcuts/game.png'),
   translate: require('@/assets/icons3d/shortcuts/translate.png'),
-  continue: require('@/assets/icons3d/shortcuts/continue.png'),
   mistakes: require('@/assets/icons3d/shortcuts/mistakes.png'),
   pronunciation: require('@/assets/icons3d/shortcuts/pronunciation.png'),
 };
@@ -64,7 +62,6 @@ export function HomeScreen() {
   const goalMinutes = useUserStore((state) => state.dailyGoalMinutes);
   const minutesToday = useUserStore((state) => state.minutesToday);
   const history = useUserStore((state) => state.history);
-  const lastScenarioId = useUserStore((state) => state.lastScenarioId);
   const cards = useStudyCards();
   const streak = useVocabularyStore(visibleStreak);
 
@@ -73,7 +70,6 @@ export function HomeScreen() {
   const average = recent.length ? recent.reduce((sum, entry) => sum + entry.score, 0) / recent.length : 0;
   const stages = usePath();
   const passedStages = stages.filter((stage) => stage.status === 'passed').length;
-  const openStage = stages.find((stage) => stage.status === 'open');
   const unlocked = stages.filter((stage) => stage.status !== 'locked');
   const minutes = Math.floor(minutesToday);
 
@@ -81,22 +77,10 @@ export function HomeScreen() {
   const shortcuts = useMemo<Shortcut[]>(
     () => [
       { key: 'topics', image: SHORTCUT_ART.topics, label: t('home.menu.topics'), art: 'topics', onPress: () => router.push('/scenarios') },
-      { key: 'history', image: SHORTCUT_ART.history, label: t('home.menu.history'), art: 'chat', onPress: () => router.navigate('/conversations') },
       // The saved-words list itself; '/words' is the "Mashqlar" tab, not the dictionary.
       { key: 'words', image: SHORTCUT_ART.words, label: t('home.menu.words'), art: 'book', onPress: () => router.push('/word-list') },
       { key: 'game', image: SHORTCUT_ART.game, label: t('home.menu.game'), art: 'game', onPress: () => setPicking(true) },
       { key: 'translate', image: SHORTCUT_ART.translate, label: t('home.menu.translate'), art: 'translate', onPress: () => router.navigate('/translate') },
-      {
-        key: 'continue',
-        image: SHORTCUT_ART.continue,
-        label: t('home.menu.continue'),
-        art: 'play',
-        // Carries on along the path; once it is all passed, back to the last chat.
-        onPress: () => {
-          const next = openStage?.scenario.id ?? lastScenarioId ?? stages[0]?.scenario.id;
-          if (next) openConversation(next);
-        },
-      },
       // The mistakes notebook lives on the server, so without one the slot stays a random topic.
       isApiConfigured
         ? { key: 'mistakes', image: SHORTCUT_ART.mistakes, label: t('home.menu.mistakes'), art: 'mistakes', onPress: () => router.push('/mistakes') }
@@ -112,7 +96,7 @@ export function HomeScreen() {
       // Profile already has its own tab, so its slot went to pronunciation practice.
       { key: 'pronunciation', image: SHORTCUT_ART.pronunciation, label: t('pron.menu'), art: 'mic', onPress: () => router.push('/pronunciation') },
     ],
-    [t, lastScenarioId, openStage, stages, unlocked],
+    [t, unlocked],
   );
 
   return (

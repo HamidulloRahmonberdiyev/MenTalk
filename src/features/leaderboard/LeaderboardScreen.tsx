@@ -26,24 +26,34 @@ const ORANGE_SOFT = '#FFB06A';
 const INK = '#2A0F5C';
 const MEDALS = ['🥇', '🥈', '🥉'] as const;
 
-/** The full leaderboard: this week or all time, the top 50, and the learner's own place even below them. */
+/** Opens on the all-time board. */
+const PERIODS = ['all', 'week'] as const;
+
+/**
+ * The full leaderboard: all time or this week, the top 50, and the learner's own row always in the
+ * table: highlighted in place, or after the list when they are below it or have no XP yet.
+ */
 export function LeaderboardScreen() {
   const t = useT();
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
-  const [period, setPeriod] = useState<LeaderboardPeriod>('week');
+  const [period, setPeriod] = useState<LeaderboardPeriod>(PERIODS[0]);
   const { board, status, retry } = useLeaderboard(period, LIMIT);
   const name = useUserStore((state) => state.name);
   const avatarUrl = useUserStore((state) => state.avatarUrl);
 
   const me = board?.me;
-  const meInTop = board?.top.some((entry) => entry.is_me) ?? false;
+  const top = board?.top ?? [];
+  const meInTop = top.some((entry) => entry.is_me);
+  // Older servers give no place before the first XP: then it is right after everyone listed, if
+  // the list holds everyone (shorter than the limit). Otherwise the row shows without a number.
+  const myRank = me?.rank ?? (board && top.length < LIMIT ? top.length + 1 : null);
 
   const header = (
     <View style={styles.headerBlock}>
       <View style={styles.segment} accessibilityRole="tablist">
-        {(['week', 'all'] as const).map((value) => {
+        {PERIODS.map((value) => {
           const active = period === value;
           return (
             <PressableScale
@@ -74,7 +84,7 @@ export function LeaderboardScreen() {
             {name}
           </AppText>
           <AppText color="rgba(255,255,255,0.9)" numberOfLines={1} variant="caption">
-            {me?.rank ? t('leaderboard.place', { n: me.rank }) : t('leaderboard.unranked')}
+            {myRank ? t('leaderboard.place', { n: myRank }) : t('leaderboard.unranked')}
           </AppText>
         </View>
         <View style={styles.xpPill}>
@@ -111,14 +121,16 @@ export function LeaderboardScreen() {
       </View>
     );
 
-  // Below the top 50: the learner's own row closes the list, after a gap.
+  // Not in the list: the learner's own row closes it, after a gap when there are learners in between.
   const footer =
-    board && me?.rank && !meInTop ? (
+    status === 'ready' && me && !meInTop ? (
       <View style={styles.footer}>
-        <AppText color={home.textMuted} style={styles.center}>
-          ···
-        </AppText>
-        <Row entry={{ rank: me.rank, name, avatar_url: avatarUrl, xp: me.xp, is_me: true }} />
+        {myRank === null || myRank > top.length + 1 ? (
+          <AppText color={home.textMuted} style={styles.center}>
+            ···
+          </AppText>
+        ) : null}
+        <Row entry={{ rank: myRank, name, avatar_url: avatarUrl, xp: me.xp, is_me: true }} />
       </View>
     ) : null;
 
@@ -127,7 +139,7 @@ export function LeaderboardScreen() {
       <StatusBar style={home.statusBar} />
       <ScreenHeader title={t('leaderboard.title')} onBack={() => router.back()} style={styles.screenHeader} />
       <FlatList
-        data={status === 'ready' ? (board?.top ?? []) : []}
+        data={status === 'ready' ? top : []}
         keyExtractor={(entry) => String(entry.rank)}
         renderItem={({ item }) => <Row entry={item} />}
         ListHeaderComponent={header}
@@ -145,24 +157,26 @@ function Separator() {
   return <View style={{ height: spacing.sm }} />;
 }
 
-function Row({ entry }: { entry: ApiLeaderboardEntry }) {
+/** One learner; `rank` is null only for the learner's own row when an older server gave no place. */
+function Row({ entry }: { entry: Omit<ApiLeaderboardEntry, 'rank'> & { rank: number | null } }) {
   const t = useT();
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
-  const medal = MEDALS[entry.rank - 1];
+  const medal = entry.rank ? MEDALS[entry.rank - 1] : undefined;
+  const place = entry.rank ? `${t('leaderboard.place', { n: entry.rank })}. ` : '';
 
   return (
     <View
       style={[styles.row, entry.is_me && styles.rowMe]}
       accessible
-      accessibilityLabel={`${t('leaderboard.place', { n: entry.rank })}. ${entry.name}, ${entry.xp} XP`}
+      accessibilityLabel={`${place}${entry.name}, ${entry.xp} XP`}
     >
       <View style={styles.rank}>
         {medal ? (
           <AppText style={styles.medal}>{medal}</AppText>
         ) : (
           <AppText variant="bodyStrong" color={home.textSecondary}>
-            {entry.rank}
+            {entry.rank ?? '—'}
           </AppText>
         )}
       </View>
