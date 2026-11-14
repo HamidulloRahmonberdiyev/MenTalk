@@ -5,7 +5,7 @@ export const ROW = 172;
 /** Room above the first node for the "you are here" bubble. */
 export const TOP_PAD = 72;
 /** Space under the last stage for the finish cup. */
-export const FINISH_ROW = 190;
+export const FINISH_ROW = 230;
 export const GUTTER = 16;
 
 /** Where each stage sits across the screen, as a share of the swing either side of the centre. */

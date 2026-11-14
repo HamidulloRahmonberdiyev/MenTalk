@@ -141,6 +141,10 @@ export const ru: Dictionary = {
   'result.mistakes': 'Основные ошибки',
   'result.retry': 'Попробовать снова',
   'result.home': 'На главную',
+  'result.stat.score': 'Балл',
+  'result.stat.time': 'Время',
+  'result.stat.words': 'Новые слова',
+  'result.skills': 'Навыки',
   'note.past': '«вчера» — прошедшее время',
   'note.present': 'Нужно использовать настоящее время',
 

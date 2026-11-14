@@ -139,6 +139,10 @@ export const en = {
   'result.mistakes': 'Main mistakes',
   'result.retry': 'Try again',
   'result.home': 'Back home',
+  'result.stat.score': 'Score',
+  'result.stat.time': 'Time',
+  'result.stat.words': 'New words',
+  'result.skills': 'Skills',
   'note.past': '«вчера» (yesterday) needs the past tense',
   'note.present': 'Use the present tense',
 

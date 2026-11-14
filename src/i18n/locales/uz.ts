@@ -141,6 +141,10 @@ export const uz: Dictionary = {
   'result.mistakes': 'Asosiy xatolar',
   'result.retry': 'Qayta urinish',
   'result.home': 'Bosh sahifaga',
+  'result.stat.score': 'Ball',
+  'result.stat.time': 'Vaqt',
+  'result.stat.words': 'Yangi so‘z',
+  'result.skills': 'Ko‘nikmalar',
   'note.past': '«вчера» (kecha) — o‘tgan zamon',
   'note.present': 'Hozirgi zamondan foydalanish kerak',
 
