@@ -16,24 +16,25 @@ import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { haptics } from '@/services/haptics';
 import { spacing } from '@/theme';
-import { usePalette, type Appearance } from '@/theme/appearance';
+import { usePalette, type Appearance, type Palette } from '@/theme/appearance';
 
 import { ShortcutArt } from './ShortcutArt';
 import type { Shortcut } from './ShortcutGrid';
 
-const CARD_W = 128;
-const CARD_H = 110;
+const CARD_W = 120;
+const CARD_H = 108;
 const GAP = spacing.md;
 const STEP = CARD_W + GAP;
 /** Space inside the scroll view for the cards' shadows to fade out before its edge. */
 const SHADOW_ROOM = 24;
-const RADIUS = 24;
-const ART = 74;
+const RADIUS = 20;
+const ART = 80;
+const GO = 26;
 /** How often the rail moves on by itself, and how long it waits after the learner swipes it. */
 const AUTO_EVERY = 3500;
 const AUTO_RESUME_AFTER = 7000;
 
-/** Each shortcut's own accent: it tints the card, the glow behind the object, the arrow and the shadow. */
+/** Each shortcut's own accent: it tints the card, the glow behind the object and the arrow. */
 const ACCENTS: Record<string, string> = {
   topics: '#8B7CF6',
   history: '#3B9BFF',
@@ -46,25 +47,28 @@ const ACCENTS: Record<string, string> = {
   pronunciation: '#6366F1',
 };
 
-/** The card body per look: white on the white sheet, a lifted slate on the grey one. */
+/**
+ * The card body per look. At night each card is a deep shade of its accent, lighter at the top
+ * left, with a faint accent rim; by day it is a pale wash of the accent on white.
+ */
 const BODY = {
   light: {
     base: '#FFFFFF',
-    tint: 0.22,
-    orb: 0.12,
-    glow: 0.32,
+    top: 0.2,
+    bottom: 0.05,
+    glow: 0.26,
     label: '#1C243C',
-    rim: (accent: string) => rgba(accent, 0.2),
+    rim: (accent: string) => rgba(accent, 0.22),
     shadow: (accent: string) => `0 6px 14px ${rgba(accent, 0.2)}`,
   },
   dark: {
-    base: '#3A3F4C',
-    tint: 0.34,
-    orb: 0.16,
-    glow: 0.48,
-    label: '#F0F4FC',
-    rim: () => 'rgba(255, 255, 255, 0.09)',
-    shadow: () => '0 6px 14px rgba(0, 0, 0, 0.35)',
+    base: '#141A2E',
+    top: 0.46,
+    bottom: 0.3,
+    glow: 0.38,
+    label: '#FFFFFF',
+    rim: (accent: string) => rgba(accent, 0.32),
+    shadow: () => '0 8px 18px rgba(0, 0, 0, 0.35)',
   },
 } as const;
 
@@ -85,12 +89,21 @@ function mix(base: string, accent: string, amount: number) {
   return `rgb(${channel(0)}, ${channel(1)}, ${channel(2)})`;
 }
 
+interface ShortcutRailProps {
+  items: Shortcut[];
+  /** The section title above the rail; with `onSeeAll` it also gets a "see all" link. */
+  title?: string;
+  seeAllLabel?: string;
+  onSeeAll?: () => void;
+}
+
 /**
- * The home shortcuts as a featured carousel of pastel cards that slides on by itself every few
+ * The home shortcuts as a featured carousel of small cards that slides on by itself every few
  * seconds (paused while the learner swipes, off with reduced motion).
  */
-export function ShortcutRail({ items }: { items: Shortcut[] }) {
-  const look: Appearance = usePalette().appearance;
+export function ShortcutRail({ items, title, seeAllLabel, onSeeAll }: ShortcutRailProps) {
+  const palette = usePalette();
+  const look: Appearance = palette.appearance;
   const reduceMotion = useReducedMotion();
   const list = useRef<ScrollView>(null);
   const [width, setWidth] = useState(0);
@@ -132,7 +145,8 @@ export function ShortcutRail({ items }: { items: Shortcut[] }) {
   };
 
   return (
-    <View onLayout={(event) => setWidth(event.nativeEvent.layout.width + spacing.xl * 2)}>
+    <View style={styles.section} onLayout={(event) => setWidth(event.nativeEvent.layout.width + spacing.xl * 2)}>
+      {title ? <RailHeader title={title} seeAllLabel={seeAllLabel} onSeeAll={onSeeAll} palette={palette} /> : null}
       <ScrollView
         ref={list}
         horizontal
@@ -150,7 +164,46 @@ export function ShortcutRail({ items }: { items: Shortcut[] }) {
           <RailCard key={key} id={key} look={look} {...item} />
         ))}
       </ScrollView>
+    </View>
+  );
+}
 
+function RailHeader({
+  title,
+  seeAllLabel,
+  onSeeAll,
+  palette,
+}: {
+  title: string;
+  seeAllLabel?: string;
+  onSeeAll?: () => void;
+  palette: Palette;
+}) {
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerTitle}>
+        <Ionicons name="grid" size={15} color={palette.text} />
+        <AppText color={palette.text} accessibilityRole="header" numberOfLines={1} style={styles.title}>
+          {title}
+        </AppText>
+      </View>
+      {onSeeAll && seeAllLabel ? (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel={`${title}: ${seeAllLabel}`}
+          hitSlop={8}
+          onPress={() => {
+            haptics.light();
+            onSeeAll();
+          }}
+          style={styles.seeAll}
+        >
+          <AppText color={palette.textSecondary} style={styles.seeAllText}>
+            {seeAllLabel}
+          </AppText>
+          <Ionicons name="arrow-forward" size={15} color={palette.textSecondary} />
+        </PressableScale>
+      ) : null}
     </View>
   );
 }
@@ -165,6 +218,7 @@ function RailCard({
 }: Omit<Shortcut, 'key'> & { id: string; look: Appearance }) {
   const body = BODY[look];
   const accent = ACCENTS[id] ?? ACCENTS.words;
+  const glow = rgba(accent, body.glow);
 
   return (
     <PressableScale
@@ -180,20 +234,19 @@ function RailCard({
     >
       <View style={[styles.inner, { borderColor: body.rim(accent) }]}>
         <LinearGradient
-          colors={[mix(body.base, accent, body.tint), body.base]}
+          colors={[mix(body.base, accent, body.top), mix(body.base, accent, body.bottom)]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          locations={[0, 0.8]}
+          end={{ x: 0.8, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View pointerEvents="none" style={[styles.orb, { backgroundColor: rgba(accent, body.orb) }]} />
 
+        {/* The object floats in the upper part of the card, a little right of centre, on a soft glow. */}
         <View pointerEvents="none" style={styles.art}>
-          <View style={[styles.glow, { backgroundColor: rgba(accent, body.glow), boxShadow: `0 0 26px 14px ${rgba(accent, body.glow)}` }]} />
+          <View style={[styles.glow, { backgroundColor: glow, boxShadow: `0 0 26px 14px ${glow}` }]} />
           {image ? (
             <Image source={image} style={styles.image} contentFit="contain" transition={150} />
           ) : (
-            <ShortcutArt name={art} size={ART - 16} />
+            <ShortcutArt name={art} size={ART - 18} />
           )}
         </View>
 
@@ -201,8 +254,8 @@ function RailCard({
           <AppText color={body.label} numberOfLines={1} adjustsFontSizeToFit style={styles.label}>
             {label}
           </AppText>
-          <View style={[styles.go, { backgroundColor: accent, boxShadow: `0 4px 10px ${rgba(accent, 0.45)}` }]}>
-            <Ionicons name="arrow-up" size={15} color="#FFFFFF" style={styles.goIcon} />
+          <View style={[styles.go, { backgroundColor: accent, boxShadow: `0 3px 8px ${rgba(accent, 0.4)}` }]}>
+            <Ionicons name="arrow-up" size={14} color="#FFFFFF" style={styles.goIcon} />
           </View>
         </View>
       </View>
@@ -211,8 +264,14 @@ function RailCard({
 }
 
 const styles = StyleSheet.create({
-  // Bleeds to the screen edges (the sheet pads by spacing.xl) so cards slide off the side cleanly;
-  // the bottom padding leaves room for the soft shadows.
+  section: { gap: spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  headerTitle: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  title: { flexShrink: 1, fontSize: 18, lineHeight: 23, fontWeight: '800', letterSpacing: -0.2 },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  seeAllText: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
+
+  // Bleeds to the screen edges (the sheet pads by spacing.xl) so cards slide off the side cleanly.
   // The scroll view clips whatever leaves its frame, shadows included, which drew a hard band under
   // the cards. Padding gives the shadows room inside it; the negative margins keep the layout as is.
   rail: { marginHorizontal: -spacing.xl, marginVertical: -SHADOW_ROOM, flexGrow: 0 },
@@ -221,27 +280,25 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     justifyContent: 'flex-end',
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
     borderRadius: RADIUS,
     borderWidth: 1,
     overflow: 'hidden',
   },
-  orb: { position: 'absolute', width: 120, height: 120, top: -50, right: -40, borderRadius: 60 },
-  // The object sits up in the top-right, tilted a little, clear of the label and arrow below.
   art: {
     position: 'absolute',
     top: 0,
-    right: 2,
+    right: 10,
     width: ART,
     height: ART,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ rotate: '-8deg' }],
   },
-  glow: { position: 'absolute', width: ART * 0.55, height: ART * 0.55, borderRadius: ART },
+  glow: { position: 'absolute', width: ART * 0.5, height: ART * 0.5, borderRadius: ART },
   image: { width: ART, height: ART },
   foot: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  label: { flex: 1, fontSize: 16, lineHeight: 20, fontWeight: '900', letterSpacing: -0.3 },
-  go: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  label: { flex: 1, fontSize: 15, lineHeight: 19, fontWeight: '800', letterSpacing: -0.2 },
+  go: { width: GO, height: GO, borderRadius: GO / 2, alignItems: 'center', justifyContent: 'center' },
   goIcon: { transform: [{ rotate: '45deg' }] },
 });

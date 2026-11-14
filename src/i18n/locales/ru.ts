@@ -42,6 +42,9 @@ export const ru: Dictionary = {
   'home.continue': 'Продолжить',
   'home.chooseTopic': 'Выберите тему',
   'home.all': 'Все',
+  'home.goalLeft': 'До цели осталось {n} мин',
+  'home.streakDays': 'дней подряд',
+  'home.practice.title': 'Виды практики',
 
   'path.title': 'Путь обучения',
   'path.overline': 'Дорожная карта',

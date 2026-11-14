@@ -42,6 +42,9 @@ export const uz: Dictionary = {
   'home.continue': 'Davom etish',
   'home.chooseTopic': 'Mavzuni tanlang',
   'home.all': 'Barchasi',
+  'home.goalLeft': 'Maqsadgacha {n} daqiqa qoldi',
+  'home.streakDays': 'ketma-ket kun',
+  'home.practice.title': 'Mashq turlari',
 
   'path.title': 'Mavzular yo‘lagi',
   'path.overline': 'Yo‘l xaritasi',

@@ -40,6 +40,9 @@ export const en = {
   'home.continue': 'Continue',
   'home.chooseTopic': 'Choose a topic',
   'home.all': 'All',
+  'home.goalLeft': '{n} min left to your goal',
+  'home.streakDays': 'day streak',
+  'home.practice.title': 'Practice',
 
   'path.title': 'Learning path',
   'path.overline': 'Roadmap',

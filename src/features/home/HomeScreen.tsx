@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,7 @@ import { openConversation } from '../scenarios/navigation';
 import { LeaderboardCard } from '../leaderboard/LeaderboardCard';
 import { GamePickerSheet } from '../vocabulary/GamePickerSheet';
 import { countDue, useStudyCards, useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
+import { AllShortcutsSheet } from './AllShortcutsSheet';
 import { FeatureCard } from './FeatureCard';
 import { HomeHeader } from './HomeHeader';
 import { ShortcutGrid, type Shortcut } from './ShortcutGrid';
@@ -55,6 +56,8 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { refreshControl, version } = useRefreshControl();
   const [picking, setPicking] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const closeAll = useCallback(() => setShowAll(false), []);
   useReminderRoute();
 
   const name = useUserStore((state) => state.name);
@@ -79,7 +82,8 @@ export function HomeScreen() {
     () => [
       { key: 'topics', image: SHORTCUT_ART.topics, label: t('home.menu.topics'), art: 'topics', onPress: () => router.push('/scenarios') },
       { key: 'history', image: SHORTCUT_ART.history, label: t('home.menu.history'), art: 'chat', onPress: () => router.navigate('/conversations') },
-      { key: 'words', image: SHORTCUT_ART.words, label: t('home.menu.words'), art: 'book', onPress: () => router.navigate('/words') },
+      // The saved-words list itself; '/words' is the "Mashqlar" tab, not the dictionary.
+      { key: 'words', image: SHORTCUT_ART.words, label: t('home.menu.words'), art: 'book', onPress: () => router.push('/word-list') },
       { key: 'game', image: SHORTCUT_ART.game, label: t('home.menu.game'), art: 'game', onPress: () => setPicking(true) },
       { key: 'translate', image: SHORTCUT_ART.translate, label: t('home.menu.translate'), art: 'translate', onPress: () => router.navigate('/translate') },
       {
@@ -129,7 +133,16 @@ export function HomeScreen() {
 
           <View style={[styles.sheet, { paddingBottom: TAB_BAR_SPACE + insets.bottom + spacing.xl }]}>
             {/* Small shortcuts sit between the goal card and the talk card, so big cards never stack; vocabulary is the compact one. */}
-            {SHORTCUTS_LOOK === 'rail' ? <ShortcutRail items={shortcuts} /> : <ShortcutGrid items={shortcuts} />}
+            {SHORTCUTS_LOOK === 'rail' ? (
+              <ShortcutRail
+                items={shortcuts}
+                title={t('home.practice.title')}
+                seeAllLabel={t('home.all')}
+                onSeeAll={() => setShowAll(true)}
+              />
+            ) : (
+              <ShortcutGrid items={shortcuts} />
+            )}
             <FeatureCard
               title={t('home.talk.title')}
               icon="mic"
@@ -154,6 +167,7 @@ export function HomeScreen() {
           </View>
         </Fragment>
       </ScrollView>
+      <AllShortcutsSheet visible={showAll} items={shortcuts} onClose={closeAll} />
       <GamePickerSheet visible={picking} onClose={() => setPicking(false)} />
       <ReminderPrompt />
     </View>
