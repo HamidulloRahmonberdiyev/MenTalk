@@ -31,7 +31,6 @@ import { FloatingAvatar } from './FloatingAvatar';
 import { HintCard } from './HintCard';
 import { NoticeBanner } from './NoticeBanner';
 import { TextComposer } from './TextComposer';
-import { ToneMenu } from './ToneMenu';
 import { useConversation } from './useConversation';
 import { UserTranscript } from './UserTranscript';
 import { useTutorVoice } from './useTutorVoice';
@@ -165,7 +164,6 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
           onBack={() => router.back()}
           onFinish={status === 'ready' ? handleFinish : undefined}
           finishing={finishing}
-          right={<ToneMenu tone={conversation.tone} onChange={conversation.setTone} />}
         />
 
         <NoticeBanner notice={conversation.notice} onDismiss={conversation.dismissNotice} />

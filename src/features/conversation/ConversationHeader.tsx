@@ -39,7 +39,7 @@ function GlassButton({ icon, label, onPress, busy = false }: { icon: IconName; l
   );
 }
 
-/** Back (and finish) on the left, the scenario in the middle, the tone menu on the right. */
+/** Back on the left, the scenario in the middle, finish (and anything passed as `right`) on the right. */
 export function ConversationHeader({ title, onBack, onFinish, finishing = false, right }: ConversationHeaderProps) {
   const t = useT();
 
@@ -47,22 +47,24 @@ export function ConversationHeader({ title, onBack, onFinish, finishing = false,
     <View style={styles.row}>
       <View style={styles.side}>
         <GlassButton icon="chevron-back" label={t('common.back')} onPress={onBack} />
-        {onFinish ? <GlassButton icon="flag" label={t('conversation.finish')} onPress={onFinish} busy={finishing} /> : null}
       </View>
 
       <AppText variant="heading" color="#FFFFFF" numberOfLines={1} style={styles.title} accessibilityRole="header">
         {title}
       </AppText>
 
-      <View style={[styles.side, styles.sideEnd]}>{right}</View>
+      <View style={[styles.side, styles.sideEnd]}>
+        {right}
+        {onFinish ? <GlassButton icon="flag" label={t('conversation.finish')} onPress={onFinish} busy={finishing} /> : null}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 52, gap: spacing.sm, zIndex: 10 },
-  // Sides take what their buttons need (the tone pill is wide), and the title fills the gap between them.
-  side: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // One button wide on each side, even before finish appears, so the title stays centred.
+  side: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minWidth: 44 },
   sideEnd: { justifyContent: 'flex-end' },
   title: { flex: 1, textAlign: 'center', fontWeight: '800', textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6 },
   button: { width: 44, height: 44, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },

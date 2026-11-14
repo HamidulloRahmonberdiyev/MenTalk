@@ -57,6 +57,16 @@ export const useSettingsStore = create<SettingsState>()(
   ),
 );
 
+/**
+ * The tone picker (calm / funny / angry) is hidden for now, in the chat and in the profile. Until it
+ * is back, every chat runs calm, even for a learner who picked another tone before; the saved choice
+ * is kept. Set to true (and restore the pickers) to bring it back.
+ */
+export const TONE_PICKER = false;
+
+/** The tone chats actually use: the learner's choice while the picker is on, calm otherwise. */
+export const activeTutorTone = (state: Pick<SettingsState, 'tutorTone'>): TutorTone => (TONE_PICKER ? state.tutorTone : 'calm');
+
 /** The pack of the language being learned; re-renders when the learner switches language. */
 export function useStudyLanguage(): StudyLanguagePack {
   return studyLanguagePack(useSettingsStore((state) => state.studyLanguage));

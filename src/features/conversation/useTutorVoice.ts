@@ -7,7 +7,7 @@ import type { LipSync } from '@/features/face';
 import { getDeviceVoiceId } from '@/services/speech/deviceVoice';
 import { voiceStyleFor } from '@/services/speech/voiceStyle';
 import { stripEmoji } from '@/services/text';
-import { useSettingsStore, useStudyLanguage } from '@/store/settingsStore';
+import { activeTutorTone, useSettingsStore, useStudyLanguage } from '@/store/settingsStore';
 import type { AiMessage, VoiceState } from '@/types';
 
 /** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
@@ -126,7 +126,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       const spoken = stripEmoji(line.text);
       const voice = await getDeviceVoiceId(speechTag);
       // Read at speaking time, so a tone picked mid-chat is heard on the next line.
-      const { pitch, rate } = voiceStyleFor(useSettingsStore.getState().tutorTone, line.emotion);
+      const { pitch, rate } = voiceStyleFor(activeTutorTone(useSettingsStore.getState()), line.emotion);
       lipSync.load(spoken, rate);
       const finish = () => {
         lipSync.stop();

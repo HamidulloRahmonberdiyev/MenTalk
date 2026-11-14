@@ -482,7 +482,7 @@ export const ru: Dictionary = {
   'res.title': 'Практика',
   'res.starter': 'Первые слова',
   'tutor.title': 'Собеседник',
-  'tutor.subtitle': 'С кем и каким тоном вы говорите',
+  'tutor.subtitle': 'С кем вы говорите',
   'tutor.character': 'Внешний вид',
   'tutor.character.bubble': 'Пузырь',
   'tutor.character.sobo': 'SOBO',

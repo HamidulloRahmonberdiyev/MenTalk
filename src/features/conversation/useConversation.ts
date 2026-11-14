@@ -8,7 +8,7 @@ import {
   type NoticeCode,
   type RecordedAudio,
 } from '@/services/conversation';
-import { useSettingsStore } from '@/store/settingsStore';
+import { activeTutorTone, useSettingsStore } from '@/store/settingsStore';
 import { useUserStore } from '@/store/userStore';
 import { pushTutorPrefs } from '@/services/session/profileSync';
 import type { AiMessage, ConversationResult, LearnerProfile, Scenario, TutorTone, VoiceState } from '@/types';
@@ -42,7 +42,7 @@ function currentLearner(): LearnerProfile {
   const settings = useSettingsStore.getState();
   return {
     name: user.name,
-    tone: settings.tutorTone,
+    tone: activeTutorTone(settings),
     gender: user.gender,
     country: user.country,
     age: ageFrom(user.birthDate),
@@ -69,7 +69,7 @@ export function useConversation(scenario: Scenario) {
   const [hint, setHint] = useState<HintState>(HIDDEN_HINT);
   const [finishing, setFinishing] = useState(false);
   const [notice, setNotice] = useState<{ code: NoticeCode; id: number } | null>(null);
-  const tone = useSettingsStore((state) => state.tutorTone);
+  const tone = useSettingsStore(activeTutorTone);
 
   useEffect(() => {
     const session = conversationService.createSession(scenario, currentLearner());

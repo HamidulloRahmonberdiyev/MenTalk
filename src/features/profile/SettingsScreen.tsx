@@ -26,7 +26,6 @@ export function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const languageCode = useSettingsStore((state) => state.language);
   const character = useSettingsStore((state) => state.tutorCharacter);
-  const tone = useSettingsStore((state) => state.tutorTone);
   const language = LANGUAGES.find(({ code }) => code === languageCode);
   const [choosingLanguage, setChoosingLanguage] = useState(false);
 
@@ -45,7 +44,7 @@ export function SettingsScreen() {
               icon="sparkles"
               tint="#CE82FF"
               label={t('tutor.title')}
-              value={`${t(`tutor.character.${character}`)} · ${t(`tutor.tone.${tone}`)}`}
+              value={t(`tutor.character.${character}`)}
               onPress={() => router.push('/settings/tutor' as Href)}
             />
           </SettingsGroup>

@@ -480,7 +480,7 @@ export const en = {
   'res.title': 'Practice',
   'res.starter': 'Starter words',
   'tutor.title': 'Conversation partner',
-  'tutor.subtitle': 'Who you talk to, and how',
+  'tutor.subtitle': 'Who you talk to',
   'tutor.character': 'Look',
   'tutor.character.bubble': 'Bubble',
   'tutor.character.sobo': 'SOBO',

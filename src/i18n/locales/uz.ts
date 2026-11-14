@@ -482,7 +482,7 @@ export const uz: Dictionary = {
   'res.title': 'Mashqlar',
   'res.starter': 'Boshlang‘ich so‘zlar',
   'tutor.title': 'Suhbatdosh',
-  'tutor.subtitle': 'Kim bilan va qanday ohangda gaplashasiz',
+  'tutor.subtitle': 'Kim bilan gaplashasiz',
   'tutor.character': 'Ko‘rinishi',
   'tutor.character.bubble': 'Pufak',
   'tutor.character.sobo': 'SOBO',

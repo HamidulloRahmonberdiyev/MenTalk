@@ -4,15 +4,14 @@ import { StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { Pressable3D } from '@/components/ui/Pressable3D';
-import { ToneFace } from '@/features/tutor/ToneFace';
 import { TutorFigure } from '@/features/tutor/TutorFigure';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { pushTutorPrefs } from '@/services/session/profileSync';
-import { useSettingsStore } from '@/store/settingsStore';
+import { activeTutorTone, useSettingsStore } from '@/store/settingsStore';
 import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
-import { TUTOR_CHARACTERS, TUTOR_TONES, type TutorCharacter } from '@/types';
+import { TUTOR_CHARACTERS, type TutorCharacter } from '@/types';
 
 const CHARACTER_EMOJI: Record<TutorCharacter, string> = {
   bubble: '🫧',
@@ -55,15 +54,14 @@ function Tile({ label, selected, onPress, children }: TileProps) {
   );
 }
 
-/** Profile settings for the conversation partner: who it is (with a live preview) and the tone it starts in. */
+/** Profile settings for the conversation partner: who it is, with a live preview. (The tone picker is off for now.) */
 export function TutorCard() {
   const t = useT();
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const character = useSettingsStore((state) => state.tutorCharacter);
-  const tone = useSettingsStore((state) => state.tutorTone);
+  const tone = useSettingsStore(activeTutorTone);
   const setCharacter = useSettingsStore((state) => state.setTutorCharacter);
-  const setTone = useSettingsStore((state) => state.setTutorTone);
 
   return (
     <View style={styles.card}>
@@ -98,25 +96,6 @@ export function TutorCard() {
             }}
           >
             <AppText style={styles.emoji}>{CHARACTER_EMOJI[option]}</AppText>
-          </Tile>
-        ))}
-      </View>
-
-      <AppText variant="captionStrong" color={home.textSecondary} style={styles.subhead}>
-        {t('tutor.tone')}
-      </AppText>
-      <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('tutor.tone')}>
-        {TUTOR_TONES.map((option) => (
-          <Tile
-            key={option}
-            label={t(`tutor.tone.${option}`)}
-            selected={tone === option}
-            onPress={() => {
-              setTone(option);
-              void pushTutorPrefs({ tone: option });
-            }}
-          >
-            <ToneFace tone={option} size={30} />
           </Tile>
         ))}
       </View>
@@ -155,7 +134,6 @@ const createStyles = (home: Palette) =>
       backgroundColor: home.primaryTint,
     },
     row: { flexDirection: 'row', gap: spacing.sm },
-    subhead: { paddingHorizontal: spacing.xs, marginTop: spacing.xs },
     tile: { flex: 1 },
     tileFace: {
       alignItems: 'center',
