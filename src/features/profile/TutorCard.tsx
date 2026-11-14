@@ -14,7 +14,7 @@ import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 import { TUTOR_CHARACTERS, type TutorCharacter } from '@/types';
 
 const CHARACTER_EMOJI: Record<TutorCharacter, string> = {
-  bubble: '🫧',
+  bubble: '🙂',
   sobo: '✨',
 };
 

@@ -10,7 +10,7 @@ import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 
 import { useTutorVoice } from '@/features/conversation/useTutorVoice';
-import { BubbleTutor } from '@/features/tutor/BubbleTutor';
+import { PillTutor } from '@/features/tutor/PillTutor';
 import type { AiMessage } from '@/types';
 
 import { AIFace } from './AIFace';
@@ -47,7 +47,7 @@ export function FaceLabScreen() {
       <ScreenHeader title="Mascot lab" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.stage}>
-          <BubbleTutor state={shownState} emotion={emotion} audioLevel={lipSync.face.jaw} size={190} />
+          <PillTutor state={shownState} emotion={emotion} audioLevel={lipSync.face.jaw} size={220} />
         </View>
 
         <View style={styles.compare}>

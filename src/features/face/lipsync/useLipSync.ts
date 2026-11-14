@@ -52,7 +52,7 @@ const WORD_SLACK = 0.12;
  *
  *   const lipSync = useLipSync();
  *   lipSync.load(text, 0.95); lipSync.start(); // + boundary()/sync()/level() as the voice plays
- *   <BubbleTutor audioLevel={lipSync.face.jaw} ... />
+ *   <PillTutor audioLevel={lipSync.face.jaw} ... />
  */
 export function useLipSync(): LipSync {
   const track = useSharedValue<SpeechTrack | null>(null);
