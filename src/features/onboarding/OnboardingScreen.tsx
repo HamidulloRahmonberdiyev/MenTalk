@@ -6,6 +6,7 @@ import { BackHandler, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Te
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
+import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { Pressable3D } from '@/components/ui/Pressable3D';
@@ -120,8 +121,8 @@ export function OnboardingScreen() {
     plan: true,
   }[current.id];
 
+  // The back button gives its own tap feedback; Android's hardware back needs none.
   const goBack = useCallback(() => {
-    haptics.light();
     if (autoAdvanceTimer.current) clearTimeout(autoAdvanceTimer.current);
     autoAdvanceTimer.current = null;
     if (step === 0) {
@@ -288,9 +289,7 @@ export function OnboardingScreen() {
       <LinearGradient colors={[home.primarySoft, home.background]} style={styles.backdrop} pointerEvents="none" />
 
       <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
-        <PressableScale accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} onPress={goBack} style={styles.back}>
-          <Ionicons name="chevron-back" size={24} color={home.text} />
-        </PressableScale>
+        <BackButton onPress={goBack} />
         <ProgressSegments count={steps.length} step={step} />
       </View>
 
@@ -642,18 +641,22 @@ function ExplainLanguagePicker({ value, onChange }: { value: Language; onChange:
         {INTERFACE_OPTIONS.map(({ id, label }) => {
           const active = value === id;
           return (
-            <PressableScale
+            <Pressable3D
               key={id}
               accessibilityRole="radio"
               accessibilityState={{ checked: active }}
               accessibilityLabel={label}
               onPress={() => onChange(id)}
-              style={[styles.segment, active && styles.segmentActive]}
+              edgeColor={active ? '#1A84BF' : home.rimBottom}
+              depth={4}
+              radius={radii.md}
+              style={styles.segmentOuter}
+              faceStyle={[styles.segment, active && styles.segmentActive]}
             >
-              <AppText variant="captionStrong" color={active ? colors.onPrimary : home.text}>
+              <AppText variant="captionStrong" color={active ? home.accent : home.text} numberOfLines={1}>
                 {label}
               </AppText>
-            </PressableScale>
+            </Pressable3D>
           );
         })}
       </View>
@@ -700,16 +703,6 @@ const createStyles = (home: Palette) =>
       alignItems: 'center',
       gap: spacing.md,
       paddingHorizontal: spacing.xl,
-    },
-    back: {
-      width: 40,
-      height: 40,
-      borderRadius: radii.pill,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: home.panel,
-      borderWidth: 2,
-      borderColor: home.rim,
     },
     scroll: { flexGrow: 1, gap: spacing.xxl, paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xl },
     step: { gap: spacing.xxl },
@@ -788,11 +781,23 @@ const createStyles = (home: Palette) =>
       padding: spacing.lg,
       borderRadius: radii.xl,
       borderWidth: 2,
+      borderBottomWidth: 6,
       borderColor: home.rim,
+      borderBottomColor: home.rimBottom,
       backgroundColor: home.panel,
     },
     explainHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    segments: { flexDirection: 'row', gap: spacing.xs, padding: spacing.xs, borderRadius: radii.md, backgroundColor: home.track },
-    segment: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radii.sm },
-    segmentActive: { backgroundColor: colors.primary },
+    // Chunky options like the profile's appearance switch, not a flat segmented control.
+    segments: { flexDirection: 'row', gap: spacing.sm },
+    segmentOuter: { flex: 1 },
+    segment: {
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.xs,
+      borderWidth: 2,
+      borderColor: home.rim,
+      backgroundColor: home.track,
+    },
+    segmentActive: { borderColor: colors.primary, backgroundColor: home.selected },
   });

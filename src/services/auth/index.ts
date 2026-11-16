@@ -5,7 +5,8 @@ import { ApiAuthService } from './ApiAuthService';
 import { GoogleIdTokenProvider } from './GoogleIdTokenProvider';
 import { MockAuthService } from './MockAuthService';
 
-export type { AuthService, AuthUser } from './AuthService';
+export type { AuthService, AuthUser, TelegramProgress } from './AuthService';
 export { GoogleUnavailable, SignInCancelled } from './GoogleIdTokenProvider';
+export { TelegramDeclined, TelegramExpired, openTelegram, pendingTelegramAttempt, type TelegramAttempt, type TelegramPhase } from './TelegramLogin';
 
 export const authService: AuthService = isApiConfigured ? new ApiAuthService(new GoogleIdTokenProvider()) : new MockAuthService();

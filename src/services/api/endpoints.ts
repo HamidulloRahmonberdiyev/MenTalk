@@ -7,7 +7,10 @@ import { streamEvents } from './stream';
 export interface ApiUser {
   id: number;
   name: string;
-  email: string;
+  /** Null for an account made with Telegram. */
+  email: string | null;
+  /** Missing on servers that predate Telegram sign-in. */
+  telegram_username?: string | null;
   avatar_url: string | null;
   avatar_custom: boolean;
   gender: 'male' | 'female' | null;
@@ -34,6 +37,22 @@ export interface ApiUser {
   tutor_character?: TutorCharacter | null;
   tutor_tone?: TutorTone | null;
 }
+
+export interface ApiTelegramLogin {
+  id: string;
+  secret: string;
+  bot_username: string;
+  /** `tg://resolve?…`: opens the Telegram app directly. */
+  app_url: string;
+  /** `https://t.me/…`: the fallback when Telegram is not installed. */
+  bot_url: string;
+  expires_at: string;
+  poll_interval_ms: number;
+}
+
+export type ApiTelegramCheck =
+  | { status: 'pending' | 'opened' | 'declined' | 'expired' }
+  | { status: 'approved'; token: string; user: ApiUser };
 
 export type ApiProfilePatch = Partial<
   Pick<
@@ -418,6 +437,12 @@ export const endpoints = {
   /** `uiLanguage` becomes the language of a newly created profile; an existing one keeps its own. */
   signInWithGoogle: (idToken: string, device: string, uiLanguage: 'uz' | 'ru' | 'en') =>
     api<{ token: string; user: ApiUser }>('POST', '/auth/google', { body: { id_token: idToken, device, ui_language: uiLanguage } }),
+  /** Opens a Telegram sign-in: the deep links into the bot, and the secret to poll with. */
+  startTelegramLogin: (device: string, uiLanguage: 'uz' | 'ru' | 'en') =>
+    api<ApiTelegramLogin>('POST', '/auth/telegram', { body: { device, ui_language: uiLanguage } }),
+  /** Not idempotent: an approved attempt hands out its session token exactly once. */
+  checkTelegramLogin: (id: string, secret: string, signal?: AbortSignal) =>
+    api<ApiTelegramCheck>('POST', `/auth/telegram/${encodeURIComponent(id)}`, { body: { secret }, signal, timeoutMs: 10_000 }),
   signOut: () => api<void>('DELETE', '/auth/session'),
 
   me: () => api<ApiUser>('GET', '/me'),

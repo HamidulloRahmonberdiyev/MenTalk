@@ -8,13 +8,14 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
 import { isApiConfigured } from '@/services/api/config';
-import { authService } from '@/services/auth';
+import { authService, pendingTelegramAttempt } from '@/services/auth';
 import { haptics } from '@/services/haptics';
 import { useUserStore } from '@/store/userStore';
-import { radii, spacing } from '@/theme';
+import { spacing } from '@/theme';
 
 import { LanguageChips } from './LanguageChips';
 
@@ -35,11 +36,17 @@ function useRestoredSession(): boolean {
       return;
     }
     let active = true;
-    authService.restore().then((user) => {
+    void (async () => {
+      const user = await authService.restore();
       if (!active) return;
-      if (user) router.replace(homeRoute());
-      else setChecking(false);
-    });
+      if (user) {
+        router.replace(homeRoute());
+        return;
+      }
+      setChecking(false);
+      // The app was closed while the learner confirmed in Telegram: take them back to finish it.
+      if (await pendingTelegramAttempt()) router.push('/auth');
+    })();
     return () => {
       active = false;
     };
@@ -62,12 +69,7 @@ export function WelcomeScreen() {
     <View style={styles.root}>
       <StatusBar style="light" />
       <Image source={BACKGROUND} contentFit="cover" contentPosition="center" style={StyleSheet.absoluteFill} />
-      <LinearGradient
-        colors={OVERLAY_COLORS}
-        locations={OVERLAY_LOCATIONS}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+      <LinearGradient colors={OVERLAY_COLORS} locations={OVERLAY_LOCATIONS} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
       <View
         style={[
@@ -90,35 +92,13 @@ export function WelcomeScreen() {
             {'\n'}
             {t('welcome.line3')}
           </AppText>
-          <AppText variant="body" color="rgba(255,255,255,0.75)" style={styles.description}>
+          <AppText variant="body" color="rgba(255,255,255,0.78)" style={styles.description}>
             {t('welcome.description')}
           </AppText>
         </Animated.View>
 
         <Animated.View entering={FadeIn.duration(500).delay(150)} style={styles.actions}>
-          <PressableScale
-            accessibilityRole="button"
-            accessibilityLabel={t('welcome.start')}
-            onPress={() => {
-              haptics.light();
-              goToAuth();
-            }}
-            style={styles.startButton}
-          >
-            <LinearGradient
-              colors={['#4FC0F5', '#229ED9']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.startButtonFill}
-            >
-              <AppText variant="button" color="#FFFFFF">
-                {t('welcome.start')}
-              </AppText>
-              <AppText variant="button" color="#FFFFFF">
-                {' →'}
-              </AppText>
-            </LinearGradient>
-          </PressableScale>
+          <Button title={t('welcome.start')} icon="arrow-forward" iconPosition="right" onPress={goToAuth} />
 
           <PressableScale
             accessibilityRole="button"
@@ -161,18 +141,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.lg,
-  },
-  startButton: {
-    height: 58,
-    borderRadius: radii.pill,
-    overflow: 'hidden',
-  },
-  startButtonFill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
   },
   secondaryAction: {
     alignItems: 'center',

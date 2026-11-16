@@ -1,4 +1,4 @@
-import { useRef, type Ref } from 'react';
+import { useRef, useState, type Ref } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -112,6 +112,7 @@ interface BoxProps {
 function Box({ ref, flex, themed, ...rest }: BoxProps) {
   const styles = useThemedStyles(createStyles);
   const home = usePalette();
+  const [focused, setFocused] = useState(false);
   return (
     <TextInput
       ref={ref}
@@ -120,7 +121,9 @@ function Box({ ref, flex, themed, ...rest }: BoxProps) {
       placeholderTextColor={home.textMuted}
       selectionColor={colors.primary}
       accessibilityLabel={rest.placeholder}
-      style={[styles.box, themed && [styles.boxThemed, { borderColor: home.rim, backgroundColor: home.track, color: home.text }], { flex }]}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[styles.box, themed && styles.boxThemed, focused && styles.boxFocused, { flex }]}
     />
   );
 }
@@ -128,17 +131,21 @@ function Box({ ref, flex, themed, ...rest }: BoxProps) {
 const createStyles = (home: Palette) => StyleSheet.create({
   wrap: { gap: spacing.lg, alignItems: 'center' },
   row: { flexDirection: 'row', gap: spacing.md, alignSelf: 'stretch' },
+  // The app's input look: a rim over a heavier bottom edge; the box being typed in turns blue.
   box: {
     ...typography.title,
     height: 72,
     textAlign: 'center',
     borderRadius: radii.lg,
     borderWidth: 2,
+    borderBottomWidth: 5,
     borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
     backgroundColor: home.panel,
     color: home.text,
   },
-  boxThemed: { height: 64, borderBottomWidth: 4 },
+  boxThemed: { height: 64, borderBottomWidth: 4, backgroundColor: home.track },
+  boxFocused: { borderColor: colors.primary, borderBottomColor: '#1A84BF' },
   pill: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radii.pill },
   pillOk: { backgroundColor: home.primarySoft },
   pillError: { backgroundColor: home.dangerFill },

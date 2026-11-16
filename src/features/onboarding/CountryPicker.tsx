@@ -6,7 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useT } from '@/i18n';
 import { haptics } from '@/services/haptics';
 import { useSettingsStore } from '@/store/settingsStore';
-import { colors, radii, shadows, spacing, typography } from '@/theme';
+import { colors, radii, spacing, typography } from '@/theme';
 import type { CountryCode } from '@/types';
 
 import { COUNTRIES, POPULAR_IDS, findCountry, normalize, type Country } from './countries';
@@ -22,6 +22,7 @@ type Item =
   | { kind: 'country'; key: string; country: Country };
 
 const ROW_HEIGHT = 64;
+const SELECTED_EDGE = '#1A84BF';
 
 export function CountryPicker({ value, onChange }: CountryPickerProps) {
   const home = usePalette();
@@ -182,17 +183,19 @@ const CountryRow = memo(function CountryRow({ country, name, selected, onSelect 
 
 const createStyles = (home: Palette) => StyleSheet.create({
   root: { flex: 1, gap: spacing.md },
+  // The app's input look: a rim with a heavier bottom edge, no soft shadow.
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    height: 54,
+    height: 56,
     paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
+    borderRadius: radii.md,
     backgroundColor: home.panel,
     borderWidth: 2,
+    borderBottomWidth: 4,
     borderColor: home.rim,
-    ...shadows.card,
+    borderBottomColor: home.rimBottom,
   },
   searchInput: { ...typography.body, flex: 1, paddingVertical: 0, color: home.text },
   chosen: {
@@ -201,9 +204,11 @@ const createStyles = (home: Palette) => StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.lg,
-    backgroundColor: home.primaryTint,
+    backgroundColor: home.selected,
     borderWidth: 2,
+    borderBottomWidth: 4,
     borderColor: colors.primary,
+    borderBottomColor: SELECTED_EDGE,
   },
   chosenFlag: { fontSize: 32, lineHeight: 40 },
   chosenTexts: { flex: 1 },
@@ -216,7 +221,7 @@ const createStyles = (home: Palette) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primary,
   },
-  list: { paddingBottom: spacing.xl, gap: spacing.xs },
+  list: { paddingBottom: spacing.xl, gap: spacing.sm },
   header: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xs,
@@ -232,11 +237,14 @@ const createStyles = (home: Palette) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radii.md,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderBottomWidth: 4,
+    borderColor: home.rim,
+    borderBottomColor: home.rimBottom,
     backgroundColor: home.panel,
   },
-  rowSelected: { borderColor: colors.primary, backgroundColor: home.primaryTint },
-  rowPressed: { backgroundColor: home.primarySoft },
+  rowSelected: { borderColor: colors.primary, borderBottomColor: SELECTED_EDGE, backgroundColor: home.selected },
+  // Pressed rows sink onto their edge, like the app's 3D buttons.
+  rowPressed: { borderBottomWidth: 2, transform: [{ translateY: 2 }], backgroundColor: home.primaryTint },
   flagWrap: {
     width: 42,
     height: 42,
