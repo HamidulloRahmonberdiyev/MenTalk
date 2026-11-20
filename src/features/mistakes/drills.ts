@@ -1,9 +1,13 @@
 import type { ApiNotebookMistake, MistakeExercise } from '@/services/api/endpoints';
 
+import { normalizeToken, sameSentence, tokensOf, wrongWords } from './diff';
+
 /**
- * Drills built on the device from a stored correction: no AI, no tokens, works for any language
- * that separates words with spaces. Three steps from recognising the fix to producing it:
+ * A practice round built on the device from stored corrections: no AI, no tokens, works for any
+ * language that separates words with spaces. A mistake not learned yet is first explained, then
+ * tested; the tests go from recognising the fix to producing it:
  *
+ * - lesson: what was said, what is right, what changed and why; nothing to answer;
  * - choice: which of the two sentences is right;
  * - spot: tap the word that is wrong in what was said;
  * - build: put the right sentence together from its words, with the wrong ones mixed in.
@@ -11,69 +15,28 @@ import type { ApiNotebookMistake, MistakeExercise } from '@/services/api/endpoin
 
 export type Rng = () => number;
 
-interface DrillBase {
+interface StepBase {
   /** Unique within a round, as the same mistake can come back once more after a miss. */
   id: string;
   mistake: ApiNotebookMistake;
 }
 
 export type Drill =
-  | (DrillBase & { kind: 'choice'; options: string[] })
-  | (DrillBase & { kind: 'spot'; tokens: string[]; wrong: number[] })
-  | (DrillBase & { kind: 'build'; bank: string[] });
+  | (StepBase & { kind: 'choice'; options: string[] })
+  | (StepBase & { kind: 'spot'; tokens: string[]; wrong: number[] })
+  | (StepBase & { kind: 'build'; bank: string[] });
 
-export interface Segment {
-  text: string;
-  changed: boolean;
-}
+export type Lesson = StepBase & { kind: 'lesson' };
 
-/** Words as written, punctuation attached. */
-export const tokensOf = (text: string): string[] => text.trim().split(/\s+/u).filter(Boolean);
+export type Step = Lesson | Drill;
 
-/** What two words are compared on: case and punctuation around them do not count. */
-export const normalizeToken = (token: string): string => token.toLocaleLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+export const isDrill = (step: Step): step is Drill => step.kind !== 'lesson';
 
-export const sameSentence = (a: string, b: string): boolean => tokensOf(a).map(normalizeToken).filter(Boolean).join(' ') === tokensOf(b).map(normalizeToken).filter(Boolean).join(' ');
-
-/** Indexes of the words each side shares with the other, by longest common subsequence. */
-function common(a: string[], b: string[]): { a: Set<number>; b: Set<number> } {
-  const x = a.map(normalizeToken);
-  const y = b.map(normalizeToken);
-  const table = Array.from({ length: x.length + 1 }, () => new Array<number>(y.length + 1).fill(0));
-  for (let i = x.length - 1; i >= 0; i -= 1) {
-    for (let j = y.length - 1; j >= 0; j -= 1) {
-      table[i][j] = x[i] === y[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
-    }
-  }
-  const keptA = new Set<number>();
-  const keptB = new Set<number>();
-  for (let i = 0, j = 0; i < x.length && j < y.length; ) {
-    if (x[i] === y[j]) {
-      keptA.add(i);
-      keptB.add(j);
-      i += 1;
-      j += 1;
-    } else if (table[i + 1][j] >= table[i][j + 1]) i += 1;
-    else j += 1;
-  }
-  return { a: keptA, b: keptB };
-}
-
-/** Both sentences split into words, each marked if the correction changed it: what to highlight. */
-export function diffSegments(said: string, correct: string): { said: Segment[]; correct: Segment[] } {
-  const a = tokensOf(said);
-  const b = tokensOf(correct);
-  const kept = common(a, b);
-  return {
-    said: a.map((text, index) => ({ text, changed: !kept.a.has(index) })),
-    correct: b.map((text, index) => ({ text, changed: !kept.b.has(index) })),
-  };
-}
-
-/** Positions of the words in what was said that the correction replaced or dropped. */
-export function wrongWords(said: string, correct: string): number[] {
-  return diffSegments(said, correct).said.flatMap((segment, index) => (segment.changed ? [index] : []));
-}
+/**
+ * How many other steps come between a lesson and its test: answering straight after reading is
+ * copying, a step in between makes it recall.
+ */
+const LESSON_GAP = 1;
 
 function shuffle<T>(items: readonly T[], rng: Rng): T[] {
   const copy = [...items];
@@ -129,8 +92,37 @@ export function drillFor(mistake: ApiNotebookMistake, kind: MistakeExercise, rng
   return { id, mistake, kind: 'choice', options: shuffle([mistake.correct, mistake.said], rng) };
 }
 
-export function buildRound(mistakes: ApiNotebookMistake[], rng: Rng = Math.random): Drill[] {
-  return mistakes.map((mistake) => drillFor(mistake, kindFor(mistake), rng));
+/**
+ * A mistake never answered right (new, or forgotten: a lapse resets `repetitions`) is explained
+ * before it is tested. Testing first would only show the learner options they cannot yet tell apart.
+ */
+export const needsLesson = (mistake: ApiNotebookMistake): boolean => mistake.repetitions === 0;
+
+/**
+ * The first test after a lesson: the lesson already put both sentences side by side, so telling
+ * them apart again teaches little; finding the wrong word in their own sentence does.
+ */
+const kindAfterLesson = (mistake: ApiNotebookMistake): MistakeExercise => (canSpot(mistake) ? 'spot' : 'choice');
+
+/**
+ * The round in the order given (due first), each lesson's test held back until `LESSON_GAP` other
+ * steps have passed: lesson A, review B, test A, … Tests still held when the round runs out come last.
+ */
+export function buildRound(mistakes: ApiNotebookMistake[], rng: Rng = Math.random): Step[] {
+  const steps: Step[] = [];
+  const held: { drill: Drill; after: number }[] = [];
+
+  for (const mistake of mistakes) {
+    if (needsLesson(mistake)) {
+      steps.push({ id: `${mistake.id}:lesson`, mistake, kind: 'lesson' });
+      held.push({ drill: drillFor(mistake, kindAfterLesson(mistake), rng), after: steps.length });
+    } else {
+      steps.push(drillFor(mistake, kindFor(mistake), rng));
+    }
+    while (held.length > 0 && steps.length - held[0].after >= LESSON_GAP) steps.push(held.shift()!.drill);
+  }
+
+  return [...steps, ...held.map(({ drill }) => drill)];
 }
 
 /** `given`: the option picked, the index of the word tapped, or the sentence built. */

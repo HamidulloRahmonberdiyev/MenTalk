@@ -31,7 +31,7 @@ export interface EndpointConfig {
   silenceAfterLongMs: number;
   /** Give up if nothing is said for this long. */
   noSpeechMs: number;
-  /** Hard cap on a single turn. */
+  /** Hard cap on the speech of a single turn, counted from when it began. */
   maxTurnMs: number;
   /** dBFS: never treat anything quieter than this as speech. */
   minStartDb: number;
@@ -75,6 +75,8 @@ export class SpeechEndpointDetector {
   private silentMs = 0;
   private missing = 0;
   private startedAt: number | null = null;
+  /** When the speech that made this a turn began. */
+  private speechAt: number | null = null;
   private spoke = false;
 
   constructor(config: Partial<EndpointConfig> = {}) {
@@ -100,7 +102,7 @@ export class SpeechEndpointDetector {
     if (db === undefined || !Number.isFinite(db)) {
       this.missing += 1;
       if (this.missing >= config.missingReadingsLimit) return 'unsupported';
-      return this.limits(elapsed);
+      return this.limits(elapsed, now);
     }
     this.missing = 0;
 
@@ -116,7 +118,10 @@ export class SpeechEndpointDetector {
       this.totalSpeechMs += config.tickMs;
       this.speechLevel =
         this.speechLevel <= -150 ? this.smoothed : this.speechLevel + (this.smoothed - this.speechLevel) * SPEECH_LEVEL_SMOOTHING;
-      if (this.voicedMs >= config.minSpeechMs) this.spoke = true;
+      if (this.voicedMs >= config.minSpeechMs && !this.spoke) {
+        this.spoke = true;
+        this.speechAt = now - this.voicedMs;
+      }
     } else {
       // Brief dips inside a word do not reset the onset counter, they only drain it.
       this.voicedMs = Math.max(0, this.voicedMs - config.tickMs / 2);
@@ -127,13 +132,13 @@ export class SpeechEndpointDetector {
     }
 
     if (this.spoke && this.silentMs >= this.silenceNeeded()) return 'end';
-    return this.limits(elapsed);
+    return this.limits(elapsed, now);
   }
 
-  private limits(elapsed: number): EndpointDecision {
-    if (elapsed >= this.config.maxTurnMs) return this.spoke ? 'end' : 'noSpeech';
-    if (!this.spoke && elapsed >= this.config.noSpeechMs) return 'noSpeech';
-    return 'continue';
+  /** Waiting for speech and the length of speech are capped separately, so a slow start costs no speaking time. */
+  private limits(elapsed: number, now: number): EndpointDecision {
+    if (!this.spoke) return elapsed >= this.config.noSpeechMs ? 'noSpeech' : 'continue';
+    return now - (this.speechAt ?? now) >= this.config.maxTurnMs ? 'end' : 'continue';
   }
 
   /** Level below which the speaker counts as paused: relative to their own voice, but above the room's noise. */

@@ -37,11 +37,14 @@ export interface AiMessage {
   text: string;
   /** Emotion the backend attached to the line, if any. */
   emotion?: TutorEmotion;
-  /** Synthesized speech for the line. When absent, the UI reads `text` with the device voice. */
+  /**
+   * Synthesized speech for the line. A conversation keeps one voice (see `useTutorVoice`): without
+   * recordings it is the device's, and in a recorded one a line that lacks its recording goes unsaid.
+   */
   audioUri?: string;
   /** The line is still arriving word by word: show it, but do not say it yet. */
   streaming?: boolean;
-  /** The text is final and its recording is on the way; the voice waits a moment for it. */
+  /** The text is final and its recording is on the way; the line is said once it comes. */
   audioPending?: boolean;
   /**
    * The recording in pieces, in order, as they arrive: the first sentence is ready long before the
@@ -50,7 +53,7 @@ export interface AiMessage {
   clips?: VoiceClip[];
 }
 
-/** One piece of a line's recording; `uri` null when it failed, so the device voice reads `text`. */
+/** One piece of a line's recording; `uri` null when it could not be made. */
 export interface VoiceClip {
   uri: string | null;
   text: string;

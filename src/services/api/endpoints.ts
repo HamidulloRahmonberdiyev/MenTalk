@@ -11,6 +11,8 @@ export interface ApiUser {
   email: string | null;
   /** Missing on servers that predate Telegram sign-in. */
   telegram_username?: string | null;
+  /** E.164, verified by Telegram at the last sign-in; null for a Google account, missing on older servers. */
+  phone?: string | null;
   avatar_url: string | null;
   avatar_custom: boolean;
   gender: 'male' | 'female' | null;
@@ -334,6 +336,8 @@ export interface ApiNotebookMistake {
   last_seen_at: string;
   last_reviewed_at: string | null;
   conversation_id: string | null;
+  /** The topic of the chat it was last made in; null once that chat is deleted, missing on older servers. */
+  scenario_id?: string | null;
 }
 
 export interface ApiMistakeSummary {

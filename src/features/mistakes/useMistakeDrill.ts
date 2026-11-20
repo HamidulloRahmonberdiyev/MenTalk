@@ -5,7 +5,7 @@ import type { StudyLanguage } from '@/services/learning';
 
 import { PERFECT_BONUS, xpForAnswer } from '../vocabulary/progress';
 import { useVocabularyStore, visibleStreak } from '../vocabulary/vocabularyStore';
-import { buildRound, drillFor, isRight, retryKind, type Drill } from './drills';
+import { buildRound, drillFor, isDrill, isRight, retryKind, type Step } from './drills';
 import { flushMistakeAnswers, refreshMistakeSummary, useMistakesStore } from './mistakesStore';
 
 const ROUND_SIZE = 10;
@@ -26,14 +26,15 @@ export interface DrillSummary {
 type Load = { state: 'loading' } | { state: 'failed' } | { state: 'empty' } | { state: 'ready' };
 
 /**
- * One drill round over the learner's own mistakes. As in the word game, only a mistake's first
- * answer counts for its schedule, the XP and the accuracy; a miss comes back once at the end in
- * another form. Answers are queued on the device first, so a round finished offline is not lost.
+ * One round over the learner's own mistakes: lessons for the ones not learned yet, drills for all.
+ * As in the word game, only a mistake's first answer counts for its schedule, the XP and the
+ * accuracy; a miss comes back once at the end in another form. A lesson is read, not answered.
+ * Answers are queued on the device first, so a round finished offline is not lost.
  */
 export function useMistakeDrill(language: StudyLanguage) {
   const [load, setLoad] = useState<Load>({ state: 'loading' });
   const [attempt, setAttempt] = useState(0);
-  const [queue, setQueue] = useState<Drill[]>([]);
+  const [queue, setQueue] = useState<Step[]>([]);
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<DrillAnswer | null>(null);
   const [combo, setCombo] = useState(0);
@@ -69,7 +70,8 @@ export function useMistakeDrill(language: StudyLanguage) {
     setAttempt((value) => value + 1);
   }, []);
 
-  const drill: Drill | undefined = queue[index];
+  const step: Step | undefined = queue[index];
+  const drill = step && isDrill(step) ? step : undefined;
   const total = new Set(queue.map((item) => item.mistake.id)).size;
 
   const submit = useCallback(
@@ -124,7 +126,7 @@ export function useMistakeDrill(language: StudyLanguage) {
   return {
     load,
     retry,
-    drill,
+    step,
     index,
     answer,
     combo,

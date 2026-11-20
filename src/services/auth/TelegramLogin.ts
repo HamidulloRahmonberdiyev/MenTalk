@@ -9,7 +9,7 @@ import { SignInCancelled } from './GoogleIdTokenProvider';
 /**
  * Sign-in through the @mentalk_auth_bot Telegram bot:
  * 1. the server opens an attempt and returns a deep link into the bot plus a secret;
- * 2. the person taps "Start" and then "Confirm" in Telegram;
+ * 2. the person taps "Start" and then shares their phone number with the bot's button;
  * 3. the app, polling with the secret, receives its session token once.
  * The attempt is kept in secure storage, so a phone that kills the app while Telegram is in front
  * can pick it up again on the next launch.
@@ -25,7 +25,7 @@ export interface TelegramAttempt {
   pollMs: number;
 }
 
-/** `waiting`: nothing heard from Telegram yet. `opened`: the bot is showing the confirmation. */
+/** `waiting`: nothing heard from Telegram yet. `opened`: the bot is asking for the phone number. */
 export type TelegramPhase = 'waiting' | 'opened';
 
 export class TelegramDeclined extends Error {

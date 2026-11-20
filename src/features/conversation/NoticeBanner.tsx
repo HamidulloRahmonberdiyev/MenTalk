@@ -7,20 +7,30 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '@/components/ui/AppText';
 import { PressableScale } from '@/components/ui/PressableScale';
 import { useT } from '@/i18n';
-import type { NoticeCode } from '@/services/conversation';
 import { colors, radii, shadows, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
+import type { IconName } from '@/types';
+
+import type { ScreenNotice } from './useConversation';
+
+/** Information keeps a calm icon; anything else is a problem. */
+const INFO_ICONS: Partial<Record<ScreenNotice, IconName>> = {
+  slow: 'time-outline',
+  voiceMissing: 'volume-mute-outline',
+  handsFreeOn: 'infinite',
+  handsFreeOff: 'hand-left-outline',
+};
 
 const VISIBLE_MS = 4500;
 /** Clears the conversation header. */
 const HEADER_HEIGHT = 56;
 
 interface NoticeBannerProps {
-  notice: { code: NoticeCode; id: number } | null;
+  notice: { code: ScreenNotice; id: number } | null;
   onDismiss: () => void;
 }
 
-/** Short, self-dismissing message for a turn that failed while the conversation carries on. */
+/** Short, self-dismissing message: a turn that failed while the conversation carries on, or a change the learner made. */
 export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
@@ -38,8 +48,8 @@ export function NoticeBanner({ notice, onDismiss }: NoticeBannerProps) {
   return (
     <Animated.View entering={FadeInUp.duration(220)} exiting={FadeOutUp.duration(160)} style={[styles.wrap, { top: insets.top + HEADER_HEIGHT }]}>
       <PressableScale accessibilityRole="alert" onPress={onDismiss} style={styles.banner}>
-        {notice.code === 'slow' ? (
-          <Ionicons name="time-outline" size={20} color={home.textMuted} />
+        {INFO_ICONS[notice.code] ? (
+          <Ionicons name={INFO_ICONS[notice.code]} size={20} color={home.textMuted} />
         ) : (
           <Ionicons name="alert-circle" size={20} color={colors.danger} />
         )}

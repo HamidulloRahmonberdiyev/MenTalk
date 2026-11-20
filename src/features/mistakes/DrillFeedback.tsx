@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,17 +12,25 @@ import { usePalette } from '@/theme/appearance';
 import { enter } from '@/theme/motion';
 
 import type { Drill } from './drills';
+import { MistakeExplanation } from './MistakeExplanation';
 import { SentenceDiff } from './SentenceDiff';
 import type { DrillAnswer } from './useMistakeDrill';
 
-/** After every answer: the right sentence with the fix picked out, and the tutor's note on why. */
+/** The explanation may be long; past this share of the screen it scrolls, the button stays put. */
+const MAX_BODY_SHARE = 0.42;
+
+/**
+ * After every answer, right or wrong: the right sentence with the fix picked out, what exactly
+ * changed, and why. A right answer is reinforced, a wrong one is never left as just "wrong".
+ */
 export function DrillFeedback({ drill, answer, onContinue }: { drill: Drill; answer: DrillAnswer; onContinue: () => void }) {
   const t = useT();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const home = usePalette();
   const good = answer.correct;
   const tone = good ? { bg: home.successFill, fg: home.successInk, accent: colors.success } : { bg: home.dangerFill, fg: home.dangerInk, accent: colors.danger };
-  const { said, correct, note } = drill.mistake;
+  const { said, correct } = drill.mistake;
 
   return (
     <Animated.View
@@ -32,18 +40,16 @@ export function DrillFeedback({ drill, answer, onContinue }: { drill: Drill; ans
     >
       <View style={styles.row}>
         <Ionicons name={good ? 'checkmark-circle' : 'close-circle'} size={30} color={tone.accent} />
-        <View style={styles.texts}>
-          <AppText variant="heading" color={tone.fg}>
-            {good ? t('practice.correct') : t('practice.wrong')}
-          </AppText>
-          <SentenceDiff said={said} correct={correct} side="correct" variant="subheading" />
-          {note ? (
-            <AppText variant="caption" color={tone.fg}>
-              {note}
-            </AppText>
-          ) : null}
-        </View>
+        <AppText variant="heading" color={tone.fg} style={styles.flex}>
+          {good ? t('practice.correct') : t('practice.wrong')}
+        </AppText>
       </View>
+
+      <ScrollView style={{ maxHeight: height * MAX_BODY_SHARE }} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <SentenceDiff said={said} correct={correct} side="correct" variant="subheading" />
+        <MistakeExplanation mistake={drill.mistake} mode="brief" />
+      </ScrollView>
+
       <PressableScale
         accessibilityRole="button"
         accessibilityLabel={t('practice.continue')}
@@ -63,13 +69,14 @@ export function DrillFeedback({ drill, answer, onContinue }: { drill: Drill; ans
 
 const styles = StyleSheet.create({
   bar: {
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
   },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  texts: { flex: 1, gap: spacing.xs },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  flex: { flex: 1 },
+  body: { gap: spacing.md },
   button: { height: 54, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
 });

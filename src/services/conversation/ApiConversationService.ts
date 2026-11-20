@@ -257,12 +257,16 @@ class ApiSession implements ConversationSession {
       }
     };
 
-    await endpoints.streamTurn(this.requireId(), { ...body, clips: true }, onEvent, signal);
+    try {
+      await endpoints.streamTurn(this.requireId(), { ...body, clips: true }, onEvent, signal);
+    } finally {
+      // However the stream ended (done, cut short, failed after the reply), no more voice will come for
+      // this line: say so, so the player stops waiting for it now instead of after a timeout.
+      const last = message as AiMessage | null;
+      if (!this.isStale(id) && last?.audioPending) show({ ...last, audioPending: false });
+    }
     if (this.isStale(id)) return;
     if (!final) throw new StreamFailed('turnFailed');
-    // The stream ended with the voice missing or cut short: stop waiting, so the device voice reads what is left now.
-    const last = message as AiMessage | null;
-    if (last?.audioPending) show({ ...last, audioPending: false });
   }
 
   private publish(id: number, turn: ApiTurn): void {

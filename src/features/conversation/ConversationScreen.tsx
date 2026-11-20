@@ -20,12 +20,12 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useResultStore } from '@/store/resultStore';
 import { useUserStore } from '@/store/userStore';
 import { colors, spacing } from '@/theme';
-import type { Scenario } from '@/types';
+import type { Scenario, VoiceState } from '@/types';
 
 import { ActionButton } from './ActionButton';
 import { AiMessageBubble } from './AiMessageBubble';
 import { ConversationBackdrop } from './ConversationBackdrop';
-import { ConversationHeader } from './ConversationHeader';
+import { ConversationHeader, GlassButton } from './ConversationHeader';
 import { toFaceState, pickEmotion } from './emotion';
 import { FloatingAvatar } from './FloatingAvatar';
 import { HintCard } from './HintCard';
@@ -58,6 +58,8 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const language = useSettingsStore((state) => state.language);
   const showTranscript = useSettingsStore((state) => state.showTranscript);
   const toggleTranscript = useSettingsStore((state) => state.toggleTranscript);
+  const handsFree = useSettingsStore((state) => state.handsFree);
+  const toggleHandsFree = useSettingsStore((state) => state.toggleHandsFree);
 
   const setResult = useResultStore((state) => state.setResult);
   const recordConversation = useUserStore((state) => state.recordConversation);
@@ -65,11 +67,29 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const faceSize = Math.min(Math.max(Math.min(height * 0.24, width * 0.52), 130), 220);
   const emotion = pickEmotion(message);
   const lipSync = useLipSync();
-  const tutor = useTutorVoice(message, voiceState, lipSync);
-  // The scripted session may report idle while the speech engine is still talking.
-  const shownState = voiceState === 'idle' && tutor.speaking ? 'speaking' : voiceState;
-  const waving = shownState === 'listening' || shownState === 'speaking';
   const voice = useVoiceTurn(conversation, voiceState);
+  const { listenAfterTutor } = voice;
+  const { showNotice } = conversation;
+
+  /**
+   * Hands-free: when the tutor finishes a line the mic opens by itself, unless the chat is in keyboard
+   * mode or not running. A sheet over the chat holds that turn back until it closes (`owedTurn`).
+   */
+  const handsFreeGate = useRef({ on: false, blocked: false });
+  const owedTurn = useRef(false);
+  const handleLineEnd = useCallback(() => {
+    const gate = handsFreeGate.current;
+    if (!gate.on) return;
+    if (gate.blocked) owedTurn.current = true;
+    else listenAfterTutor();
+  }, [listenAfterTutor]);
+  const handleVoiceMissing = useCallback(() => showNotice('voiceMissing'), [showNotice]);
+  const tutor = useTutorVoice(message, voiceState, lipSync, { onLineEnd: handleLineEnd, onVoiceMissing: handleVoiceMissing });
+  // Listening and thinking come from the session; otherwise what the learner sees is what the voice is
+  // actually doing, not the session's estimate of how long a line takes to say.
+  const shownState: VoiceState =
+    voiceState === 'listening' || voiceState === 'thinking' ? voiceState : tutor.speaking ? 'speaking' : tutor.preparing ? 'thinking' : 'idle';
+  const waving = shownState === 'listening' || shownState === 'speaking';
 
   const navigation = useNavigation();
   /** Set once the screen is allowed to close without asking again (result shown, or the user said No). */
@@ -105,11 +125,32 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
       navigation.addListener('beforeRemove', (event) => {
         if (exitAllowed.current || !hasAnswered()) return;
         event.preventDefault();
+        // Nothing said while the learner decides should reach the tutor.
+        void stopVoice();
         setExitAction(event.data.action);
         setExitPromptOpen(true);
       }),
-    [navigation, hasAnswered],
+    [navigation, hasAnswered, stopVoice],
   );
+
+  const sheetOpen = wordRequest !== null || exitPromptOpen;
+  useEffect(() => {
+    handsFreeGate.current = { on: handsFree && !keyboardMode && status === 'ready' && !finishing, blocked: sheetOpen };
+  });
+  // The sheet is gone and the tutor finished while it was up: the learner's turn now.
+  useEffect(() => {
+    if (sheetOpen || !owedTurn.current) return;
+    owedTurn.current = false;
+    if (handsFreeGate.current.on) listenAfterTutor();
+  }, [sheetOpen, listenAfterTutor]);
+
+  const handleToggleHandsFree = useCallback(() => {
+    const next = !handsFree;
+    toggleHandsFree();
+    showNotice(next ? 'handsFreeOn' : 'handsFreeOff');
+    // Switched on while it is already the learner's turn: no need to wait for the next line.
+    if (next && !keyboardMode && !tutor.speaking && !tutor.preparing) listenAfterTutor();
+  }, [handsFree, toggleHandsFree, showNotice, keyboardMode, tutor.speaking, tutor.preparing, listenAfterTutor]);
 
   const finishFromPrompt = useCallback(async () => {
     if (await completeConversation()) afterExitPrompt.current = 'result';
@@ -138,10 +179,27 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
   const handleWordPress = useCallback(
     (word: string) => {
       haptics.selection();
+      // Looking a word up is not an answer: the mic waits until the sheet is closed.
+      if (voiceState === 'listening') {
+        owedTurn.current = true;
+        void stopVoice();
+      }
       setWordRequest({ word, sentence: sentenceOf(messageText, word) });
     },
-    [messageText],
+    [messageText, voiceState, stopVoice],
   );
+
+  const replayLine = tutor.replay;
+  const handleReplay = useCallback(() => {
+    // The tutor must not be heard by an open mic.
+    void stopVoice();
+    replayLine();
+  }, [stopVoice, replayLine]);
+
+  const leaveKeyboard = useCallback(() => {
+    setKeyboardMode(false);
+    if (handsFree && !tutor.speaking && !tutor.preparing) listenAfterTutor();
+  }, [handsFree, tutor.speaking, tutor.preparing, listenAfterTutor]);
 
   const handleSendText = useCallback(
     (text: string) => {
@@ -164,6 +222,16 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
           onBack={() => router.back()}
           onFinish={status === 'ready' ? handleFinish : undefined}
           finishing={finishing}
+          right={
+            status === 'ready' ? (
+              <GlassButton
+                icon={handsFree ? 'infinite' : 'infinite-outline'}
+                label={t('conversation.handsFree')}
+                active={handsFree}
+                onPress={handleToggleHandsFree}
+              />
+            ) : undefined
+          }
         />
 
         <NoticeBanner notice={conversation.notice} onDismiss={conversation.dismissNotice} />
@@ -186,7 +254,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
                 message={message}
                 speaking={shownState === 'speaking'}
                 thinking={voiceState === 'thinking'}
-                onReplay={tutor.replay}
+                onReplay={handleReplay}
                 onWordPress={handleWordPress}
                 savedWords={savedWords}
                 showTip={!tipSeen}
@@ -200,7 +268,7 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
             {keyboardMode ? (
               <View style={styles.composer}>
                 <TextComposer onSend={handleSendText} disabled={voiceState === 'thinking'} />
-                <PressableScale onPress={() => setKeyboardMode(false)} accessibilityRole="button" hitSlop={8}>
+                <PressableScale onPress={leaveKeyboard} accessibilityRole="button" hitSlop={8}>
                   <AppText variant="captionStrong" color={colors.primary} style={styles.center}>
                     {t('conversation.voiceMode')}
                   </AppText>

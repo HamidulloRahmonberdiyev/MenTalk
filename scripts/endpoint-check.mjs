@@ -13,8 +13,8 @@ function stream(segments, seed = 7) {
   );
 }
 
-function run(name, readings, expect) {
-  const detector = new SpeechEndpointDetector();
+function run(name, readings, expect, config = {}) {
+  const detector = new SpeechEndpointDetector(config);
   let now = 0;
   let result = 'continue';
   for (const db of readings) {
@@ -37,3 +37,7 @@ run('long sentence ends faster after the pause', stream([[400, -58], [6000, -22,
 run('cough does not count as speech', stream([[500, -58], [150, -15], [7600, -58]]), { result: 'noSpeech' });
 run('silence only', stream([[8000, -58]]), { result: 'noSpeech', maxMs: 7100 });
 run('no metering available', Array.from({ length: 60 }, () => undefined), { result: 'unsupported' });
+run('a mic opened by itself waits through a long think', stream([[12000, -58], [2000, -22, 8], [1500, -58]]), { result: 'end', minMs: 14000 }, { noSpeechMs: 15000 });
+run('...and still gives up on silence', stream([[16000, -58]]), { result: 'noSpeech', minMs: 15000, maxMs: 15100 }, { noSpeechMs: 15000 });
+run('a slow start costs no speaking time', stream([[12000, -58], [25000, -22, 8], [1500, -58]]), { result: 'end', minMs: 37000 }, { noSpeechMs: 15000 });
+run('endless speech is cut 30 s after it began', stream([[600, -58], [40000, -22, 8]]), { result: 'end', minMs: 30500, maxMs: 31000 });

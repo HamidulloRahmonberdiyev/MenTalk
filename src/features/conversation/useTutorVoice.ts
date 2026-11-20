@@ -10,20 +10,41 @@ import { stripEmoji } from '@/services/text';
 import { activeTutorTone, useSettingsStore, useStudyLanguage } from '@/store/settingsStore';
 import type { AiMessage, VoiceState } from '@/types';
 
-/** A clip that hasn't started by then (bad URL, slow network) is replaced by the device voice. */
-const AUDIO_START_TIMEOUT_MS = 6_000;
 const PLAYABLE_URI = /^(https?|file):\/\//i;
+/** A recording that has not started by then (stalled download, bad file) is tried once more. */
+const AUDIO_START_TIMEOUT_MS = 8_000;
 /**
- * The text of a line can arrive before its recording. Waiting this long for the recording keeps the
- * tutor's real voice in most turns; past it, the device voice reads the line so the learner never waits.
+ * The longest wait for a voice the server said is on its way. It normally comes within seconds, and
+ * the session stops waiting when the turn's stream ends; this only guards against a stream that hangs.
  */
-const AUDIO_GRACE_MS = 2_500;
+const AUDIO_WAIT_MS = 20_000;
+/** Device speech that never reports its end (some engines, a missing language) is called finished after its expected length plus this. */
+const DEVICE_SPEECH_SLACK_MS = 5_000;
+/** Well above real speech (~65 ms a character), so a slow voice is never cut off. */
+const DEVICE_MS_PER_CHAR = 120;
+
+/**
+ * Which voice this conversation speaks with. The tutor is one person, so a conversation keeps the
+ * voice its first line was said in: the server's when it came, otherwise the device's. A line whose
+ * server voice is missing later is left unsaid (its text is on screen) rather than read by a stranger.
+ */
+type VoiceSource = 'server' | 'device';
+
+/** What the tutor is doing: waiting for the voice of a line that has arrived, or saying it. */
+type Phase = 'quiet' | 'preparing' | 'speaking';
 
 /** The line being said piece by piece: the piece to play next, and whether it has not arrived yet. */
 interface ClipQueue {
   id: string;
   index: number;
   waiting: boolean;
+}
+
+export interface TutorVoiceOptions {
+  /** The tutor said a whole line to its end (it was not cut off): the learner's turn. */
+  onLineEnd?: () => void;
+  /** A line, or the rest of one, had no voice and was left unsaid. */
+  onVoiceMissing?: () => void;
 }
 
 /** Loudness 0..1 of a block of PCM frames, on a perceptual (dB) scale. */
@@ -44,6 +65,8 @@ function textAfter(line: AiMessage, count: number): string {
   return end < 0 ? '' : line.text.slice(end + said.text.length).trim();
 }
 
+const hasServerVoice = (line: AiMessage) => Boolean(line.clips?.length) || Boolean(line.audioUri && PLAYABLE_URI.test(line.audioUri));
+
 /**
  * Sampling the playback is how the lips follow the real voice. Android only allows it with the
  * microphone permission, which the app asks for anyway; without it the lips follow the text timing.
@@ -62,163 +85,224 @@ async function enableSampling(player: AudioPlayer): Promise<void> {
 }
 
 /**
- * Plays the tutor's lines aloud: the synthesized audio that came with the message (whole, or in
- * pieces played back to back as they arrive), or, when there is none (mock backend, TTS failure), the
- * device's text-to-speech in the studied language, pitched and paced for the tutor's tone and the
- * line's emotion. `lipSync` is fed the spoken text, word boundaries, playback position and loudness
- * so the face moves with the voice.
+ * Says the tutor's lines aloud: the recording that came with the line (whole, or in pieces played back
+ * to back as they arrive), or the device's text-to-speech in a conversation that has no recordings
+ * (mock backend, speech turned off). `lipSync` is fed the spoken text, word boundaries, playback
+ * position and loudness so the face moves with the voice.
+ *
+ * Every callback of a player or an utterance is tied to the `generation` it was started in; `stop()`
+ * starts a new one, so a voice that was cut off can never end, or restart, a newer line.
  */
-export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState, lipSync: LipSync) {
+export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState, lipSync: LipSync, options: TutorVoiceOptions = {}) {
   const { speechTag } = useStudyLanguage();
-  const [speaking, setSpeaking] = useState(false);
-  const talking = useRef(false);
-  const spokenId = useRef<string | null>(null);
+  const [phase, setPhaseState] = useState<Phase>('quiet');
+  const phaseRef = useRef<Phase>('quiet');
+  const source = useRef<VoiceSource | null>(null);
+  const generation = useRef(0);
   const player = useRef<AudioPlayer | null>(null);
   const startTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const graceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const waitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queue = useRef<ClipQueue | null>(null);
+  /** The last line dealt with: said, being said whole, or dropped because the learner took the floor. */
+  const handled = useRef<string | null>(null);
+  /** The line whose voice is awaited before it is said. */
+  const awaiting = useRef<string | null>(null);
   // Pieces arrive as new versions of the same message; the queue always reads the newest one.
   const latest = useRef<AiMessage | null>(message);
+  const callbacks = useRef(options);
   const playClipRef = useRef<(index: number) => void>(() => undefined);
 
   useEffect(() => {
     latest.current = message;
   }, [message]);
 
+  useEffect(() => {
+    callbacks.current = options;
+  });
+
   // Only real changes reach React: stopping a tutor who is already quiet re-renders nothing.
-  const setTalking = useCallback((value: boolean) => {
-    if (talking.current === value) return;
-    talking.current = value;
-    setSpeaking(value);
+  const setPhase = useCallback((next: Phase) => {
+    if (phaseRef.current === next) return;
+    phaseRef.current = next;
+    setPhaseState(next);
   }, []);
 
-  const clearStartTimer = useCallback(() => {
-    if (startTimer.current) clearTimeout(startTimer.current);
-    startTimer.current = null;
-  }, []);
-
-  const clearGraceTimer = useCallback(() => {
-    if (graceTimer.current) clearTimeout(graceTimer.current);
-    graceTimer.current = null;
+  const clearWaitTimer = useCallback(() => {
+    if (waitTimer.current) clearTimeout(waitTimer.current);
+    waitTimer.current = null;
   }, []);
 
   const disposePlayer = useCallback(() => {
-    clearStartTimer();
+    if (startTimer.current) clearTimeout(startTimer.current);
+    startTimer.current = null;
     if (player.current) {
       player.current.pause();
       player.current.remove();
       player.current = null;
     }
-  }, [clearStartTimer]);
+  }, []);
 
+  /** Silences the tutor at once. Nothing that was playing reports back afterwards. */
   const stop = useCallback(() => {
+    generation.current += 1;
     queue.current = null;
-    clearGraceTimer();
+    awaiting.current = null;
+    clearWaitTimer();
     Speech.stop();
     lipSync.stop();
     disposePlayer();
-    setTalking(false);
-  }, [lipSync, clearGraceTimer, disposePlayer, setTalking]);
+    setPhase('quiet');
+  }, [lipSync, clearWaitTimer, disposePlayer, setPhase]);
 
-  /** Reads `line.text` with the device voice; `then` runs once it has been said in full. */
+  /** The line has been said to its end. */
+  const finishLine = useCallback(() => {
+    queue.current = null;
+    clearWaitTimer();
+    lipSync.stop();
+    setPhase('quiet');
+    callbacks.current.onLineEnd?.();
+  }, [lipSync, clearWaitTimer, setPhase]);
+
+  /** Reads `text` with the device voice; `then` runs once it has been said (or could not be). */
   const speakWithDevice = useCallback(
-    async (line: AiMessage, then?: () => void) => {
-      const spoken = stripEmoji(line.text);
+    async (line: AiMessage, text: string, then: () => void) => {
+      const gen = generation.current;
+      const spoken = stripEmoji(text).trim();
+      if (!spoken) return then();
       const voice = await getDeviceVoiceId(speechTag);
+      if (gen !== generation.current) return;
       // Read at speaking time, so a tone picked mid-chat is heard on the next line.
       const { pitch, rate } = voiceStyleFor(activeTutorTone(useSettingsStore.getState()), line.emotion);
-      lipSync.load(spoken, rate);
-      const finish = () => {
-        lipSync.stop();
-        setTalking(false);
-      };
+      const current = () => gen === generation.current;
+      let settled = false;
       const done = () => {
+        if (settled || !current()) return;
+        settled = true;
+        clearTimeout(watchdog);
         lipSync.stop();
-        if (then) then();
-        else setTalking(false);
+        then();
       };
+      // Silenced first, so the microphone that may open next never hears the end of it.
+      const watchdog = setTimeout(() => {
+        Speech.stop();
+        done();
+      }, (spoken.length * DEVICE_MS_PER_CHAR) / rate + DEVICE_SPEECH_SLACK_MS);
+      lipSync.load(spoken, rate);
       Speech.speak(spoken, {
         language: speechTag,
         voice,
         pitch,
         rate,
         onStart: () => {
+          if (!current()) return;
           lipSync.start();
-          setTalking(true);
+          setPhase('speaking');
         },
         // Native: { charIndex, charLength }; web: a SpeechSynthesisEvent with the same fields.
         onBoundary: (event: { charIndex?: number; charLength?: number }) => {
-          if (typeof event?.charIndex === 'number') lipSync.boundary(event.charIndex, event.charLength);
+          if (current() && typeof event?.charIndex === 'number') lipSync.boundary(event.charIndex, event.charLength);
         },
         onDone: done,
         onError: done,
-        // Stopped on purpose (the learner took the floor): nothing more is said.
-        onStopped: finish,
+        // Our own stop() moved the generation on, so this only fires for a stop from elsewhere.
+        onStopped: done,
       });
     },
-    [lipSync, speechTag, setTalking],
+    [lipSync, speechTag, setPhase],
   );
 
-  /**
-   * Plays one recording of `text`. `then` runs when it has played to the end (a piece of a line);
-   * without it, the line is over. A recording that will not play is read by the device voice instead.
-   */
+  /** `text` has no server voice: the device reads it in a device-voiced chat, otherwise it is skipped. */
+  const sayUnvoiced = useCallback(
+    (line: AiMessage, text: string, then: () => void) => {
+      source.current ??= 'device';
+      if (source.current === 'device') {
+        void speakWithDevice(line, text, then);
+        return;
+      }
+      callbacks.current.onVoiceMissing?.();
+      then();
+    },
+    [speakWithDevice],
+  );
+
+  /** Plays one recording of `text`; `then` runs when it has played to the end. */
   const playFile = useCallback(
-    (uri: string, text: string, line: AiMessage, then?: () => void) => {
-      try {
-        const next = createAudioPlayer({ uri });
+    (uri: string, text: string, line: AiMessage, then: () => void) => {
+      const gen = generation.current;
+
+      const attempt = (retried: boolean) => {
+        let next: AudioPlayer;
+        try {
+          next = createAudioPlayer({ uri });
+        } catch {
+          sayUnvoiced(line, text, then);
+          return;
+        }
         player.current = next;
         lipSync.load(stripEmoji(text));
         let started = false;
-        const fallBack = (reason: string) => {
-          if (started || player.current !== next) return;
-          if (__DEV__) console.warn(`Tutor audio failed (${reason}):`, uri);
-          disposePlayer();
+        let settled = false;
+        const mine = () => gen === generation.current && player.current === next;
+
+        const end = () => {
+          if (settled || !mine()) return;
+          settled = true;
           lipSync.stop();
-          void speakWithDevice({ ...line, text }, then);
+          disposePlayer();
+          then();
         };
-        startTimer.current = setTimeout(() => fallBack('timeout'), AUDIO_START_TIMEOUT_MS);
+        const fail = (reason: string) => {
+          if (settled || !mine()) return;
+          // Cut short after it started: what was heard stands, and the line goes on.
+          if (started) return end();
+          settled = true;
+          if (__DEV__) console.warn(`Tutor audio failed (${reason}):`, uri);
+          lipSync.stop();
+          disposePlayer();
+          if (retried) sayUnvoiced(line, text, then);
+          else attempt(true);
+        };
+
+        startTimer.current = setTimeout(() => fail('timeout'), AUDIO_START_TIMEOUT_MS);
         next.addListener('playbackStatusUpdate', (status) => {
-          if (status.error) return fallBack(status.error);
+          if (!mine()) return;
+          if (status.error) return fail(status.error);
           if (status.playing && !started) {
             started = true;
-            clearStartTimer();
+            source.current ??= 'server';
+            if (startTimer.current) clearTimeout(startTimer.current);
+            startTimer.current = null;
             lipSync.start();
-            setTalking(true);
+            setPhase('speaking');
           }
           if (status.duration > 0) lipSync.sync(status.currentTime, status.duration);
-          if (status.didJustFinish) {
-            lipSync.stop();
-            next.remove();
-            if (player.current === next) player.current = null;
-            if (then) then();
-            else setTalking(false);
-          }
+          if (status.didJustFinish) end();
         });
         next.addListener('audioSampleUpdate', (sample) => {
+          if (!mine()) return;
           lipSync.level(loudness(sample));
           if (next.duration > 0) lipSync.sync(sample.timestamp, next.duration);
         });
         void enableSampling(next);
         next.play();
-      } catch {
-        void speakWithDevice({ ...line, text }, then);
-      }
+      };
+
+      attempt(false);
     },
-    [lipSync, speakWithDevice, disposePlayer, clearStartTimer, setTalking],
+    [lipSync, sayUnvoiced, disposePlayer, setPhase],
   );
 
-  const play = useCallback(
-    (line: AiMessage) => {
-      stop();
-      if (!line.audioUri || !PLAYABLE_URI.test(line.audioUri)) {
-        if (__DEV__ && line.audioUri) console.warn('Unplayable tutor audio URL:', line.audioUri);
-        void speakWithDevice(line);
-        return;
-      }
-      playFile(line.audioUri, line.text, line);
+  /** Stops waiting for a voice after `AUDIO_WAIT_MS`; `giveUp` then says the line some other way. */
+  const waitForVoice = useCallback(
+    (giveUp: () => void) => {
+      clearWaitTimer();
+      const gen = generation.current;
+      waitTimer.current = setTimeout(() => {
+        waitTimer.current = null;
+        if (gen === generation.current) giveUp();
+      }, AUDIO_WAIT_MS);
     },
-    [stop, speakWithDevice, playFile],
+    [clearWaitTimer],
   );
 
   const playClip = useCallback(
@@ -232,35 +316,68 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       if (!clip) {
         // The next piece is still being made: pick up from here when it arrives.
         if (line.audioPending) {
-          current.waiting = true;
+          if (!current.waiting) {
+            current.waiting = true;
+            waitForVoice(() => {
+              if (queue.current !== current) return;
+              queue.current = null;
+              const rest = textAfter(line, index);
+              if (rest) sayUnvoiced(line, rest, finishLine);
+              else finishLine();
+            });
+          }
           return;
         }
         queue.current = null;
         const rest = textAfter(line, index);
-        if (rest) void speakWithDevice({ ...line, text: rest });
-        else setTalking(false);
+        if (rest) sayUnvoiced(line, rest, finishLine);
+        else finishLine();
         return;
       }
 
       current.waiting = false;
+      clearWaitTimer();
       const next = () => playClipRef.current(index + 1);
-      if (clip.uri && PLAYABLE_URI.test(clip.uri)) playFile(clip.uri, clip.text, line, next);
-      else void speakWithDevice({ ...line, text: clip.text }, next);
+      if (source.current === 'device') void speakWithDevice(line, clip.text, next);
+      else if (clip.uri && PLAYABLE_URI.test(clip.uri)) playFile(clip.uri, clip.text, line, next);
+      else sayUnvoiced(line, clip.text, next);
     },
-    [playFile, speakWithDevice, setTalking],
+    [playFile, speakWithDevice, sayUnvoiced, finishLine, waitForVoice, clearWaitTimer],
   );
 
   useEffect(() => {
     playClipRef.current = playClip;
   }, [playClip]);
 
-  const playClips = useCallback(
+  /** Starts saying `line` from the top, in this conversation's voice. */
+  const begin = useCallback(
     (line: AiMessage) => {
       stop();
-      queue.current = { id: line.id, index: 0, waiting: false };
-      playClip(0);
+      handled.current = line.id;
+      setPhase('preparing');
+
+      if (source.current === 'device') {
+        void speakWithDevice(line, line.text, finishLine);
+      } else if (line.clips?.length) {
+        queue.current = { id: line.id, index: 0, waiting: false };
+        playClip(0);
+      } else if (line.audioUri && PLAYABLE_URI.test(line.audioUri)) {
+        playFile(line.audioUri, line.text, line, finishLine);
+      } else if (line.audioPending) {
+        // The text is here and its voice is on the way: wait for it rather than read it in another voice.
+        handled.current = null;
+        awaiting.current = line.id;
+        waitForVoice(() => {
+          awaiting.current = null;
+          handled.current = line.id;
+          sayUnvoiced(latest.current?.id === line.id ? latest.current : line, line.text, finishLine);
+        });
+      } else {
+        if (__DEV__ && line.audioUri) console.warn('Unplayable tutor audio URL:', line.audioUri);
+        sayUnvoiced(line, line.text, finishLine);
+      }
     },
-    [stop, playClip],
+    [stop, setPhase, speakWithDevice, playClip, playFile, finishLine, waitForVoice, sayUnvoiced],
   );
 
   useEffect(() => {
@@ -279,39 +396,23 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       if (current.waiting) playClip(current.index);
       return;
     }
-    if (message.id === spokenId.current) return;
+    if (message.id === handled.current) return;
+    // Still waiting for this line's voice, and it has not come yet.
+    if (message.id === awaiting.current && message.audioPending && !hasServerVoice(message)) return;
+    begin(message);
+  }, [message, begin, playClip]);
 
-    if (message.clips?.length) {
-      clearGraceTimer();
-      spokenId.current = message.id;
-      playClips(message);
-      return;
-    }
-    if (message.audioPending) {
-      if (graceTimer.current) return;
-      graceTimer.current = setTimeout(() => {
-        graceTimer.current = null;
-        if (spokenId.current === message.id) return;
-        spokenId.current = message.id;
-        play({ ...message, audioUri: undefined, clips: undefined });
-      }, AUDIO_GRACE_MS);
-      return;
-    }
-    clearGraceTimer();
-    spokenId.current = message.id;
-    play(message);
-  }, [message, play, playClip, playClips, clearGraceTimer]);
-
-  // The user takes the floor (or the tutor is preparing an answer): stop talking.
+  // The learner takes the floor (or the tutor is preparing an answer): stop talking, and drop the
+  // current line, so a voice that arrives for it now is never played over the learner.
   useEffect(() => {
-    if (voiceState === 'listening' || voiceState === 'thinking') stop();
+    if (voiceState !== 'listening' && voiceState !== 'thinking') return;
+    stop();
+    if (latest.current) handled.current = latest.current.id;
   }, [voiceState, stop]);
 
   const replay = useCallback(() => {
-    if (!message) return;
-    if (message.clips?.length) playClips(message);
-    else play(message);
-  }, [message, play, playClips]);
+    if (message && !message.streaming) begin(message);
+  }, [message, begin]);
 
-  return { speaking, replay };
+  return { speaking: phase === 'speaking', preparing: phase === 'preparing', replay };
 }

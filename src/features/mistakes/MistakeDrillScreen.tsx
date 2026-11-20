@@ -20,9 +20,13 @@ import { duration, easing, enter } from '@/theme/motion';
 import { SessionSummary } from '../vocabulary/SessionSummary';
 import { DrillFeedback } from './DrillFeedback';
 import { BuildDrill, ChoiceDrill, SpotDrill } from './DrillViews';
+import { LessonCard } from './LessonCard';
 import { useMistakeDrill } from './useMistakeDrill';
 
-/** Personal practice: a short round built only from the learner's own mistakes, due ones first. */
+/**
+ * Personal practice: a short round built only from the learner's own mistakes, due ones first.
+ * A mistake not learned yet is explained before it is tested.
+ */
 export function MistakeDrillScreen() {
   const [round, setRound] = useState(0);
   return <Round key={round} onAgain={() => setRound((value) => value + 1)} />;
@@ -34,7 +38,7 @@ function Round({ onAgain }: { onAgain: () => void }) {
   const t = useT();
   const studyLanguage = useSettingsStore((state) => state.studyLanguage);
   const session = useMistakeDrill(studyLanguage);
-  const { drill, answer, combo, summary, load } = session;
+  const { step, answer, combo, summary, load } = session;
 
   useEffect(() => {
     if (!answer) return;
@@ -68,7 +72,7 @@ function Round({ onAgain }: { onAgain: () => void }) {
     );
   }
 
-  if (load.state === 'empty' || !drill) {
+  if (load.state === 'empty' || !step) {
     return (
       <Screen>
         <View style={styles.empty}>
@@ -109,18 +113,19 @@ function Round({ onAgain }: { onAgain: () => void }) {
       </View>
 
       <Animated.View
-        key={`${session.index}:${drill.id}`}
+        key={`${session.index}:${step.id}`}
         entering={FadeInRight.duration(duration.base).easing(easing.out)}
         style={[styles.stage, answer && styles.stageAnswered]}
       >
-        {drill.kind === 'choice' ? <ChoiceDrill drill={drill} answer={answer} onSubmit={session.submit} /> : null}
-        {drill.kind === 'spot' ? <SpotDrill drill={drill} answer={answer} onSubmit={session.submit} /> : null}
-        {drill.kind === 'build' ? <BuildDrill drill={drill} answer={answer} onSubmit={session.submit} /> : null}
+        {step.kind === 'lesson' ? <LessonCard lesson={step} onContinue={session.next} /> : null}
+        {step.kind === 'choice' ? <ChoiceDrill drill={step} answer={answer} onSubmit={session.submit} /> : null}
+        {step.kind === 'spot' ? <SpotDrill drill={step} answer={answer} onSubmit={session.submit} /> : null}
+        {step.kind === 'build' ? <BuildDrill drill={step} answer={answer} onSubmit={session.submit} /> : null}
       </Animated.View>
 
-      {answer ? (
+      {answer && step.kind !== 'lesson' ? (
         <View style={styles.feedback} pointerEvents="box-none">
-          <DrillFeedback drill={drill} answer={answer} onContinue={session.next} />
+          <DrillFeedback drill={step} answer={answer} onContinue={session.next} />
         </View>
       ) : null}
     </Screen>

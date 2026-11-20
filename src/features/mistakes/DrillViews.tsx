@@ -11,8 +11,10 @@ import { haptics } from '@/services/haptics';
 import { colors, radii, spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
-import { categoryOf } from './categories';
-import { sameSentence, type Drill } from './drills';
+import { sameSentence } from './diff';
+import type { Drill } from './drills';
+import { MistakeContext } from './MistakeContext';
+import { SentenceDiff } from './SentenceDiff';
 import type { DrillAnswer } from './useMistakeDrill';
 
 interface DrillProps<K extends Drill['kind']> {
@@ -21,52 +23,53 @@ interface DrillProps<K extends Drill['kind']> {
   onSubmit: (given: string) => void;
 }
 
-/** What kind of mistake this is: a hint at where to look, never the answer itself. */
-function Topic({ drill }: { drill: Drill }) {
+/**
+ * The task, how to approach it, and which mistake it is about (kind, chat, when): the learner
+ * always knows what they are working on, never just a pair of options out of nowhere.
+ */
+function Header({ drill, question, hint }: { drill: Drill; question: string; hint?: string }) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
-  const t = useT();
-  const category = categoryOf(drill.mistake.category);
   return (
-    <View style={styles.topicRow}>
-      <View style={[styles.topic, { backgroundColor: `${category.tint}22` }]}>
-        <Ionicons name={category.icon} size={14} color={category.tint} />
-        <AppText variant="captionStrong" color={category.tint}>
-          {t(category.label)}
-        </AppText>
-      </View>
-      {drill.mistake.occurrences > 1 ? (
-        <AppText variant="caption" color={home.textMuted}>
-          {t('mistakes.times', { n: drill.mistake.occurrences })}
+    <View style={styles.header}>
+      <MistakeContext mistake={drill.mistake} />
+      <AppText variant="heading" style={styles.center}>
+        {question}
+      </AppText>
+      {hint ? (
+        <AppText variant="caption" color={home.textSecondary} style={styles.center}>
+          {hint}
         </AppText>
       ) : null}
     </View>
   );
 }
 
-function Question({ text }: { text: string }) {
-  const home = usePalette();
-  const styles = useThemedStyles(createStyles);
-  return (
-    <AppText variant="captionStrong" color={home.textSecondary} style={styles.question}>
-      {text}
-    </AppText>
-  );
-}
-
-/** Two sentences, the one said and the right one: pick the right one. */
+/** Two sentences, the one said and the right one, their difference underlined: pick the right one. */
 export function ChoiceDrill({ drill, answer, onSubmit }: DrillProps<'choice'>) {
   const styles = useThemedStyles(createStyles);
   const t = useT();
+  const { said, correct } = drill.mistake;
   return (
     <View style={styles.wrap}>
-      <Question text={t('mistakes.drill.choice')} />
-      <Topic drill={drill} />
+      <Header drill={drill} question={t('mistakes.drill.choice')} hint={t('mistakes.drill.choice.hint')} />
       <View style={styles.options}>
         {drill.options.map((option, index) => {
-          const right = sameSentence(option, drill.mistake.correct);
+          const right = sameSentence(option, correct);
           const state = !answer ? 'idle' : right ? 'correct' : option === answer.given ? 'wrong' : 'dimmed';
-          return <SentenceOption key={option} index={index} label={option} state={state} locked={answer !== null} onPress={() => onSubmit(option)} />;
+          return (
+            <SentenceOption
+              key={option}
+              index={index}
+              label={option}
+              said={said}
+              correct={correct}
+              side={right ? 'correct' : 'said'}
+              state={state}
+              locked={answer !== null}
+              onPress={() => onSubmit(option)}
+            />
+          );
         })}
       </View>
     </View>
@@ -75,7 +78,18 @@ export function ChoiceDrill({ drill, answer, onSubmit }: DrillProps<'choice'>) {
 
 type OptionState = 'idle' | 'correct' | 'wrong' | 'dimmed';
 
-function SentenceOption({ label, index, state, locked, onPress }: { label: string; index: number; state: OptionState; locked: boolean; onPress: () => void }) {
+interface SentenceOptionProps {
+  label: string;
+  said: string;
+  correct: string;
+  side: 'said' | 'correct';
+  index: number;
+  state: OptionState;
+  locked: boolean;
+  onPress: () => void;
+}
+
+function SentenceOption({ label, said, correct, side, index, state, locked, onPress }: SentenceOptionProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   const shake = useShake(state === 'wrong');
@@ -95,9 +109,7 @@ function SentenceOption({ label, index, state, locked, onPress }: { label: strin
         onPress={onPress}
         style={[styles.option, { backgroundColor: tone.bg, borderColor: tone.border }]}
       >
-        <AppText variant="subheading" color={tone.text} style={styles.flex}>
-          {label}
-        </AppText>
+        <SentenceDiff said={said} correct={correct} side={side} tone="neutral" variant="subheading" color={tone.text} style={styles.flex} />
         {state === 'correct' ? <Ionicons name="checkmark-circle" size={24} color={colors.success} /> : null}
         {state === 'wrong' ? <Ionicons name="close-circle" size={24} color={colors.danger} /> : null}
       </PressableScale>
@@ -112,8 +124,7 @@ export function SpotDrill({ drill, answer, onSubmit }: DrillProps<'spot'>) {
   const t = useT();
   return (
     <View style={styles.wrap}>
-      <Question text={t('mistakes.drill.spot')} />
-      <Topic drill={drill} />
+      <Header drill={drill} question={t('mistakes.drill.spot')} hint={t('mistakes.drill.spot.hint')} />
       <View style={styles.prompt}>
         <View style={styles.words}>
           {drill.tokens.map((token, index) => {
@@ -195,8 +206,7 @@ export function BuildDrill({ drill, answer, onSubmit }: DrillProps<'build'>) {
 
   return (
     <View style={styles.wrap}>
-      <Question text={t('mistakes.drill.build')} />
-      <Topic drill={drill} />
+      <Header drill={drill} question={t('mistakes.drill.build')} />
       <View style={styles.said}>
         <AppText variant="caption" color={home.textMuted}>
           {t('mistakes.youSaid')}
@@ -255,9 +265,8 @@ const createStyles = (home: Palette) =>
   StyleSheet.create({
     wrap: { flex: 1, gap: spacing.lg },
     flex: { flex: 1 },
-    question: { textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.8 },
-    topicRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-    topic: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, paddingVertical: 5, borderRadius: radii.pill },
+    header: { gap: spacing.sm },
+    center: { textAlign: 'center' },
     prompt: { flex: 1, justifyContent: 'center' },
     options: { flex: 1, justifyContent: 'center', gap: spacing.md },
     option: {

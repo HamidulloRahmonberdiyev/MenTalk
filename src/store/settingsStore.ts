@@ -16,6 +16,9 @@ interface SettingsState {
   /** Show what the user said as text in the conversation. */
   showTranscript: boolean;
   toggleTranscript: () => void;
+  /** Voice chats hand the floor back by themselves: the mic opens once the tutor has finished a line. */
+  handsFree: boolean;
+  toggleHandsFree: () => void;
   /** Dark or light look of the redesigned screens, chosen in the profile. */
   appearance: 'dark' | 'light';
   setAppearance: (appearance: 'dark' | 'light') => void;
@@ -37,6 +40,8 @@ export const useSettingsStore = create<SettingsState>()(
       setStudyLanguage: (studyLanguage) => set({ studyLanguage }),
       showTranscript: true,
       toggleTranscript: () => set((state) => ({ showTranscript: !state.showTranscript })),
+      handsFree: true,
+      toggleHandsFree: () => set((state) => ({ handsFree: !state.handsFree })),
       appearance: 'dark',
       setAppearance: (appearance) => set({ appearance }),
       tutorCharacter: 'bubble',

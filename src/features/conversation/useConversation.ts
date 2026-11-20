@@ -21,6 +21,9 @@ export type HintState =
 
 const HIDDEN_HINT: HintState = { status: 'hidden' };
 
+/** A turn that failed, or something the screen itself has to tell the learner. */
+export type ScreenNotice = NoticeCode | 'voiceMissing' | 'handsFreeOn' | 'handsFreeOff';
+
 function ageFrom(birthDate: string | null): number | null {
   if (!birthDate) return null;
   const born = new Date(birthDate);
@@ -68,7 +71,7 @@ export function useConversation(scenario: Scenario) {
   const [learnerText, setLearnerText] = useState<string | null>(null);
   const [hint, setHint] = useState<HintState>(HIDDEN_HINT);
   const [finishing, setFinishing] = useState(false);
-  const [notice, setNotice] = useState<{ code: NoticeCode; id: number } | null>(null);
+  const [notice, setNotice] = useState<{ code: ScreenNotice; id: number } | null>(null);
   const tone = useSettingsStore(activeTutorTone);
 
   useEffect(() => {
@@ -139,6 +142,7 @@ export function useConversation(scenario: Scenario) {
   }, []);
 
   const dismissNotice = useCallback(() => setNotice(null), []);
+  const showNotice = useCallback((code: ScreenNotice) => setNotice({ code, id: Date.now() }), []);
 
   const startListening = useCallback(() => sessionRef.current?.startListening(), []);
   const stopListening = useCallback(() => sessionRef.current?.stopListening(), []);
@@ -189,6 +193,7 @@ export function useConversation(scenario: Scenario) {
     setTone,
     hasAnswered,
     notice,
+    showNotice,
     dismissNotice,
     retry,
     startListening,

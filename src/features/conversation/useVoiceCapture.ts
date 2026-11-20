@@ -28,6 +28,16 @@ const MANUAL_ONLY_MAX_MS = 12_000;
 
 export type CaptureStart = 'started' | 'denied' | 'failed';
 
+export interface CaptureOptions {
+  /** How long to wait for the person to start talking. */
+  noSpeechMs?: number;
+  /**
+   * The mic was opened for the person, not by them. Without loudness readings such a turn is closed
+   * unsent: a timed recording nobody asked for would go to the tutor as an answer.
+   */
+  unprompted?: boolean;
+}
+
 interface VoiceCaptureOptions {
   /** Speech was heard and then stopped (or the user tapped stop): here is the recording. */
   onSpeechEnd: (audio: RecordedAudio) => void;
@@ -37,7 +47,7 @@ interface VoiceCaptureOptions {
 
 export interface VoiceCapture {
   /** Opens the mic. */
-  start: () => Promise<CaptureStart>;
+  start: (options?: CaptureOptions) => Promise<CaptureStart>;
   /** Ends the turn now and submits it if anything was said. */
   stop: () => Promise<void>;
   /** Closes the mic silently, with no callbacks. */
@@ -50,6 +60,7 @@ interface Turn {
   startedAt: number;
   detector: SpeechEndpointDetector;
   manualOnly: boolean;
+  unprompted: boolean;
 }
 
 /**
@@ -107,7 +118,10 @@ export function useVoiceCapture({ onSpeechEnd, onNoSpeech }: VoiceCaptureOptions
     const decision = current.detector.push(recorder.getStatus().metering, now);
     level.set(current.detector.level);
 
-    if (decision === 'unsupported') current.manualOnly = true;
+    if (decision === 'unsupported') {
+      if (current.unprompted) return void finish(false, elapsed);
+      current.manualOnly = true;
+    }
     if (current.manualOnly) {
       if (elapsed >= MANUAL_ONLY_MAX_MS) void finish(true, elapsed);
       return;
@@ -121,7 +135,7 @@ export function useVoiceCapture({ onSpeechEnd, onNoSpeech }: VoiceCaptureOptions
     }
   }, [recorder, level, finish]);
 
-  const start = useCallback(async (): Promise<CaptureStart> => {
+  const start = useCallback(async ({ noSpeechMs, unprompted = false }: CaptureOptions = {}): Promise<CaptureStart> => {
     if (turn.current || starting.current) return 'started';
     starting.current = true;
     try {
@@ -133,7 +147,12 @@ export function useVoiceCapture({ onSpeechEnd, onNoSpeech }: VoiceCaptureOptions
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
-      turn.current = { startedAt: Date.now(), detector: new SpeechEndpointDetector(), manualOnly: false };
+      turn.current = {
+        startedAt: Date.now(),
+        detector: new SpeechEndpointDetector(noSpeechMs ? { noSpeechMs } : {}),
+        manualOnly: false,
+        unprompted,
+      };
       timer.current = setInterval(tick, DEFAULT_ENDPOINT_CONFIG.tickMs);
       return 'started';
     } catch {
