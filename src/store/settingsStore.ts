@@ -28,6 +28,17 @@ interface SettingsState {
   /** The tone new conversations start in; the last one picked in a chat or the profile. */
   tutorTone: TutorTone;
   setTutorTone: (tone: TutorTone) => void;
+  /**
+   * The tutor voice new conversations start with, from the server's list; null: the language's default.
+   * Its gender names the tutor in the app's texts, as the server names him or her in the chat.
+   */
+  tutorVoice: TutorVoiceChoice | null;
+  setTutorVoice: (voice: TutorVoiceChoice | null) => void;
+}
+
+export interface TutorVoiceChoice {
+  id: number;
+  gender: 'female' | 'male';
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -48,6 +59,8 @@ export const useSettingsStore = create<SettingsState>()(
       setTutorCharacter: (tutorCharacter) => set({ tutorCharacter }),
       tutorTone: 'calm',
       setTutorTone: (tutorTone) => set({ tutorTone }),
+      tutorVoice: null,
+      setTutorVoice: (tutorVoice) => set({ tutorVoice }),
     }),
     {
       name: 'settings',

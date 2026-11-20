@@ -84,7 +84,11 @@ export function ConversationScreen({ scenario }: ConversationScreenProps) {
     else listenAfterTutor();
   }, [listenAfterTutor]);
   const handleVoiceMissing = useCallback(() => showNotice('voiceMissing'), [showNotice]);
-  const tutor = useTutorVoice(message, voiceState, lipSync, { onLineEnd: handleLineEnd, onVoiceMissing: handleVoiceMissing });
+  const tutor = useTutorVoice(message, voiceState, lipSync, {
+    onLineEnd: handleLineEnd,
+    onVoiceMissing: handleVoiceMissing,
+    fetchVoice: conversation.fetchVoice,
+  });
   // Listening and thinking come from the session; otherwise what the learner sees is what the voice is
   // actually doing, not the session's estimate of how long a line takes to say.
   const shownState: VoiceState =

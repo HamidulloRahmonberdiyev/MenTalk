@@ -53,6 +53,7 @@ function currentLearner(): LearnerProfile {
     goals: user.goals,
     uiLanguage: settings.language,
     studyLanguage: settings.studyLanguage,
+    tutorVoiceId: settings.tutorVoice?.id ?? null,
   };
 }
 
@@ -150,6 +151,11 @@ export function useConversation(scenario: Scenario) {
   const cancelListening = useCallback(() => sessionRef.current?.cancelListening(), []);
   const sendText = useCallback((text: string) => sessionRef.current?.sendText(text), []);
 
+  const fetchVoice = useCallback(
+    async (turnId: number, text: string) => (await sessionRef.current?.fetchVoice?.(turnId, text)) ?? null,
+    [],
+  );
+
   const toggleHint = useCallback(async () => {
     const session = sessionRef.current;
     if (!session) return;
@@ -203,5 +209,7 @@ export function useConversation(scenario: Scenario) {
     cancelListening,
     toggleHint,
     finish,
+    /** Set when the tutor speaks with the server's voice: a missing voice is asked for again with it. */
+    fetchVoice: conversationService.serverVoiced ? fetchVoice : undefined,
   };
 }

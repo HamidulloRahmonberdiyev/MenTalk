@@ -16,6 +16,7 @@ import type { ScreenNotice } from './useConversation';
 /** Information keeps a calm icon; anything else is a problem. */
 const INFO_ICONS: Partial<Record<ScreenNotice, IconName>> = {
   slow: 'time-outline',
+  reconnecting: 'sync-outline',
   voiceMissing: 'volume-mute-outline',
   handsFreeOn: 'infinite',
   handsFreeOff: 'hand-left-outline',

@@ -35,6 +35,8 @@ export type TutorEmotion = 'neutral' | 'happy' | 'encouraging' | 'curious' | 'em
 export interface AiMessage {
   id: string;
   text: string;
+  /** The server's id of the line once it is stored: a voice that failed to arrive is asked for by it. */
+  turnId?: number;
   /** Emotion the backend attached to the line, if any. */
   emotion?: TutorEmotion;
   /**
@@ -139,6 +141,8 @@ export interface LearnerProfile {
   uiLanguage: 'uz' | 'ru' | 'en';
   /** The language the learner practises with the tutor. */
   studyLanguage: StudyLanguage;
+  /** The tutor voice picked in settings (an id from the server's list); null: the language's default. */
+  tutorVoiceId?: number | null;
 }
 
 export interface UserProfile {

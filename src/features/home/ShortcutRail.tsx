@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -53,6 +53,12 @@ const GO = 26;
 /** How often the rail moves on by itself, and how long it waits after the learner swipes it. */
 const AUTO_EVERY = 3500;
 const AUTO_RESUME_AFTER = 7000;
+/**
+ * The rail is endless: the cards are laid out this many times and the learner always stands in the
+ * middle copy. Once a move ends in a side copy, the rail jumps to the same spot in the middle one,
+ * which looks exactly the same, so after the last card the first one simply comes round again.
+ */
+const COPIES = 3;
 
 // Motion. The rail turns like a drum: cards swing away as they reach the screen edges and face the
 // learner again as they come in. Each card breathes on one shared loop, a little behind its left
@@ -83,7 +89,7 @@ const ENTER_DELAY = 120;
 const ENTER_STAGGER = 70;
 
 /** Each shortcut's own accent: it tints the card, the glow behind the object and the arrow. */
-const ACCENTS: Record<string, string> = {
+export const ACCENTS: Record<string, string> = {
   topics: '#8B7CF6',
   history: '#3B9BFF',
   words: '#2F7BEA',
@@ -99,7 +105,7 @@ const ACCENTS: Record<string, string> = {
  * The card body per look. At night each card is a deep shade of its accent, lighter at the top
  * left, with a faint accent rim; by day it is a pale wash of the accent on white.
  */
-const BODY = {
+export const BODY = {
   light: {
     base: '#FFFFFF',
     top: 0.2,
@@ -127,12 +133,12 @@ function hexToRgb(hex: string) {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255] as const;
 }
 
-function rgba(hex: string, alpha: number) {
+export function rgba(hex: string, alpha: number) {
   return `rgba(${hexToRgb(hex).join(', ')}, ${alpha})`;
 }
 
 /** `base` with `amount` of `accent` mixed in. */
-function mix(base: string, accent: string, amount: number) {
+export function mix(base: string, accent: string, amount: number) {
   const a = hexToRgb(base);
   const b = hexToRgb(accent);
   const channel = (i: number) => Math.round(a[i] + (b[i] - a[i]) * amount);
@@ -209,8 +215,8 @@ interface ShortcutRailProps {
 }
 
 /**
- * The home shortcuts as a featured carousel of small cards. It slides on by itself every few
- * seconds (paused while the learner swipes), turns like a drum under the finger, and the cards
+ * The home shortcuts as a featured, endless carousel of small cards. It slides on by itself every
+ * few seconds (paused while the learner swipes), turns like a drum under the finger, and the cards
  * float, glint and tip toward a press. Reduced motion keeps only a plain press.
  */
 export function ShortcutRail({ items, title, seeAllLabel, onSeeAll }: ShortcutRailProps) {
@@ -221,24 +227,41 @@ export function ShortcutRail({ items, title, seeAllLabel, onSeeAll }: ShortcutRa
   const scrollX = useScrollOffset(list);
   const span = useSharedValue(0);
   const clock = useSharedValue(0);
-  const [width, setWidth] = useState(0);
-  const indexRef = useRef(0);
+  const count = items.length;
+  // A single card has nothing to come round to.
+  const loops = count > 1;
+  const copies = loops ? COPIES : 1;
+  /** The card at the left edge, counted over all copies. */
+  const indexRef = useRef(loops ? count : 0);
   const pausedUntil = useRef(0);
-  // The last few cards fit on screen together, so the rail has fewer stops than cards.
-  const visible = width ? Math.max(1, Math.floor((width - PAD + GAP) / STEP)) : 1;
-  const pages = Math.max(1, items.length - visible + 1);
-  const pagesRef = useRef(pages);
+  const countRef = useRef(count);
   useEffect(() => {
-    pagesRef.current = pages;
-  }, [pages]);
+    countRef.current = count;
+  }, [count]);
 
   const goTo = useCallback(
-    (next: number) => {
+    (next: number, animated = true) => {
       indexRef.current = next;
-      list.current?.scrollTo({ x: next * STEP, animated: true });
+      list.current?.scrollTo({ x: next * STEP, animated });
     },
     [list],
   );
+
+  /** The same card in the middle copy; the jump there can't be seen. */
+  const recenter = useCallback(() => {
+    const n = countRef.current;
+    const at = indexRef.current;
+    if (n < 2 || (at >= n && at < 2 * n)) return false;
+    goTo(n + (((at % n) + n) % n), false);
+    return true;
+  }, [goTo]);
+
+  // Always forward: from the last card on to the first, never rewinding across the whole rail.
+  const advance = useCallback(() => {
+    if (countRef.current < 2) return;
+    if (recenter()) requestAnimationFrame(() => goTo(indexRef.current + 1));
+    else goTo(indexRef.current + 1);
+  }, [goTo, recenter]);
 
   // The loop advances by frame time, so pausing it on blur and resuming it later never jumps.
   const tick = useCallback(
@@ -257,33 +280,36 @@ export function ShortcutRail({ items, title, seeAllLabel, onSeeAll }: ShortcutRa
       if (still) return;
       life.setActive(true);
       const timer = setInterval(() => {
-        if (Date.now() < pausedUntil.current || pagesRef.current < 2) return;
-        goTo((indexRef.current + 1) % pagesRef.current);
+        if (Date.now() < pausedUntil.current) return;
+        advance();
       }, AUTO_EVERY);
       return () => {
         clearInterval(timer);
         life.setActive(false);
       };
-    }, [goTo, life, still]),
+    }, [advance, life, still]),
   );
 
-  // Keep the index valid if the list or the screen width changes.
-  useEffect(() => {
-    if (indexRef.current >= pages) goTo(0);
-  }, [goTo, pages]);
-
+  // A swipe that ended in a side copy goes back to the middle one, so the learner can keep swiping either way.
   const onSettle = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / STEP), 0), pages - 1);
-    indexRef.current = next;
+    const last = count * copies - 1;
+    indexRef.current = Math.min(Math.max(Math.round(event.nativeEvent.contentOffset.x / STEP), 0), last);
+    recenter();
+  };
+
+  // Starts on the first card of the middle copy, and again whenever the number of cards changes.
+  const placedFor = useRef(-1);
+  const place = () => {
+    if (placedFor.current === count) return;
+    placedFor.current = count;
+    goTo(loops ? count : 0, false);
   };
 
   return (
     <View
       style={styles.section}
       onLayout={(event) => {
-        const next = event.nativeEvent.layout.width + PAD * 2;
-        setWidth(next);
-        span.set(next);
+        span.set(event.nativeEvent.layout.width + PAD * 2);
       }}
     >
       {title ? <RailHeader title={title} seeAllLabel={seeAllLabel} onSeeAll={onSeeAll} palette={palette} /> : null}
@@ -300,26 +326,32 @@ export function ShortcutRail({ items, title, seeAllLabel, onSeeAll }: ShortcutRa
           pausedUntil.current = Date.now() + AUTO_RESUME_AFTER;
         }}
         onMomentumScrollEnd={onSettle}
+        onContentSizeChange={place}
       >
-        {items.map(({ key, ...item }, index) => (
-          <RailCard
-            key={key}
-            id={key}
-            index={index}
-            look={look}
-            still={still}
-            clock={clock}
-            scrollX={scrollX}
-            span={span}
-            {...item}
-          />
-        ))}
+        {Array.from({ length: copies }, (_, copy) =>
+          items.map(({ key, ...item }, slot) => (
+            <RailCard
+              key={`${copy}-${key}`}
+              id={key}
+              index={copy * count + slot}
+              slot={slot}
+              // Screen readers get each shortcut once, from the middle copy.
+              hidden={loops && copy !== 1}
+              look={look}
+              still={still}
+              clock={clock}
+              scrollX={scrollX}
+              span={span}
+              {...item}
+            />
+          )),
+        )}
       </Animated.ScrollView>
     </View>
   );
 }
 
-function RailHeader({
+export function RailHeader({
   title,
   seeAllLabel,
   onSeeAll,
@@ -361,7 +393,12 @@ function RailHeader({
 
 interface RailCardProps extends Omit<Shortcut, 'key'> {
   id: string;
+  /** Where the card sits on the rail, over all copies: drives the drum turn. */
   index: number;
+  /** Its place in the list: drives the float, light and entrance, so every copy moves alike. */
+  slot: number;
+  /** A side copy of the endless rail: left out for screen readers. */
+  hidden: boolean;
   look: Appearance;
   /** Reduced motion: no drum, float, light or entrance; the press only sinks. */
   still: boolean;
@@ -371,14 +408,14 @@ interface RailCardProps extends Omit<Shortcut, 'key'> {
   span: SharedValue<number>;
 }
 
-function RailCard({ id, index, look, still, clock, scrollX, span, label, art, image, onPress }: RailCardProps) {
+function RailCard({ id, index, slot, hidden, look, still, clock, scrollX, span, label, art, image, onPress }: RailCardProps) {
   const body = BODY[look];
   const accent = ACCENTS[id] ?? ACCENTS.words;
   const glow = rgba(accent, body.glow);
   const press = useSharedValue(0);
   const tipX = useSharedValue(0);
   const tipY = useSharedValue(0);
-  const entering = useMemo(() => (still ? undefined : entrance(index)), [index, still]);
+  const entering = useMemo(() => (still ? undefined : entrance(slot)), [slot, still]);
 
   // The drum turn from the scroll position, plus the tip toward a pressing finger.
   const cardStyle = useAnimatedStyle(() => {
@@ -412,8 +449,8 @@ function RailCard({ id, index, look, still, clock, scrollX, span, label, art, im
   const objectStyle = useAnimatedStyle(() => {
     const t = clock.get();
     const p = press.get();
-    const lift = still ? 0.5 : rise(t, index);
-    const sway = still ? 0 : Math.sin(2 * Math.PI * (t + index * 0.23));
+    const lift = still ? 0.5 : rise(t, slot);
+    const sway = still ? 0 : Math.sin(2 * Math.PI * (t + slot * 0.23));
     return {
       transform: [
         { translateY: FLOAT / 2 - FLOAT * lift - 7 * p },
@@ -427,8 +464,8 @@ function RailCard({ id, index, look, still, clock, scrollX, span, label, art, im
   const glowStyle = useAnimatedStyle(() => {
     const t = clock.get();
     const p = press.get();
-    const lift = still ? 0.5 : rise(t, index);
-    const flare = still ? 0 : bump(phase(t, index), 0.02, 0.26);
+    const lift = still ? 0.5 : rise(t, slot);
+    const flare = still ? 0 : bump(phase(t, slot), 0.02, 0.26);
     return {
       opacity: Math.min(1, 0.7 + 0.2 * lift + 0.3 * flare + 0.3 * p),
       transform: [{ scale: 0.9 + 0.18 * lift + 0.16 * flare + 0.25 * p }],
@@ -436,13 +473,13 @@ function RailCard({ id, index, look, still, clock, scrollX, span, label, art, im
   });
 
   const shineStyle = useAnimatedStyle(() => {
-    const p = Math.min(phase(clock.get(), index) / SHINE_SPAN, 1);
+    const p = Math.min(phase(clock.get(), slot) / SHINE_SPAN, 1);
     const eased = p * p * (3 - 2 * p);
     return { transform: [{ translateX: SHINE_FROM + (SHINE_TO - SHINE_FROM) * eased }, { rotate: '20deg' }] };
   });
 
   const goStyle = useAnimatedStyle(() => {
-    const nudge = still ? 0 : bump(phase(clock.get(), index), NUDGE_AT, NUDGE_SPAN);
+    const nudge = still ? 0 : bump(phase(clock.get(), slot), NUDGE_AT, NUDGE_SPAN);
     const p = press.get();
     const out = 3.5 * nudge + 3 * p;
     return { transform: [{ translateX: out }, { translateY: -out }, { scale: 1 + 0.12 * nudge + 0.14 * p }] };
@@ -466,7 +503,11 @@ function RailCard({ id, index, look, still, clock, scrollX, span, label, art, im
 
   return (
     // The entrance has its own wrapper: a layout animation's transform would fight the card's.
-    <Animated.View entering={entering}>
+    <Animated.View
+      entering={entering}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
+    >
       <AnimatedPressable
         accessibilityRole="button"
         accessibilityLabel={label}

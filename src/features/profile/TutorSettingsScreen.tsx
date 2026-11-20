@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { useT } from '@/i18n';
+import { conversationService } from '@/services/conversation';
 import { spacing } from '@/theme';
 import { usePalette, useThemedStyles, type Palette } from '@/theme/appearance';
 
 import { TutorCard } from './TutorCard';
+import { TutorVoicePicker } from './TutorVoicePicker';
 
 /** Who the learner talks to and in which tone, with the live preview: a page of its own in settings. */
 export function TutorSettingsScreen() {
@@ -25,6 +27,8 @@ export function TutorSettingsScreen() {
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxxl }]} showsVerticalScrollIndicator={false}>
         <TutorCard />
+        {/* Voices come from the MenTalk server; a chat run on the device has none to pick from. */}
+        {conversationService.serverVoiced && <TutorVoicePicker />}
       </ScrollView>
     </View>
   );
@@ -34,5 +38,5 @@ const createStyles = (home: Palette) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: home.background },
     header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, backgroundColor: home.background },
-    content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+    content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.lg },
   });

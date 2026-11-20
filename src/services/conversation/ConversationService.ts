@@ -18,9 +18,10 @@ export interface RecordedAudio {
 
 /**
  * `slow`: the reply is taking unusually long, still waiting. `busy`: the server is still finishing the
- * previous turn (usually after a timeout), so this one was not taken.
+ * previous turn (usually after a timeout), so this one was not taken. `reconnecting`: the connection
+ * dropped before the reply came, and the turn is being sent again.
  */
-export type NoticeCode = 'turnFailed' | 'network' | 'quota' | 'slow' | 'busy';
+export type NoticeCode = 'turnFailed' | 'network' | 'quota' | 'slow' | 'busy' | 'reconnecting';
 
 /** Why `connect()` failed, so the UI only blames the connection when the connection is at fault. */
 export class ConnectError extends Error {
@@ -58,10 +59,20 @@ export interface ConversationSession {
   setTone(tone: TutorTone): void;
   /** Ends the conversation and returns the evaluation. */
   end(): Promise<ConversationResult>;
+  /**
+   * Server-voiced sessions only: the voice of `text` (a stored line, or part of it) asked for again
+   * after it failed to arrive. Resolves to a playable URL, or null when there is still none.
+   */
+  fetchVoice?(turnId: number, text: string): Promise<string | null>;
   /** Releases all resources. Safe to call multiple times. */
   dispose(): void;
 }
 
 export interface ConversationService {
+  /**
+   * The tutor speaks with the server's voice. A line whose voice is missing is then asked for again
+   * (`fetchVoice`) and never read by the device, so the tutor never changes voice mid-conversation.
+   */
+  readonly serverVoiced?: boolean;
   createSession(scenario: Scenario, learner: LearnerProfile): ConversationSession;
 }

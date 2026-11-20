@@ -24,11 +24,20 @@ const DEVICE_SPEECH_SLACK_MS = 5_000;
 const DEVICE_MS_PER_CHAR = 120;
 
 /**
- * Which voice this conversation speaks with. The tutor is one person, so a conversation keeps the
- * voice its first line was said in: the server's when it came, otherwise the device's. A line whose
- * server voice is missing later is left unsaid (its text is on screen) rather than read by a stranger.
+ * Which voice this conversation speaks with. The tutor is one person, so a conversation keeps one voice.
+ * In a server-voiced chat (`fetchVoice` given) that is always the server's: a line whose voice is
+ * missing is asked for again, and left unsaid (its text is on screen) if it still does not come; the
+ * device never reads it. Otherwise the chat keeps the voice its first line was said in.
  */
 type VoiceSource = 'server' | 'device';
+
+/** A voice to ask for again once its line is stored (the line's id comes right after its first piece). */
+interface PendingRecovery {
+  id: string;
+  text: string;
+  then: () => void;
+  generation: number;
+}
 
 /** What the tutor is doing: waiting for the voice of a line that has arrived, or saying it. */
 type Phase = 'quiet' | 'preparing' | 'speaking';
@@ -45,6 +54,11 @@ export interface TutorVoiceOptions {
   onLineEnd?: () => void;
   /** A line, or the rest of one, had no voice and was left unsaid. */
   onVoiceMissing?: () => void;
+  /**
+   * Server-voiced chats: asks the server for the voice of a stored line (or part of it) that did not
+   * arrive. Without it the device voice stands in, as in chats that have no server voice at all.
+   */
+  fetchVoice?: (turnId: number, text: string) => Promise<string | null>;
 }
 
 /** Loudness 0..1 of a block of PCM frames, on a perceptual (dB) scale. */
@@ -111,6 +125,8 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
   const latest = useRef<AiMessage | null>(message);
   const callbacks = useRef(options);
   const playClipRef = useRef<(index: number) => void>(() => undefined);
+  const playFileRef = useRef<(uri: string, text: string, line: AiMessage, then: () => void, unplayable?: () => void) => void>(() => undefined);
+  const pendingRecovery = useRef<PendingRecovery | null>(null);
 
   useEffect(() => {
     latest.current = message;
@@ -147,6 +163,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
     generation.current += 1;
     queue.current = null;
     awaiting.current = null;
+    pendingRecovery.current = null;
     clearWaitTimer();
     Speech.stop();
     lipSync.stop();
@@ -211,9 +228,44 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
     [lipSync, speechTag, setPhase],
   );
 
-  /** `text` has no server voice: the device reads it in a device-voiced chat, otherwise it is skipped. */
+  /**
+   * Server-voiced chat: `text` (a line, or the rest of one) came without its voice. It is asked for once
+   * more and played; if it still does not come, it stays on screen unsaid and the learner is told so.
+   */
+  const recoverVoice = useCallback((line: AiMessage, text: string, then: () => void) => {
+    const gen = generation.current;
+    const newest = latest.current?.id === line.id ? latest.current : line;
+    const fetchVoice = callbacks.current.fetchVoice;
+    const giveUp = () => {
+      if (gen !== generation.current) return;
+      callbacks.current.onVoiceMissing?.();
+      then();
+    };
+
+    if (!fetchVoice) return giveUp();
+    if (newest.turnId === undefined) {
+      // Not stored yet; its id arrives with the rest of the stream. Asked for again once it has.
+      if (newest.audioPending) pendingRecovery.current = { id: line.id, text, then, generation: gen };
+      else giveUp();
+      return;
+    }
+    fetchVoice(newest.turnId, text).then((uri) => {
+      if (gen !== generation.current) return;
+      if (uri && PLAYABLE_URI.test(uri)) playFileRef.current(uri, text, newest, then, giveUp);
+      else giveUp();
+    }, giveUp);
+  }, []);
+
+  /**
+   * `text` has no voice. In a server-voiced chat it is asked for again; otherwise the device reads it in
+   * a device-voiced chat, and it is skipped in one that started with recordings.
+   */
   const sayUnvoiced = useCallback(
     (line: AiMessage, text: string, then: () => void) => {
+      if (callbacks.current.fetchVoice) {
+        recoverVoice(line, text, then);
+        return;
+      }
       source.current ??= 'device';
       if (source.current === 'device') {
         void speakWithDevice(line, text, then);
@@ -222,12 +274,16 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
       callbacks.current.onVoiceMissing?.();
       then();
     },
-    [speakWithDevice],
+    [speakWithDevice, recoverVoice],
   );
 
-  /** Plays one recording of `text`; `then` runs when it has played to the end. */
+  /**
+   * Plays one recording of `text`; `then` runs when it has played to the end. A recording that will not
+   * play even on a second try goes to `unplayable` (by default: said some other way, see `sayUnvoiced`).
+   */
   const playFile = useCallback(
-    (uri: string, text: string, line: AiMessage, then: () => void) => {
+    (uri: string, text: string, line: AiMessage, then: () => void, unplayable?: () => void) => {
+      const cannotPlay = unplayable ?? (() => sayUnvoiced(line, text, then));
       const gen = generation.current;
 
       const attempt = (retried: boolean) => {
@@ -235,7 +291,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
         try {
           next = createAudioPlayer({ uri });
         } catch {
-          sayUnvoiced(line, text, then);
+          cannotPlay();
           return;
         }
         player.current = next;
@@ -259,7 +315,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
           if (__DEV__) console.warn(`Tutor audio failed (${reason}):`, uri);
           lipSync.stop();
           disposePlayer();
-          if (retried) sayUnvoiced(line, text, then);
+          if (retried) cannotPlay();
           else attempt(true);
         };
 
@@ -349,6 +405,10 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
     playClipRef.current = playClip;
   }, [playClip]);
 
+  useEffect(() => {
+    playFileRef.current = playFile;
+  }, [playFile]);
+
   /** Starts saying `line` from the top, in this conversation's voice. */
   const begin = useCallback(
     (line: AiMessage) => {
@@ -390,6 +450,13 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
     // Still being written: shown on screen, said once complete.
     if (!message || message.streaming) return;
 
+    // A voice waiting to be asked for again: the line is stored now (or nothing more will come).
+    const pending = pendingRecovery.current;
+    if (pending?.id === message.id && (message.turnId !== undefined || !message.audioPending)) {
+      pendingRecovery.current = null;
+      if (pending.generation === generation.current) recoverVoice(message, pending.text, pending.then);
+    }
+
     // Already saying this line in pieces: the piece it was waiting for may just have come.
     const current = queue.current;
     if (current?.id === message.id) {
@@ -400,7 +467,7 @@ export function useTutorVoice(message: AiMessage | null, voiceState: VoiceState,
     // Still waiting for this line's voice, and it has not come yet.
     if (message.id === awaiting.current && message.audioPending && !hasServerVoice(message)) return;
     begin(message);
-  }, [message, begin, playClip]);
+  }, [message, begin, playClip, recoverVoice]);
 
   // The learner takes the floor (or the tutor is preparing an answer): stop talking, and drop the
   // current line, so a voice that arrives for it now is never played over the learner.

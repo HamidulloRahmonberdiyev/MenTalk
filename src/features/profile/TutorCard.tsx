@@ -28,7 +28,7 @@ interface TileProps {
 }
 
 /** One chunky option: picture on top, name under it; the chosen one turns blue. */
-function Tile({ label, selected, onPress, children }: TileProps) {
+export function Tile({ label, selected, onPress, children }: TileProps) {
   const home = usePalette();
   const styles = useThemedStyles(createStyles);
   return (

@@ -243,8 +243,26 @@ export interface ApiTurn {
   audio_ms: number | null;
 }
 
-export interface ApiOpening extends ApiTurn {
-  conversation_id: number;
+/**
+ * A started conversation. Asked with `deferOpening`, the server answers at once with the conversation
+ * only and the tutor's first line is streamed (`opening`); an older server still sends that line here.
+ */
+export type ApiStartedConversation = { conversation_id: number } & Partial<ApiTurn>;
+
+/** A tutor line's voice, made again after it failed to arrive the first time. */
+export interface ApiSpeech {
+  url: string;
+  ms: number;
+}
+
+/** A tutor voice the learner can pick (Settings → Tutor). Admins keep the list in the panel. */
+export interface ApiTutorVoice {
+  id: number;
+  /** As the app shows it, per UI language. */
+  name: Partial<Record<'uz' | 'ru' | 'en', string>>;
+  gender: 'female' | 'male';
+  /** The voice a conversation in the asked language gets when the learner picked none. */
+  default: boolean;
 }
 
 export interface ApiMistake {
@@ -414,16 +432,20 @@ export interface ApiNotification {
 /** Either the listed notifications or all of them (up to `before`, when given). */
 export type ApiNotificationSelection = { ids: string[] } | { all: true; before?: string };
 
-export type TurnPayload = ({ text: string } | { audio: string; mime: string }) & {
+/** `opening`: the tutor's first line of a conversation started with `deferOpening` (streamed turns only). */
+export type TurnPayload = ({ text: string } | { audio: string; mime: string } | { opening: true }) & {
   tone?: TutorTone;
   /** Streamed turns: the voice may come as several `audio` events (with `text` and `last`). */
   clips?: boolean;
+  /** Streamed turns: the same id on every retry of one turn, so the server answers (and charges) it once. */
+  client_id?: string;
 };
 
 /**
  * Events of `POST /conversations/{id}/turns/stream`, in the order they arrive:
- * `transcript` (voice turns), `delta`… (the reply as it is written), `reply` (final text),
- * `audio` (once the voice is recorded; absent if that failed), `done`. `error` may replace any of them.
+ * `transcript` (voice turns), `delta`… (the reply as it is written; none when a retry is answered from
+ * what was saved), `reply` (final text), `audio` (once the voice is recorded; absent if that failed),
+ * `saved` (the turn's id, once stored), `done`. `error` may replace any of them.
  */
 export type TurnStreamEvent =
   | { event: 'transcript'; data: { text: string } }
@@ -431,8 +453,9 @@ export type TurnStreamEvent =
   | { event: 'reply'; data: { id?: number | null; reply: string; emotion: string } }
   /** With `clips`: one per piece, `url` null for a piece that failed. Without: once, for the whole reply. */
   | { event: 'audio'; data: { url: string | null; ms: number | null; text?: string; last?: boolean } }
+  | { event: 'saved'; data: { id: number } }
   | { event: 'error'; data: { type?: string; status?: number } }
-  | { event: 'done'; data: unknown };
+  | { event: 'done'; data: { id?: number } | null };
 
 export const endpoints = {
   /** Public, and answered without the `{ data }` envelope. */
@@ -468,9 +491,12 @@ export const endpoints = {
   path: (language: StudyLanguage) => api<ApiPath>('GET', `/path?language=${language}`),
   leaderboard: (period: LeaderboardPeriod, limit: number) => api<ApiLeaderboard>('GET', `/leaderboard?period=${period}&limit=${limit}`),
 
-  startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, signal?: AbortSignal) =>
-    api<ApiOpening>('POST', '/conversations', {
-      body: { scenario_id: scenarioId, target_language: targetLanguage, tone },
+  /** Creates the conversation without waiting for the model; its first line is then streamed with `opening`. */
+  /** `voice`: a tutor voice id, or null for the language's default (so is one the server no longer has). */
+  startConversation: (scenarioId: string, targetLanguage: StudyLanguage, tone: TutorTone, voice: number | null, signal?: AbortSignal) =>
+    api<ApiStartedConversation>('POST', '/conversations', {
+      body: { scenario_id: scenarioId, target_language: targetLanguage, tone, defer_opening: true, voice },
+      // An older server ignores `defer_opening` and writes the first line before it answers.
       timeoutMs: AI_TIMEOUT_MS,
       signal,
     }),
@@ -484,6 +510,24 @@ export const endpoints = {
       idleTimeoutMs: AI_TIMEOUT_MS,
       signal,
       onEvent: (event, data) => onEvent({ event, data } as TurnStreamEvent),
+    }),
+  /** Voices a tutor line again, or `text` (a part of it, e.g. what is left after a piece already heard). */
+  turnSpeech: (conversationId: number, turnId: number, text: string, signal?: AbortSignal) =>
+    api<ApiSpeech>('POST', `/conversations/${conversationId}/turns/${turnId}/speech`, {
+      body: { text },
+      timeoutMs: AI_TIMEOUT_MS,
+      idempotent: true,
+      signal,
+    }),
+  tutorVoices: (language: StudyLanguage, signal?: AbortSignal) =>
+    api<ApiTutorVoice[]>('GET', `/tutor-voices?language=${encodeURIComponent(language)}`, { signal }),
+  /** The tutor greeting the learner in that voice and language; the same text each time, so it is cached. */
+  voiceSample: (voiceId: number, language: StudyLanguage, signal?: AbortSignal) =>
+    api<ApiSpeech>('POST', `/tutor-voices/${voiceId}/sample`, {
+      body: { language },
+      timeoutMs: AI_TIMEOUT_MS,
+      idempotent: true,
+      signal,
     }),
   hint: (conversationId: number) =>
     api<{ hint: string }>('POST', `/conversations/${conversationId}/hint`, { timeoutMs: AI_TIMEOUT_MS, idempotent: true }),
